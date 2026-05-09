@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import emailjs from '@emailjs/browser';
-import { UserPlus, Save, Loader2, Building2, User, Phone, Briefcase, FileText, CreditCard, Calendar, Gift, Zap, Users, Target, Globe, Award } from 'lucide-react';
+import { UserPlus, Save, Loader2, Building2, User, Phone, Briefcase, FileText, CreditCard, Gift, Zap, Users, Target, Globe, Award } from 'lucide-react';
 import { IndustryCategories, PaymentStatus } from '../types';
 import { EMAIL_CONFIG } from '../constants';
 import { submitNewebPayForm } from '../utils/newebpay';
@@ -216,12 +216,8 @@ ${memberData.notes || '(無)'}
             </h2>
             <div className="flex flex-col md:flex-row gap-6 md:gap-12 relative z-10">
               <div className="bg-red-700/50 p-4 rounded-xl flex-1 backdrop-blur-sm border border-red-500/30">
-                <div className="text-red-200 text-sm font-bold mb-1 flex items-center gap-2"><Calendar size={14}/> 會期</div>
-                <div className="text-xl font-bold">4/1 ～ 隔年 3/31</div>
-              </div>
-              <div className="bg-red-700/50 p-4 rounded-xl flex-1 backdrop-blur-sm border border-red-500/30">
                 <div className="text-red-200 text-sm font-bold mb-1 flex items-center gap-2"><CreditCard size={14}/> 會員費</div>
-                <div className="text-xl font-bold">NT$ 5,000 / 年</div>
+                <div className="text-xl font-bold">NT$ 5,000 / 年（自加入日起一年到期）</div>
               </div>
             </div>
           </div>
