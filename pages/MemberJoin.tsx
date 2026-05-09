@@ -217,7 +217,7 @@ ${memberData.notes || '(無)'}
             <div className="flex flex-col md:flex-row gap-6 md:gap-12 relative z-10">
               <div className="bg-red-700/50 p-4 rounded-xl flex-1 backdrop-blur-sm border border-red-500/30">
                 <div className="text-red-200 text-sm font-bold mb-1 flex items-center gap-2"><Calendar size={14}/> 會期</div>
-                <div className="text-xl font-bold">4/1 ～ 隔年 3/31</div>
+                <div className="text-xl font-bold">1 年</div>
               </div>
               <div className="bg-red-700/50 p-4 rounded-xl flex-1 backdrop-blur-sm border border-red-500/30">
                 <div className="text-red-200 text-sm font-bold mb-1 flex items-center gap-2"><CreditCard size={14}/> 會員費</div>
