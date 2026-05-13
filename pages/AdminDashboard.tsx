@@ -1454,6 +1454,17 @@ const ActivityManager: React.FC<{
                <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">地點</label><input required type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">費用</label><input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+               <div>
+                 <label className="block text-sm font-bold text-gray-700 mb-2">會員價 (選填)</label>
+                 <input
+                   type="number"
+                   placeholder="留空表示無會員優惠"
+                   value={formData.member_price ?? ''}
+                   onChange={e => setFormData({...formData, member_price: e.target.value === '' ? null : Number(e.target.value)})}
+                   className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                 />
+                 <p className="text-xs text-gray-400 mt-1">設定後，會員報名自動套用此價格</p>
+               </div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">報名狀態</label><select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"><option value="active">開放報名</option><option value="closed">報名截止</option></select></div>
                <div className="md:col-span-2"><label className="block text-sm font-bold text-gray-700 mb-2">活動封面圖片</label><div className="flex items-center gap-4"><img src={formData.picture} alt="Preview" className="w-32 h-20 object-cover rounded-lg border bg-gray-50"/><label className="cursor-pointer bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2"><UploadCloud size={18} /> 上傳圖片<input type="file" className="hidden" accept="image/*" onChange={handleImageChange} /></label></div></div>
                <div className="md:col-span-2">
@@ -1501,6 +1512,7 @@ const ActivityManager: React.FC<{
               <div className="space-y-2 mb-6">
                 <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar size={16} /> {act.date} {act.time}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><MapPin size={16} /> {act.location}</div>
+                <div className="flex items-center gap-2 text-sm text-gray-500"><DollarSign size={16} /> NT$ {(act.price ?? 0).toLocaleString()}{(act as any).member_price != null && <span className="text-red-600 font-bold ml-1">/ 會員 NT$ {(act as any).member_price.toLocaleString()}</span>}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={16} /> {registrations.filter(r => String(r.activityId) === String(act.id)).length} 人已報名</div>
               </div>
               <button onClick={() => { setEditingId(act.id); setView('registrations'); }} className="w-full py-3 bg-gray-50 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">管理報名名單 <ChevronRight size={18} /></button>
