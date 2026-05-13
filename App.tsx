@@ -894,7 +894,7 @@ const App: React.FC = () => {
               <Route path="/members" element={<MemberList members={members} />} />
               <Route path="/join" element={<MemberJoin />} />
               <Route path="/renew" element={<MemberRenewal />} />
-              <Route path="/activity/:id" element={<ActivityDetail type="general" activities={activities} onRegister={handleRegister} registrations={registrations} validateCoupon={validateCoupon} />} />
+              <Route path="/activity/:id" element={<ActivityDetail type="general" activities={activities} members={members} onRegister={handleRegister} registrations={registrations} validateCoupon={validateCoupon} />} />
               <Route path="/member-activity/:id" element={<ActivityDetail type="member" activities={memberActivities} members={members} onMemberRegister={handleMemberRegister} memberRegistrations={memberRegistrations} validateCoupon={validateCoupon} />} />
               <Route path="/pay-application/:id" element={<ApplicationPayment />} />
               <Route path="/pay-renewal/:id" element={<RenewalPayment />} />

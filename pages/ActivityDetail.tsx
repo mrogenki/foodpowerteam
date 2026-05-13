@@ -112,7 +112,10 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     ).length;
   }
 
-  const basePrice = activity.price;
+  // 會員價判定：當會員已選且活動有設定 member_price 時，自動套用
+  const hasMemberPrice = activity.member_price !== undefined && activity.member_price !== null;
+  const isUsingMemberPrice = !!formData.memberId && hasMemberPrice;
+  const basePrice = isUsingMemberPrice ? activity.member_price! : (activity.price || 0);
   const finalPrice = Math.max(0, basePrice - discountAmount);
 
   // 搜尋會員邏輯
@@ -255,7 +258,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
       };
 
       if (props.type === 'general' && props.onRegister) {
-        success = await props.onRegister(commonData as Registration, validCouponId);
+        // 公開活動但用會員價時，把 member_id 一起帶上方便後續報表辨識
+        const payload: Registration = isUsingMemberPrice && formData.memberId
+          ? { ...commonData, member_id: String(formData.memberId), member_name: formData.name }
+          : (commonData as Registration);
+        success = await props.onRegister(payload, validCouponId);
       } else if (props.type === 'member' && props.onMemberRegister) {
         const newMemberReg: MemberRegistration = {
           ...commonData,
@@ -360,7 +367,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 rounded-2xl border border-gray-100 mb-8">
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><Calendar size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">日期時間</p><p className="font-medium">{activity.date}</p><p className="text-sm text-gray-500 font-bold">{activity.time}</p></div></div>
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><MapPin size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">地點</p><p className="font-medium">{activity.location}</p></div></div>
-              <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><DollarSign size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">活動費用</p><p className="font-medium">NT$ {activity.price.toLocaleString()}</p></div></div>
+              <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><DollarSign size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">活動費用</p><p className="font-medium">NT$ {(activity.price ?? 0).toLocaleString()}</p>{hasMemberPrice && <p className="text-xs text-red-600 font-bold mt-0.5">會員價 NT$ {activity.member_price!.toLocaleString()}</p>}</div></div>
             </div>
 
             <div className="prose prose-red max-w-none mb-10 overflow-hidden">
@@ -408,6 +415,13 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                       <p className="text-red-800 font-bold flex items-center justify-center gap-2 mb-1"><Crown size={20} /> 會員專屬活動</p>
                       <p className="text-xs text-red-600 opacity-80">請使用您的會員資料進行報名</p>
                    </div>
+                ) : hasMemberPrice ? (
+                   <div className={`p-4 rounded-xl border mb-6 text-center ${isUsingMemberPrice ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                      <p className={`font-bold flex items-center justify-center gap-2 mb-1 ${isUsingMemberPrice ? 'text-red-800' : 'text-gray-800'}`}><Users size={20} /> 一般公開活動</p>
+                      <p className={`text-xs ${isUsingMemberPrice ? 'text-red-600 opacity-80' : 'text-gray-500'}`}>
+                        {isUsingMemberPrice ? '✓ 已套用會員價' : `會員享優惠價 NT$ ${activity.member_price!.toLocaleString()}，請於下方搜尋會員資料`}
+                      </p>
+                   </div>
                 ) : (
                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6 text-center">
                       <p className="text-gray-800 font-bold flex items-center justify-center gap-2 mb-1"><Users size={20} /> 一般公開活動</p>
@@ -415,11 +429,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                    </div>
                 )}
 
-                {/* 會員搜尋區塊 - 僅在會員活動顯示 */}
-                {props.type === 'member' && (
+                {/* 會員搜尋區塊 - 會員活動必填、公開活動有會員價時選填 */}
+                {(props.type === 'member' || (props.type === 'general' && hasMemberPrice)) && (
                   <div className="mb-6 relative">
                      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
-                        <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><UserCheck size={14} /> 請先查詢您的會員資料</p>
+                        <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><UserCheck size={14} /> {props.type === 'member' ? '請先查詢您的會員資料' : '會員可搜尋資料以套用會員價（選填）'}</p>
                         <div className="relative">
                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                            <input type="text" value={memberSearchTerm} onChange={(e) => { setMemberSearchTerm(e.target.value); setShowMemberResults(true); }} placeholder="輸入姓名或電話搜尋..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
