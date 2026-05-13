@@ -16,6 +16,7 @@ export const EMAIL_CONFIG = {
 export const INITIAL_ACTIVITIES: Activity[] = [
   {
     id: '1',
+    audience: 'public',
     type: ActivityType.GATHERING,
     title: '食在力量 - 十月講座論壇',
     date: '2025-10-18',
@@ -28,6 +29,7 @@ export const INITIAL_ACTIVITIES: Activity[] = [
   },
   {
     id: '2',
+    audience: 'public',
     type: ActivityType.DINNER,
     title: '年終感恩交流餐敘',
     date: '2025-12-20',

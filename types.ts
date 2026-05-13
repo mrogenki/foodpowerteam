@@ -26,41 +26,41 @@ export enum PaymentStatus {
   PROCESSED = 'processed', // 已處理 (人工確認)
 }
 
-// 一般公開活動
+export type ActivityAudience = 'public' | 'member_only' | 'club';
+
+// 統一活動型別 — Phase 3 後三表合一，以 audience 區分對象
 export interface Activity {
   id: string | number;
-  type: ActivityType;
+  audience: ActivityAudience;
   title: string;
   date: string;
-  time: string;
-  location: string;
-  price: number;
   picture: string;
   description: string;
   status?: 'active' | 'closed';
-}
-
-// 會員專屬活動 (結構相似但邏輯獨立)
-export interface MemberActivity extends Activity {
-  // 未來可擴充專屬欄位，目前結構相同
-}
-
-// 俱樂部活動 (用於首頁輪播)
-export interface ClubActivity {
-  id: string | number;
-  title: string;
-  date: string;
-  picture: string;
-  link?: string; // 點擊跳轉連結 (選填)
-  description?: string;
-  status?: 'active' | 'closed';
   created_at?: string;
+
+  // 報名類活動 (public / member_only) 必填，club 類可缺
+  type?: ActivityType;
+  time?: string;
+  location?: string;
+  price?: number;
+  member_price?: number;
+
+  // club 類專用
+  link?: string;
 }
 
-// 一般報名
+// Back-compat aliases — 舊 code 仍可 import MemberActivity / ClubActivity，型別等同 Activity
+export type MemberActivity = Activity;
+export type ClubActivity = Activity;
+
+// 統一報名 — 以 audience 區分；會員報名時 member_id / member_name / member_no 必填
 export interface Registration {
   id: string | number;
   activityId: string | number;
+  audience: ActivityAudience;
+
+  // 個人欄位（公開活動必填，會員活動則從 members 表 join 帶入）
   name: string;
   phone: string;
   email: string;
@@ -73,27 +73,11 @@ export interface Registration {
   check_in_status?: boolean;
   paid_amount?: number;
   coupon_code?: string;
-  
-  // 金流相關
-  payment_status?: PaymentStatus;
-  merchant_order_no?: string; // 商店訂單編號 (藍新: MerchantOrderNo)
-  payment_method?: string;    // 付款方式
-  paid_at?: string;           // 付款時間
 
-  created_at: string;
-}
-
-// 會員報名 (連結 member_id)
-export interface MemberRegistration {
-  id: string | number;
-  activityId: string | number; // 對應 member_activities 的 ID
-  memberId: string | number;   // 對應 members 的 ID
-  member_name: string;         // 冗餘儲存方便顯示
-  member_no: string;           // 冗餘儲存方便顯示
-  notes?: string;
-  check_in_status?: boolean;
-  paid_amount?: number;
-  coupon_code?: string;
+  // 會員報名專用
+  member_id?: string;
+  member_name?: string;
+  member_no?: string;
 
   // 金流相關
   payment_status?: PaymentStatus;
@@ -101,8 +85,19 @@ export interface MemberRegistration {
   payment_method?: string;
   paid_at?: string;
 
+  // 收據
+  invoice_no?: string;
+  invoice_status?: string;
+
   created_at: string;
 }
+
+// Back-compat alias
+export type MemberRegistration = Registration & {
+  memberId: string | number;
+  member_name: string;
+  member_no: string;
+};
 
 export interface AdminUser {
   id: string;
