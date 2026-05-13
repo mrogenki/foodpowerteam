@@ -1481,7 +1481,7 @@ const ActivityManager: React.FC<{
         <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold transition-colors shadow-lg shadow-red-200"><Plus size={20} /> 新增活動</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activities.map(act => (
+        {[...activities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(act => (
           <div key={act.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
             <div className="relative h-48">
               <img src={act.picture} alt={act.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
