@@ -192,7 +192,7 @@ serve(async (req) => {
             }
           };
 
-          // 6.1 Update 'registrations' (一般活動)
+          // 6.1 Update 'registrations' (統一活動表 — 含公開與會員專屬，以 audience 區分)
           console.log(`[Notify] Attempting to update registrations for ${merchantOrderNo}`);
           const { data: regData, error: regError } = await supabase
             .from('registrations')
@@ -204,18 +204,21 @@ serve(async (req) => {
           if (regError && regError.code !== 'PGRST116') {
             console.error(`[Notify] registrations update error:`, regError);
           }
-          
+
           if (regData) {
-            console.log(`[Notify] Success! Updated Registration: ${merchantOrderNo}`)
-            
-            // Fetch activity details separately to avoid PGRST200
+            const isMemberOnly = regData.audience === 'member_only';
+            console.log(`[Notify] Success! Updated Registration (${regData.audience}): ${merchantOrderNo}`)
+
+            // 從統一 activities 表取活動資訊
             let activityTitle = '活動報名確認';
             let activityDate = '';
             let activityTime = '';
             let activityLocation = '';
-            
-            if (regData.activityId || regData.activity_id) {
-              const actId = regData.activityId || regData.activity_id;
+            let recipientEmail = regData.email || '';
+            let recipientName = regData.name || regData.member_name || '';
+
+            const actId = regData.activityId || regData.activity_id;
+            if (actId) {
               const { data: actData } = await supabase.from('activities').select('*').eq('id', actId).single();
               if (actData) {
                 activityTitle = actData.title || activityTitle;
@@ -225,92 +228,41 @@ serve(async (req) => {
               }
             }
 
-            // Send Email & Telegram
+            // 會員活動：補抓會員 email（registrations.email 可能為空，要回頭 join members）
+            if (isMemberOnly && !recipientEmail) {
+              const memId = regData.member_id || regData.memberId;
+              if (memId) {
+                const { data: memberRec } = await supabase.from('members').select('email').eq('id', memId).single();
+                if (memberRec?.email) recipientEmail = memberRec.email;
+              }
+            }
+
             try {
-              console.log(`[Notify] Sending general activity email to ${regData.email} for activity ${activityTitle}`);
+              const label = isMemberOnly ? '會員專屬活動報名 (已付款)' : '一般活動報名 (已付款)';
+              const telegramBody = isMemberOnly
+                ? `活動：${activityTitle}\n會員：${recipientName}\n金額：NT$ ${regData.paid_amount?.toLocaleString()}`
+                : `活動：${activityTitle}\n姓名：${recipientName}\n電話：${regData.phone || ''}\n金額：NT$ ${regData.paid_amount?.toLocaleString()}`;
+
+              console.log(`[Notify] Sending ${isMemberOnly ? 'member' : 'general'} activity email to ${recipientEmail}`);
               await Promise.all([
                 sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
-                  to_name: regData.name,
-                  email: regData.email,
+                  to_name: recipientName,
+                  email: recipientEmail,
                   activity_title: activityTitle,
                   activity_date: activityDate,
                   activity_time: activityTime,
                   activity_location: activityLocation,
                   activity_price: regData.paid_amount || 0
                 }),
-                sendTelegram('一般活動報名 (已付款)', `活動：${activityTitle}\n姓名：${regData.name}\n電話：${regData.phone}\n人數：${regData.participantsCount || 1}人\n金額：NT$ ${regData.paid_amount?.toLocaleString()}`)
+                sendTelegram(label, telegramBody)
               ]);
-              console.log(`[Notify] Finished awaiting notifications for general activity`);
             } catch (emailErr) {
               console.error(`[Notify] Email process error:`, emailErr);
             }
           }
 
           if (!regData) {
-            // 6.2 If not found, Update 'member_registrations' (會員活動)
-            console.log(`[Notify] Attempting to update member_registrations for ${merchantOrderNo}`);
-            const { data: memData, error: memError } = await supabase
-              .from('member_registrations')
-              .update(updatePayload)
-              .eq('merchant_order_no', merchantOrderNo)
-              .select()
-              .single()
-
-            if (memError && memError.code !== 'PGRST116') {
-              console.error(`[Notify] member_registrations update error:`, memError);
-            }
-            
-            if (memData) {
-              console.log(`[Notify] Success! Updated Member Registration: ${merchantOrderNo}`)
-              
-              // Fetch activity and member details separately to avoid PGRST200
-              let activityTitle = '活動報名確認';
-              let activityDate = '';
-              let activityTime = '';
-              let activityLocation = '';
-              let memberEmail = '';
-
-              if (memData.activityId || memData.activity_id) {
-                const actId = memData.activityId || memData.activity_id;
-                const { data: actData } = await supabase.from('member_activities').select('*').eq('id', actId).single();
-                if (actData) {
-                  activityTitle = actData.title || activityTitle;
-                  activityDate = actData.date || activityDate;
-                  activityTime = actData.time || activityTime;
-                  activityLocation = actData.location || activityLocation;
-                }
-              }
-              if (memData.memberId || memData.member_id) {
-                const memId = memData.memberId || memData.member_id;
-                const { data: memberRec } = await supabase.from('members').select('email').eq('id', memId).single();
-                if (memberRec) {
-                  memberEmail = memberRec.email;
-                }
-              }
-
-              // Send Email & Telegram
-              try {
-                console.log(`[Notify] Sending member activity email to ${memberEmail} for activity ${activityTitle}`);
-                await Promise.all([
-                  sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
-                    to_name: memData.member_name,
-                    email: memberEmail || '',
-                    activity_title: activityTitle,
-                    activity_date: activityDate,
-                    activity_time: activityTime,
-                    activity_location: activityLocation,
-                    activity_price: memData.paid_amount || 0
-                  }),
-                  sendTelegram('會員專屬活動報名 (已付款)', `活動：${activityTitle}\n會員：${memData.member_name}\n人數：${memData.participantsCount || 1}人\n金額：NT$ ${memData.paid_amount?.toLocaleString()}`)
-                ]);
-                console.log(`[Notify] Finished awaiting notifications for member activity`);
-              } catch (emailErr) {
-                console.error(`[Notify] Email process error:`, emailErr);
-              }
-            }
-
-            if (!memData) {
-              // 6.3 If not found, Update 'member_applications' (新會員入會)
+              // 6.2 If not found, Update 'member_applications' (新會員入會)
               console.log(`[Notify] Attempting to update member_applications for ${merchantOrderNo}`);
               const { data: appData, error: appError } = await supabase
                 .from('member_applications')
@@ -418,7 +370,6 @@ serve(async (req) => {
                     console.warn(`[Notify] Warning: Order not found in any table: ${merchantOrderNo}`)
                   }
                 }
-            }
           }
         } else {
             console.log(`[Notify] Payment Status is not SUCCESS: ${paymentData.Status}`)

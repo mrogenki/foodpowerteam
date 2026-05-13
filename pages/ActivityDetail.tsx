@@ -237,34 +237,32 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
       const commonData = {
         id: Math.random().toString(36).substr(2, 9),
         activityId: activity.id,
+        audience: (props.type === 'member' ? 'member_only' : 'public') as 'public' | 'member_only',
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        company: formData.company,
+        company_title: formData.company_title,
+        tax_id: formData.tax_id,
+        title: formData.title,
+        referrer: formData.referrer,
+        notes: formData.notes,
         paid_amount: finalPrice,
         coupon_code: validCouponId ? couponCode : undefined,
         created_at: new Date().toISOString(),
         merchant_order_no: merchantOrderNo,
-        payment_status: PaymentStatus.PENDING // 預設為待付款
+        payment_status: PaymentStatus.PENDING
       };
 
       if (props.type === 'general' && props.onRegister) {
-        const newReg: Registration = {
-          ...commonData,
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          company: formData.company,
-          company_title: formData.company_title,
-          tax_id: formData.tax_id,
-          title: formData.title,
-          referrer: formData.referrer,
-          notes: formData.notes,
-        };
-        success = await props.onRegister(newReg, validCouponId);
+        success = await props.onRegister(commonData as Registration, validCouponId);
       } else if (props.type === 'member' && props.onMemberRegister) {
         const newMemberReg: MemberRegistration = {
           ...commonData,
+          member_id: String(formData.memberId),
           memberId: formData.memberId,
           member_name: formData.name,
-          member_no: '', 
-          notes: formData.notes,
+          member_no: '',
         };
         success = await props.onMemberRegister(newMemberReg, validCouponId);
       }

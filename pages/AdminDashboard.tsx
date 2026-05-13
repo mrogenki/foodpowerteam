@@ -169,13 +169,11 @@ const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: n
         <a href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-800 text-gray-400 hover:text-white"><ExternalLink size={20} /><span>預覽前台網站</span></a>
         
         <div className="pt-4 pb-2 px-3 text-xs font-bold text-gray-600 uppercase">活動報到 (工作人員)</div>
-        <Link to="/admin/check-in" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/check-in') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><CheckSquare size={20} /><span>一般活動報到</span></Link>
-        <Link to="/admin/member-check-in" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/member-check-in') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Crown size={20} /><span>會員活動報到</span></Link>
-        
+        <Link to="/admin/check-in" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/check-in') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><CheckSquare size={20} /><span>活動報到</span></Link>
+
         {isManager && (<>
           <div className="pt-4 pb-2 px-3 text-xs font-bold text-gray-600 uppercase">活動管理</div>
-          <Link to="/admin/activities" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/activities') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Calendar size={20} /><span>一般活動管理</span></Link>
-          <Link to="/admin/member-activities" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/member-activities') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Calendar size={20} /><span>會員活動管理</span></Link>
+          <Link to="/admin/activities" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/activities') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Calendar size={20} /><span>活動管理</span></Link>
           <Link to="/admin/club" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/club') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Crown size={20} /><span>俱樂部管理</span></Link>
           <Link to="/admin/milestones" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/milestones') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><History size={20} /><span>大事記管理</span></Link>
 
@@ -930,7 +928,7 @@ const MemberApplicationManager: React.FC<{
 };
 
 const ActivityManager: React.FC<{
-  type: 'general' | 'member';
+  type: 'general' | 'member' | 'unified';
   activities: (Activity | MemberActivity)[];
   registrations: (Registration | MemberRegistration)[];
   onAdd: (act: any) => void;
@@ -942,6 +940,12 @@ const ActivityManager: React.FC<{
   onUploadImage: (file: File) => Promise<string>;
   members?: Member[];
 }> = ({ type, activities, registrations, onAdd, onUpdate, onDelete, onUpdateReg, onDeleteReg, onAddRegs, onUploadImage, members }) => {
+  // unified 模式：當活動的 audience 為 member_only 時，視為「會員活動」行為
+  const isMemberMode = (act?: any) => {
+    if (type === 'member') return true;
+    if (type === 'general') return false;
+    return (act?.audience || 'public') === 'member_only';
+  };
   const [view, setView] = useState<'list' | 'edit' | 'registrations'>('list');
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [formData, setFormData] = useState<any>({});
@@ -985,8 +989,13 @@ const ActivityManager: React.FC<{
     return name.toLowerCase().includes(term) || (r.phone && r.phone.includes(term)) || (r.email && r.email.toLowerCase().includes(term)) || (r.merchant_order_no && r.merchant_order_no.includes(term));
   });
 
-  const handleEdit = (act: any) => { setEditingId(act.id); setFormData({ ...act }); setView('edit'); };
-  const handleCreate = () => { setEditingId(null); setFormData({ type: type === 'general' ? ActivityType.GATHERING : ActivityType.GATHERING, title: '', date: '', time: '', location: '', price: 0, picture: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1', description: '', status: 'active' }); setView('edit'); };
+  const handleEdit = (act: any) => { setEditingId(act.id); setFormData({ ...act, audience: act.audience || (type === 'member' ? 'member_only' : 'public') }); setView('edit'); };
+  const handleCreate = () => {
+    const defaultAudience = type === 'member' ? 'member_only' : 'public';
+    setEditingId(null);
+    setFormData({ audience: defaultAudience, type: ActivityType.GATHERING, title: '', date: '', time: '', location: '', price: 0, picture: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1', description: '', status: 'active' });
+    setView('edit');
+  };
   const handleSave = async (e: React.FormEvent) => { e.preventDefault(); if (editingId) onUpdate(formData); else onAdd(formData); setView('list'); };
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const url = await onUploadImage(e.target.files[0]); if (url) setFormData({ ...formData, picture: url }); } };
 
@@ -1116,7 +1125,7 @@ const ActivityManager: React.FC<{
               created_at: new Date().toISOString()
             };
 
-            if (type === 'member') {
+            if (isMemberMode(currentActivity)) {
               const memberName = row['姓名'] || row['Name'] || '';
               const memberPhone = String(row['手機號碼'] || row['電話'] || row['Phone'] || '');
               const member = members?.find(m => m.name === memberName || (memberPhone && m.phone === memberPhone));
@@ -1312,7 +1321,7 @@ const ActivityManager: React.FC<{
                     />
                   </th>
                   <th className="p-4">姓名/資訊</th>
-                  {type !== 'member' && <th className="p-4">引薦人</th>}
+                  {!isMemberMode(currentActivity) && <th className="p-4">引薦人</th>}
                   <th className="p-4">備註</th>
                   <th className="p-4">報到狀態</th>
                   <th className="p-4">付款狀態 (點擊切換)</th>
@@ -1354,7 +1363,7 @@ const ActivityManager: React.FC<{
                       {(company || title) && <div className="text-xs text-gray-500 mt-0.5">{company}{company && title ? ' / ' : ''}{title}</div>}
                       {reg.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{reg.merchant_order_no}</div>}
                     </td>
-                    {type !== 'member' && <td className="p-4 text-xs text-gray-500">{reg.referrer || '-'}</td>}
+                    {!isMemberMode(currentActivity) && <td className="p-4 text-xs text-gray-500">{reg.referrer || '-'}</td>}
                     <td className="p-4 min-w-[150px]">
                       <NotesInput value={reg.notes} onSave={(val) => onUpdateReg({...reg, notes: val})} />
                     </td>
@@ -1424,6 +1433,21 @@ const ActivityManager: React.FC<{
          <div className="flex items-center gap-4"><button onClick={() => setView('list')} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200"><ChevronRight className="rotate-180" size={20} /></button><h2 className="text-2xl font-bold">{editingId ? '編輯活動' : '新增活動'}</h2></div>
          <form onSubmit={handleSave} className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {type === 'unified' && (
+                 <div className="md:col-span-2">
+                   <label className="block text-sm font-bold text-gray-700 mb-2">活動對象</label>
+                   <div className="flex gap-2">
+                     <label className={`flex-1 p-3 border rounded-lg cursor-pointer text-center font-bold transition-all ${(formData.audience || 'public') === 'public' ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-200 hover:bg-gray-50'}`}>
+                       <input type="radio" name="audience" value="public" checked={(formData.audience || 'public') === 'public'} onChange={() => setFormData({ ...formData, audience: 'public' })} className="hidden" />
+                       公開活動
+                     </label>
+                     <label className={`flex-1 p-3 border rounded-lg cursor-pointer text-center font-bold transition-all ${formData.audience === 'member_only' ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-200 hover:bg-gray-50'}`}>
+                       <input type="radio" name="audience" value="member_only" checked={formData.audience === 'member_only'} onChange={() => setFormData({ ...formData, audience: 'member_only' })} className="hidden" />
+                       會員專屬
+                     </label>
+                   </div>
+                 </div>
+               )}
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動標題</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動類型</label><select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">{Object.values(ActivityType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
@@ -1453,7 +1477,7 @@ const ActivityManager: React.FC<{
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">{type === 'general' ? '一般活動管理' : '會員活動管理'}</h2>
+        <h2 className="text-2xl font-bold">{type === 'general' ? '一般活動管理' : type === 'member' ? '會員活動管理' : '活動管理'}</h2>
         <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold transition-colors shadow-lg shadow-red-200"><Plus size={20} /> 新增活動</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1465,7 +1489,12 @@ const ActivityManager: React.FC<{
                 <button onClick={() => handleEdit(act)} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-colors text-gray-600"><Edit2 size={18} /></button>
                 <button onClick={() => onDelete(act.id)} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-colors text-red-500"><Trash2 size={18} /></button>
               </div>
-              <div className="absolute bottom-4 left-4"><span className="px-3 py-1 bg-white/90 backdrop-blur rounded-full text-xs font-bold text-gray-700 shadow-sm">{act.type}</span></div>
+              <div className="absolute bottom-4 left-4 flex gap-2">
+                <span className="px-3 py-1 bg-white/90 backdrop-blur rounded-full text-xs font-bold text-gray-700 shadow-sm">{act.type}</span>
+                {(act as any).audience === 'member_only' && (
+                  <span className="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-1"><Crown size={12} /> 會員專屬</span>
+                )}
+              </div>
             </div>
             <div className="p-6">
               <h3 className="text-lg font-bold mb-2 line-clamp-1">{act.title}</h3>
@@ -1501,7 +1530,7 @@ const ActivityManager: React.FC<{
 };
 
 const ActivityCheckInManager: React.FC<{
-  type: 'general' | 'member';
+  type: 'general' | 'member' | 'unified';
   activities: (Activity | MemberActivity)[];
   registrations: (Registration | MemberRegistration)[];
   onUpdateReg: (reg: any) => void;
@@ -1541,8 +1570,9 @@ const ActivityCheckInManager: React.FC<{
     if (!confirm(`確定要重新發送付款連結給 ${reg.name || reg.member_name}？`)) return;
     
     let email = reg.email;
-    if (type === 'member' && !email && members) {
-       const member = members.find(m => String(m.id) === String(reg.memberId));
+    const isMemberReg = reg.audience === 'member_only' || type === 'member';
+    if (isMemberReg && !email && members) {
+       const member = members.find(m => String(m.id) === String(reg.memberId || reg.member_id));
        if (member) email = member.email;
     }
 
@@ -1713,7 +1743,7 @@ const ActivityCheckInManager: React.FC<{
     const sortedActivities = [...activities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{type === 'member' ? '會員' : '一般'}活動報到</h1>
+        <h1 className="text-2xl font-bold">{type === 'general' ? '一般活動' : type === 'member' ? '會員活動' : '活動'}報到</h1>
         <p className="text-gray-500">請選擇要進行報到的活動：</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedActivities.map(act => {
@@ -1808,7 +1838,7 @@ const ActivityCheckInManager: React.FC<{
                    />
                  </th>
                  <th className="p-4">參加者</th>
-                 <th className="p-4">備註{type !== 'member' && '/引薦人'}</th>
+                 <th className="p-4">備註{(type === 'general' || (type === 'unified' && (currentActivity as any)?.audience !== 'member_only')) && '/引薦人'}</th>
                  <th className="p-4">報到操作 (點擊切換)</th>
                  <th className="p-4">付款狀態</th>
                  <th className="p-4">付款方式</th>
@@ -1844,7 +1874,7 @@ const ActivityCheckInManager: React.FC<{
                      </td>
                      <td className="p-4">
                        <div className="text-xs text-gray-600 max-w-[200px] space-y-2">
-                         {type !== 'member' && reg.referrer && <div><span className="font-bold text-gray-400">引薦:</span> {reg.referrer}</div>}
+                         {reg.audience !== 'member_only' && reg.referrer && <div><span className="font-bold text-gray-400">引薦:</span> {reg.referrer}</div>}
                          <div><span className="font-bold text-gray-400">備註:</span> <NotesInput value={reg.notes} onSave={(val) => onUpdateReg({...reg, notes: val})} /></div>
                        </div>
                      </td>
@@ -2919,11 +2949,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <Routes>
           <Route path="/" element={<DashboardHome {...props} />} />
           
-          <Route path="/check-in" element={<ActivityCheckInManager type="general" activities={props.activities} registrations={props.registrations} onUpdateReg={props.onUpdateRegistration} members={props.members} />} />
-          <Route path="/member-check-in" element={<ActivityCheckInManager type="member" activities={props.memberActivities} registrations={props.memberRegistrations} onUpdateReg={props.onUpdateMemberRegistration} members={props.members} />} />
-          
-          <Route path="/activities" element={<ActivityManager type="general" activities={props.activities} registrations={props.registrations} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={props.onUpdateRegistration} onDeleteReg={props.onDeleteRegistration} onAddRegs={props.onAddRegistrations} onUploadImage={props.onUploadImage} />} />
-          <Route path="/member-activities" element={<ActivityManager type="member" activities={props.memberActivities} registrations={props.memberRegistrations} onAdd={props.onAddMemberActivity} onUpdate={props.onUpdateMemberActivity} onDelete={props.onDeleteMemberActivity} onUpdateReg={props.onUpdateMemberRegistration} onDeleteReg={props.onDeleteMemberRegistration} onAddRegs={props.onAddMemberRegistrations} onUploadImage={props.onUploadImage} members={props.members} />} />
+          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} />} />
+          {/* 向下相容：舊連結 /member-check-in 重導至統一入口 */}
+          <Route path="/member-check-in" element={<Navigate to="/admin/check-in" replace />} />
+
+          <Route path="/activities" element={<ActivityManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} onDeleteReg={(id: any) => props.onDeleteRegistration(id)} onAddRegs={(regs: any[]) => regs.every(r => r.audience === 'member_only') ? props.onAddMemberRegistrations?.(regs) : props.onAddRegistrations?.(regs)} onUploadImage={props.onUploadImage} members={props.members} />} />
+          {/* 向下相容：舊連結 /member-activities 重導 */}
+          <Route path="/member-activities" element={<Navigate to="/admin/activities" replace />} />
           
           <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} />} />
           <Route path="/club" element={<ClubManager activities={props.clubActivities} onUpdate={props.onUpdateClubActivity} onAdd={props.onAddClubActivity} onDelete={props.onDeleteClubActivity} onUploadImage={props.onUploadImage} />} />

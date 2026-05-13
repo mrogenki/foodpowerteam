@@ -272,62 +272,65 @@ const App: React.FC = () => {
     try {
       if (!supabase) throw new Error("Supabase client not initialized");
 
-      // 分離公開與管理員資料
+      // 統一活動表（含 audience='public' / 'member_only' / 'club'）
       const publicQueries = [
-        supabase.from('activities').select('id, type, title, date, time, location, price, picture, status, description').order('date', { ascending: true }),
-        supabase.from('member_activities').select('id, type, title, date, time, location, price, picture, status, description').order('date', { ascending: true }),
+        supabase.from('activities').select('*').order('date', { ascending: true }),
       ];
 
       // 只有在確定有 currentUser 時才加入管理員查詢
       const adminQueries = currentUser ? [
         supabase.from('registrations').select('*').order('created_at', { ascending: false }),
-        supabase.from('member_registrations').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*'),
         supabase.from('coupons').select('*').order('created_at', { ascending: false }),
         supabase.from('member_applications').select('*').order('created_at', { ascending: false }),
-        supabase.from('club_activities').select('*').order('date', { ascending: true }),
         supabase.from('members').select('*'),
         supabase.from('financial_records').select('*').order('date', { ascending: false }),
         supabase.from('milestones').select('*').order('date', { ascending: false }),
       ] : [];
 
       const results = await Promise.all([...publicQueries, ...adminQueries]);
-      
-      const actData = results[0].data;
-      const memActData = results[1].data;
 
-      // 處理公開資料
-      if (actData && actData.length > 0) {
-        setActivities(actData.map((a: any) => ({ ...a, status: a.status || 'active' })));
+      const allActData = results[0].data;
+
+      // 將統一表依 audience 切回三個 state slice，維持下游元件相容
+      if (allActData && allActData.length > 0) {
+        const normalized = allActData.map((a: any) => ({ ...a, status: a.status || 'active' }));
+        setActivities(normalized.filter((a: any) => a.audience === 'public'));
+        setMemberActivities(normalized.filter((a: any) => a.audience === 'member_only'));
+        setClubActivities(normalized.filter((a: any) => a.audience === 'club'));
       } else if (currentUser?.role === UserRole.SUPER_ADMIN) {
          const { data: hasAny } = await supabase.from('activities').select('id').limit(1);
          if (!hasAny || hasAny.length === 0) {
-            await supabase.from('activities').insert(INITIAL_ACTIVITIES);
+            const seed = INITIAL_ACTIVITIES.map(a => ({ ...a, audience: 'public' as const }));
+            await supabase.from('activities').insert(seed);
             const { data: reload } = await supabase.from('activities').select('*');
-            if (reload) setActivities(reload);
+            if (reload) {
+              const normalized = reload.map((a: any) => ({ ...a, status: a.status || 'active' }));
+              setActivities(normalized.filter((a: any) => a.audience === 'public'));
+              setMemberActivities(normalized.filter((a: any) => a.audience === 'member_only'));
+              setClubActivities(normalized.filter((a: any) => a.audience === 'club'));
+            }
          }
       }
 
-      if (memActData) setMemberActivities(memActData.map((a: any) => ({ ...a, status: a.status || 'active' })));
-      
-      // 處理管理員資料 (索引從 2 開始)
-      if (currentUser && results.length > 2) {
-        const regData = results[2]?.data;
-        const memRegData = results[3]?.data;
-        const userData = results[4]?.data;
-        const couponData = results[5]?.data;
-        const applicationData = results[6]?.data;
-        const clubData = results[7]?.data;
-        const memberData = results[8]?.data;
-        const financialData = results[9]?.data;
-        const milestoneData = results[10]?.data;
+      // 處理管理員資料 (索引從 1 開始)
+      if (currentUser && results.length > 1) {
+        const allRegData = results[1]?.data;
+        const userData = results[2]?.data;
+        const couponData = results[3]?.data;
+        const applicationData = results[4]?.data;
+        const memberData = results[5]?.data;
+        const financialData = results[6]?.data;
+        const milestoneData = results[7]?.data;
 
-        if (regData) setRegistrations(regData);
-        if (memRegData) setMemberRegistrations(memRegData);
+        // 統一報名表，依 audience 切回兩組
+        if (allRegData) {
+          setRegistrations(allRegData.filter((r: any) => r.audience !== 'member_only'));
+          setMemberRegistrations(allRegData.filter((r: any) => r.audience === 'member_only'));
+        }
         if (userData) setUsers(userData);
         if (couponData) setCoupons(couponData as Coupon[]);
         if (applicationData) setMemberApplications(applicationData as MemberApplication[]);
-        if (clubData) setClubActivities(clubData as ClubActivity[]);
         if (financialData) setFinancialRecords(financialData as FinancialRecord[]);
         if (milestoneData) setMilestones(milestoneData);
         
@@ -386,8 +389,8 @@ const App: React.FC = () => {
     const runMigrationAndFetch = async () => {
       if (currentUser && currentUser.role === UserRole.SUPER_ADMIN && supabase) {
         let hasMigrationError = false;
-        // 1. 轉移 picture 欄位
-        const tables = ['activities', 'member_activities', 'club_activities', 'milestones'];
+        // 1. 轉移 picture 欄位 (Phase 3 後 member_activities / club_activities 已合併至 activities)
+        const tables = ['activities', 'milestones'];
         for (const table of tables) {
           try {
             const { data, error } = await supabase.from(table).select('id').like('picture', 'data:image/%');
@@ -530,156 +533,123 @@ const App: React.FC = () => {
     return { valid: true, discount: data.discount_amount, message: '折扣碼適用', couponId: data.id };
   };
 
-  const fetchActivities = async () => {
+  // Phase 3：統一 fetch — 一次讀 activities 全表，依 audience 切回三個 slice
+  const refreshActivities = async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('activities').select('id, type, title, date, time, location, price, picture, status, description').order('date', { ascending: true });
-    if (data) setActivities(data.map((a: any) => ({ ...a, status: a.status || 'active' })));
+    const { data } = await supabase.from('activities').select('*').order('date', { ascending: true });
+    if (data) {
+      const normalized = data.map((a: any) => ({ ...a, status: a.status || 'active' }));
+      setActivities(normalized.filter((a: any) => a.audience === 'public'));
+      setMemberActivities(normalized.filter((a: any) => a.audience === 'member_only'));
+      setClubActivities(normalized.filter((a: any) => a.audience === 'club'));
+    }
   };
 
-  const fetchMemberActivities = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('member_activities').select('id, type, title, date, time, location, price, picture, status, description').order('date', { ascending: true });
-    if (data) setMemberActivities(data.map((a: any) => ({ ...a, status: a.status || 'active' })));
-  };
-
-  const fetchClubActivities = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('club_activities').select('*').order('date', { ascending: true });
-    if (data) setClubActivities(data as ClubActivity[]);
-  };
-
-  const fetchRegistrations = async () => {
+  const refreshRegistrations = async () => {
     if (!supabase || !currentUser) return;
     const { data } = await supabase.from('registrations').select('*').order('created_at', { ascending: false });
-    if (data) setRegistrations(data);
+    if (data) {
+      setRegistrations(data.filter((r: any) => r.audience !== 'member_only'));
+      setMemberRegistrations(data.filter((r: any) => r.audience === 'member_only'));
+    }
   };
 
-  const fetchMemberRegistrations = async () => {
-    if (!supabase || !currentUser) return;
-    const { data } = await supabase.from('member_registrations').select('*').order('created_at', { ascending: false });
-    if (data) setMemberRegistrations(data);
+  // 活動 CRUD — 全部走統一的 activities 表，audience 在傳入物件中決定
+  const writeActivity = async (act: Activity, mode: 'insert' | 'update') => {
+    if (!supabase) return { error: null as any };
+    if (mode === 'insert') {
+      return supabase.from('activities').insert([act]);
+    }
+    return supabase.from('activities').update(act).eq('id', act.id);
   };
 
-  // CRUD Functions ... (保持與原邏輯相同，Supabase Auth 會自動處理 RLS)
   const handleUpdateActivity = async (updated: Activity) => {
-    setActivities(prev => prev.map(a => a.id === updated.id ? updated : a));
-    if (!supabase) return;
-    const { error } = await supabase.from('activities').update(updated).eq('id', updated.id);
-    if (error) { console.error(error); fetchActivities(); }
+    const withAudience = { ...updated, audience: updated.audience || 'public' };
+    if (withAudience.audience === 'public') setActivities(prev => prev.map(a => a.id === withAudience.id ? withAudience : a));
+    else if (withAudience.audience === 'member_only') setMemberActivities(prev => prev.map(a => a.id === withAudience.id ? withAudience : a));
+    else setClubActivities(prev => prev.map(a => a.id === withAudience.id ? withAudience : a));
+    const { error } = await writeActivity(withAudience, 'update');
+    if (error) { console.error(error); refreshActivities(); }
   };
+
   const handleAddActivity = async (newAct: Activity) => {
-    const activityToInsert = { ...newAct, id: newAct.id || crypto.randomUUID() };
-    setActivities(prev => [...prev, activityToInsert].sort((a, b) => a.date.localeCompare(b.date)));
-    if (!supabase) return;
-    const { error } = await supabase.from('activities').insert([activityToInsert]);
-    if (error) { alert('新增活動失敗: ' + error.message); fetchActivities(); }
+    const withAudience: Activity = { ...newAct, audience: newAct.audience || 'public', id: newAct.id || crypto.randomUUID() };
+    if (withAudience.audience === 'public') setActivities(prev => [...prev, withAudience].sort((a, b) => a.date.localeCompare(b.date)));
+    else if (withAudience.audience === 'member_only') setMemberActivities(prev => [...prev, withAudience].sort((a, b) => a.date.localeCompare(b.date)));
+    else setClubActivities(prev => [...prev, withAudience].sort((a, b) => a.date.localeCompare(b.date)));
+    const { error } = await writeActivity(withAudience, 'insert');
+    if (error) { alert('新增活動失敗: ' + error.message); refreshActivities(); }
   };
+
   const handleDeleteActivity = async (id: string | number) => {
     setActivities(prev => prev.filter(a => a.id !== id));
-    if (!supabase) return;
-    await supabase.from('registrations').delete().eq('activityId', id);
-    const { error } = await supabase.from('activities').delete().eq('id', id);
-    if (error) fetchActivities();
-  };
-
-  const handleUpdateMemberActivity = async (updated: MemberActivity) => {
-    setMemberActivities(prev => prev.map(a => a.id === updated.id ? updated : a));
-    if (!supabase) return;
-    const { error } = await supabase.from('member_activities').update(updated).eq('id', updated.id);
-    if (error) fetchMemberActivities();
-  };
-  const handleAddMemberActivity = async (newAct: MemberActivity) => {
-    const activityToInsert = { ...newAct, id: newAct.id || crypto.randomUUID() };
-    setMemberActivities(prev => [...prev, activityToInsert].sort((a, b) => a.date.localeCompare(b.date)));
-    if (!supabase) return;
-    const { error } = await supabase.from('member_activities').insert([activityToInsert]);
-    if (error) { alert('新增會員活動失敗: ' + error.message); fetchMemberActivities(); }
-  };
-  const handleDeleteMemberActivity = async (id: string | number) => {
     setMemberActivities(prev => prev.filter(a => a.id !== id));
-    if (!supabase) return;
-    await supabase.from('member_registrations').delete().eq('activityId', id);
-    const { error } = await supabase.from('member_activities').delete().eq('id', id);
-    if (error) fetchMemberActivities();
-  };
-
-  const handleUpdateClubActivity = async (updated: ClubActivity) => {
-    setClubActivities(prev => prev.map(a => a.id === updated.id ? updated : a));
-    if (!supabase) return;
-    const { error } = await supabase.from('club_activities').update(updated).eq('id', updated.id);
-    if (error) fetchClubActivities();
-  };
-  const handleAddClubActivity = async (newAct: ClubActivity) => {
-    const activityToInsert = { ...newAct, id: newAct.id || crypto.randomUUID() };
-    setClubActivities(prev => [...prev, activityToInsert].sort((a, b) => a.date.localeCompare(b.date)));
-    if (!supabase) return;
-    const { error } = await supabase.from('club_activities').insert([activityToInsert]);
-    if (error) { alert('新增俱樂部活動失敗: ' + error.message); fetchClubActivities(); }
-  };
-  const handleDeleteClubActivity = async (id: string | number) => {
     setClubActivities(prev => prev.filter(a => a.id !== id));
     if (!supabase) return;
-    const { error } = await supabase.from('club_activities').delete().eq('id', id);
-    if (error) fetchClubActivities();
+    // Cascade：先刪該活動所有報名
+    await supabase.from('registrations').delete().eq('activityId', id);
+    const { error } = await supabase.from('activities').delete().eq('id', id);
+    if (error) refreshActivities();
   };
 
+  // 會員/俱樂部活動 handler — 內部標好 audience 後走 handleAddActivity / handleUpdateActivity
+  const handleAddMemberActivity = (newAct: Activity) => handleAddActivity({ ...newAct, audience: 'member_only' });
+  const handleUpdateMemberActivity = (updated: Activity) => handleUpdateActivity({ ...updated, audience: 'member_only' });
+  const handleDeleteMemberActivity = (id: string | number) => handleDeleteActivity(id);
+  const handleAddClubActivity = (newAct: Activity) => handleAddActivity({ ...newAct, audience: 'club' });
+  const handleUpdateClubActivity = (updated: Activity) => handleUpdateActivity({ ...updated, audience: 'club' });
+  const handleDeleteClubActivity = (id: string | number) => handleDeleteActivity(id);
+
+  // 報名 CRUD — 統一 registrations 表，audience 區分公開／會員專屬
   const handleRegister = async (newReg: Registration, couponId?: string): Promise<boolean> => {
     if (!supabase) return false;
-    const { error } = await supabase.from('registrations').insert([newReg]);
+    const payload = { ...newReg, audience: newReg.audience || 'public' };
+    const { error } = await supabase.from('registrations').insert([payload]);
     if (error) { alert('報名失敗：' + error.message); return false; }
     if (couponId) await supabase.from('coupons').update({ is_used: true, used_at: new Date().toISOString() }).eq('id', couponId);
-    fetchRegistrations(); return true;
+    refreshRegistrations();
+    return true;
   };
 
-  const handleMemberRegister = async (newReg: MemberRegistration, couponId?: string): Promise<boolean> => {
-    if (!supabase) return false;
-    const { error } = await supabase.from('member_registrations').insert([newReg]);
-    if (error) { alert('會員報名失敗：' + error.message); return false; }
-    if (couponId) await supabase.from('coupons').update({ is_used: true, used_at: new Date().toISOString() }).eq('id', couponId);
-    fetchMemberRegistrations(); return true;
+  const handleMemberRegister = async (newReg: Registration, couponId?: string): Promise<boolean> => {
+    return handleRegister({ ...newReg, audience: 'member_only' }, couponId);
   };
 
   const handleUpdateRegistration = async (updated: Registration) => {
-    setRegistrations(prev => prev.map(r => r.id === updated.id ? updated : r));
+    if (updated.audience === 'member_only') {
+      setMemberRegistrations(prev => prev.map(r => r.id === updated.id ? updated : r));
+    } else {
+      setRegistrations(prev => prev.map(r => r.id === updated.id ? updated : r));
+    }
     if (!supabase) return;
     const { error } = await supabase.from('registrations').update(updated).eq('id', updated.id);
-    if (error) { console.error(error); fetchRegistrations(); alert('更新失敗'); }
+    if (error) { console.error(error); refreshRegistrations(); alert('更新失敗'); }
   };
+
   const handleDeleteRegistration = async (id: string | number) => {
     setRegistrations(prev => prev.filter(r => r.id !== id));
+    setMemberRegistrations(prev => prev.filter(r => r.id !== id));
     if (!supabase) return;
     const { error } = await supabase.from('registrations').delete().eq('id', id);
     if (error) { console.error(error); fetchData(); }
   };
 
-  const handleUpdateMemberRegistration = async (updated: MemberRegistration) => {
-    setMemberRegistrations(prev => prev.map(r => r.id === updated.id ? updated : r));
-    if (!supabase) return;
-    const { error } = await supabase.from('member_registrations').update(updated).eq('id', updated.id);
-    if (error) { console.error(error); fetchData(); alert('更新失敗'); }
-  };
+  const handleUpdateMemberRegistration = (updated: Registration) =>
+    handleUpdateRegistration({ ...updated, audience: 'member_only' });
+  const handleDeleteMemberRegistration = (id: string | number) => handleDeleteRegistration(id);
 
   const handleAddRegistrations = async (newRegs: Registration[]) => {
     if (!supabase) return;
     setLoading(true);
-    const { error } = await supabase.from('registrations').insert(newRegs);
+    const payload = newRegs.map(r => ({ ...r, audience: r.audience || 'public' }));
+    const { error } = await supabase.from('registrations').insert(payload);
     if (!error) { alert(`成功匯入 ${newRegs.length} 筆報名資料`); await fetchData(); } else alert('匯入失敗：' + error.message);
     setLoading(false);
   };
 
-  const handleAddMemberRegistrations = async (newRegs: MemberRegistration[]) => {
-    if (!supabase) return;
-    setLoading(true);
-    const { error } = await supabase.from('member_registrations').insert(newRegs);
-    if (!error) { alert(`成功匯入 ${newRegs.length} 筆報名資料`); await fetchData(); } else alert('匯入失敗：' + error.message);
-    setLoading(false);
-  };
-
-  const handleDeleteMemberRegistration = async (id: string | number) => {
-    setMemberRegistrations(prev => prev.filter(r => r.id !== id));
-    if (!supabase) return;
-    const { error } = await supabase.from('member_registrations').delete().eq('id', id);
-    if (error) { console.error(error); fetchData(); }
+  const handleAddMemberRegistrations = async (newRegs: Registration[]) => {
+    const tagged = newRegs.map(r => ({ ...r, audience: 'member_only' as const }));
+    return handleAddRegistrations(tagged);
   };
 
   const fetchMilestones = async () => {
