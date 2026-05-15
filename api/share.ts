@@ -6,20 +6,27 @@ type VercelHandler = (req: any, res: any) => Promise<void>;
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+const NON_TEXT_BLOCK_TYPES = new Set(['image', 'video', 'embed', 'attachment', 'file', 'divider']);
+
 const extractPlainText = (raw: string | null | undefined): string => {
   if (!raw) return '';
-  // 嘗試解析 BlockEditor 格式 (Editor.js)
+  let blocks: any[] | null = null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed?.blocks && Array.isArray(parsed.blocks)) {
-      return parsed.blocks
-        .map((b: any) => b?.data?.text || b?.data?.caption || '')
-        .join(' ')
-        .replace(/<[^>]+>/g, '')
-        .trim();
-    }
-  } catch {}
-  // 一般 string 或 HTML：剝掉標籤
+    if (Array.isArray(parsed)) blocks = parsed;
+    else if (parsed?.blocks && Array.isArray(parsed.blocks)) blocks = parsed.blocks;
+  } catch {
+    // raw 不是 JSON，留待 fallback 處理
+  }
+  if (blocks) {
+    return blocks
+      .filter((b: any) => !NON_TEXT_BLOCK_TYPES.has(String(b?.type || '').toLowerCase()))
+      .map((b: any) => b?.content || b?.data?.text || b?.data?.caption || b?.text || '')
+      .join(' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   return String(raw).replace(/<[^>]+>/g, '').trim();
 };
 
