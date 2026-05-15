@@ -150,7 +150,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   };
 
   const handleShare = async () => {
-    const shareUrl = window.location.href;
+    // 使用 /share/:id 而非 hash URL，讓 LINE/FB 等爬蟲能拿到正確的 og:image
+    const shareUrl = `${window.location.origin}/share/${activity.id}`;
     // 修正：針對手機原生分享，移除 URL 避免重複
     const shareTextBase = `【食在力量活動推薦】\n活動：${activity.title}\n日期：${activity.date}\n時間：${activity.time}\n地點：${activity.location}\n\n立即點擊連結報名：`;
     
