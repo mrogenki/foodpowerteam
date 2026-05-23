@@ -213,15 +213,15 @@ const Hero: React.FC = () => (
   </section>
 );
 
-// ====== Mascot 角色資料 ======
+// ====== Mascot 角色資料（探險隊版） ======
 const MASCOT = {
-  jump: '/festival/mascot-jump.png',  // 跳躍 + 愛心，最有元氣
-  dance: '/festival/mascot-dance.png', // 跳舞舉手
-  eat: '/festival/mascot-eat.png',    // 站著吃東西
-  love: '/festival/mascot-love.png',  // 害羞愛心
-  gift: '/festival/mascot-gift.png',  // 從禮物盒探頭
-  wave: '/festival/mascot-wave.png',  // 揮手
-  rest: '/festival/mascot-rest.png'   // 趴著休息
+  jump: '/festival/mascot-explorer-jump.png',  // 跳躍 + 愛心，最有元氣
+  dance: '/festival/mascot-explorer-dance.png', // 跳舞舉手
+  eat: '/festival/mascot-explorer-eat.png',    // 站著吃東西
+  love: '/festival/mascot-explorer-love.png',  // 害羞愛心
+  gift: '/festival/mascot-explorer-gift.png',  // 從禮物盒探頭
+  wave: '/festival/mascot-explorer-wave.png',  // 揮手
+  rest: '/festival/mascot-explorer-rest.png'   // 趴著休息
 };
 
 // ====== 1. 協會介紹 ======
