@@ -731,15 +731,14 @@ const EventIntro: React.FC = () => (
 const brandWall: { name: string; category: string; logo?: string }[] = [
   { name: '屋馬燒肉', category: '燒肉名店', logo: '/festival/brand-umma.png' },
   { name: '尚屋韓式烤肉', category: '韓式烤肉', logo: '/festival/brand-sangok.jpg' },
-  { name: '燒肉眾', category: '燒肉名店' },
-  { name: '榮次郎', category: '燒肉名店' },
-  { name: '鹿兒島', category: '日式燒肉' },
-  { name: '狸小路燒肉', category: '日式燒肉' },
-  { name: '延香炭食', category: '炭火燒肉' },
-  { name: '老井極上燒肉', category: '極上和牛' },
-  { name: '侍老井精品和牛燒肉會所', category: '精品和牛' },
-  { name: '烤狀猿日式燒肉', category: '日式燒肉' }
-  // 之後 logo 到位時，加上 logo: '/festival/brand-xxx.png'
+  { name: '燒肉眾', category: '燒肉名店', logo: '/festival/brand-sioumazang.jpg' },
+  { name: '榮次郎', category: '燒肉名店', logo: '/festival/brand-eijiro.jpg' },
+  { name: '鹿兒島', category: '日式燒肉', logo: '/festival/brand-kagoshima.jpg' },
+  { name: '狸小路燒肉', category: '日式燒肉', logo: '/festival/brand-tanukikoji.png' },
+  { name: '延香炭食', category: '炭火燒肉', logo: '/festival/brand-yanxiang.jpg' },
+  { name: '老井極上燒肉', category: '極上和牛', logo: '/festival/brand-laojin.png' },
+  { name: '侍老井精品和牛燒肉會所', category: '精品和牛', logo: '/festival/brand-samurai.jpg' },
+  { name: '烤狀猿日式燒肉', category: '日式燒肉', logo: '/festival/brand-kabuto.png' }
 ];
 
 const BrandWall: React.FC = () => (
