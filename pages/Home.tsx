@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, UserPlus, Calendar, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Crown, UserPlus, Calendar, ChevronLeft, ChevronRight, MapPin, Flame, ArrowRight } from 'lucide-react';
 import { Activity, MemberActivity, ClubActivity } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -91,6 +91,25 @@ const Home: React.FC<HomeProps> = ({ activities, memberActivities }) => {
       <script type="application/ld+json">
         {JSON.stringify(orgJsonLd)}
       </script>
+
+      {/* 燒肉祭・火鍋祭 promo banner (招商頁入口) */}
+      <Link
+        to="/festival"
+        className="relative block bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 text-white overflow-hidden group hover:brightness-110 transition-all"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Flame size={20} className="animate-pulse flex-shrink-0 text-yellow-200" />
+            <div className="text-sm sm:text-base font-bold truncate">
+              <span className="text-yellow-200">招商中</span>・燒肉祭 × 火鍋祭
+              <span className="hidden md:inline text-white/90 font-medium ml-2">— 餐廳業者整合行銷祭典</span>
+            </div>
+          </div>
+          <span className="text-xs sm:text-sm font-bold flex items-center gap-1 flex-shrink-0 opacity-90 group-hover:opacity-100 group-hover:gap-2 transition-all">
+            了解詳情 <ArrowRight size={14} />
+          </span>
+        </div>
+      </Link>
 
       {/* Hero Section / Carousel */}
       {allUpcomingActivities.length > 0 ? (

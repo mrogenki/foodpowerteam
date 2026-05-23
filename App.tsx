@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle } from 'lucide-react';
+import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // 使用 React.lazy 進行程式碼分割，減少初始載入體積
@@ -80,8 +80,16 @@ const Header: React.FC = () => {
             <Link to="/milestones" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">大事記</Link>
             <Link to="/activities" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">協會活動</Link>
             <Link to="/members" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">會員列表</Link>
+            <Link
+              to="/festival"
+              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full text-base font-bold shadow-md shadow-orange-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              title="燒肉祭・火鍋祭 招商頁"
+            >
+              <Flame size={16} className="animate-pulse" />
+              <span>燒肉祭・火鍋祭</span>
+            </Link>
             <Link to="/join" className="flex items-center gap-2 bg-red-600 text-white px-6 py-2.5 rounded-full text-lg font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all hover:-translate-y-0.5 active:translate-y-0">
-              <UserPlus size={20} /> 
+              <UserPlus size={20} />
               <span>加入會員</span>
             </Link>
           </div>
@@ -109,6 +117,14 @@ const Header: React.FC = () => {
             <Link to="/milestones" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">大事記</Link>
             <Link to="/activities" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">協會活動</Link>
             <Link to="/members" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">會員列表</Link>
+            <Link
+              to="/festival"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-xl font-bold text-white px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl transition-all shadow-md"
+            >
+              <Flame size={20} className="animate-pulse" />
+              燒肉祭・火鍋祭
+            </Link>
             <Link to="/join" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-red-600 px-4 py-2 bg-red-50 rounded-xl transition-all">加入會員</Link>
           </motion.div>
         )}
