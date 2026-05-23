@@ -144,6 +144,34 @@ const Hero: React.FC = () => (
             了解活動方案
           </button>
         </motion.div>
+
+        {/* 美食探險隊長・麻吉貓（隊長報到） */}
+        <motion.div
+          variants={fadeUp}
+          className="mt-8 inline-flex items-center gap-3 sm:gap-4 px-4 py-2 rounded-2xl bg-black/30 backdrop-blur-md border border-white/20"
+        >
+          <motion.img
+            src={MASCOT.wave}
+            alt="美食探險隊長 麻吉貓"
+            className="w-16 sm:w-20 flex-shrink-0 drop-shadow-lg"
+            animate={{ y: [0, -4, 0], rotate: [-3, 3, -3] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <div>
+            <div className="text-[10px] sm:text-xs text-yellow-200 font-bold tracking-[0.2em] mb-0.5">
+              本屆活動大使
+            </div>
+            <div
+              className="text-base sm:text-lg font-black text-white leading-tight"
+              style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+            >
+              美食探險隊長
+            </div>
+            <div className="text-sm sm:text-base font-bold text-yellow-200" style={{ textShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
+              麻吉貓 Maji
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
 
       {/* 右側：火鍋燒肉 emoji 動畫卡片 */}
