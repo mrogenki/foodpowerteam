@@ -375,8 +375,8 @@ const MascotIntro: React.FC = () => (
       {/* 主視覺：左文字、右大貓 */}
       <div className="grid lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-center">
         <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ x: -30 }}
+          whileInView={{ x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
@@ -410,10 +410,10 @@ const MascotIntro: React.FC = () => (
           </div>
         </motion.div>
 
-        {/* 右側大跳躍貓 */}
+        {/* 右側大跳躍貓 — 不做 opacity 動畫避免 whileInView 卡住變半透明 */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.7 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          initial={{ scale: 0.7 }}
+          whileInView={{ scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="relative flex-shrink-0 mx-auto"
@@ -430,10 +430,10 @@ const MascotIntro: React.FC = () => (
         </motion.div>
       </div>
 
-      {/* 下方：6 種表情/動作展示 */}
+      {/* 下方：6 種表情/動作展示 — 不做 opacity 動畫 */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ y: 20 }}
+        whileInView={{ y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, delay: 0.3 }}
         className="mt-12 sm:mt-16"
@@ -448,7 +448,7 @@ const MascotIntro: React.FC = () => (
             { src: MASCOT.love, label: '心動' },
             { src: MASCOT.gift, label: '驚喜' },
             { src: MASCOT.rest, label: '滿足' },
-            { src: MASCOT.wave, label: '掰掰' }
+            { src: MASCOT.wave, label: '出發' }
           ].map((m, i) => (
             <motion.div
               key={m.label}
@@ -504,9 +504,10 @@ const journeyStages = [
     subtitle: '邊玩邊累積・餐廳零負擔',
     color: 'from-amber-500 to-yellow-600',
     items: [
-      { icon: Gamepad2, title: '遊戲集點', desc: 'APP 內小遊戲，邊玩邊累積點數' },
-      { icon: Target, title: '任務集點', desc: '完成分享、推薦、評論等互動任務解鎖點數' },
-      { icon: MapPinned, title: '打卡集點', desc: '到合作餐廳現場打卡即可累積，消費者自主操作，不需店家結帳介入' }
+      { icon: MessageSquare, title: '加 LINE 好友', desc: '加入官方 LINE 好友即贈點數' },
+      { icon: Smartphone, title: '下載 APP', desc: '完成 APP 註冊登入即累積點數' },
+      { icon: Share2, title: '推薦好友', desc: '推薦朋友加入活動，雙方都拿點' },
+      { icon: Gamepad2, title: '玩小遊戲', desc: 'APP 內限定小遊戲，邊玩邊集點' }
     ]
   },
   {
@@ -617,7 +618,10 @@ const EventIntro: React.FC = () => (
                   <h3 className="text-2xl font-black text-gray-900 leading-tight">{stage.title}</h3>
                   <p className="text-sm text-gray-500 mt-1">{stage.subtitle}</p>
                 </div>
-                <div className={`grid gap-3 ${stage.items.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                <div className={`grid gap-3 ${
+                  stage.items.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' :
+                  stage.items.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'
+                }`}>
                   {stage.items.map((item) => {
                     // optional stat (only some items have it)
                     const stat = (item as { stat?: string }).stat;
@@ -1297,7 +1301,7 @@ const AppFeature: React.FC = () => (
                   {[
                     { emoji: '🥩', name: '燒肉券', pts: '50' },
                     { emoji: '🍲', name: '火鍋券', pts: '50' },
-                    { emoji: '📱', name: 'iPhone', pts: '150' },
+                    { emoji: '🎫', name: '抽獎券', pts: '30' },
                     { emoji: '🎁', name: '神秘禮', pts: '80' }
                   ].map((it) => (
                     <div key={it.name} className="bg-white text-gray-900 rounded-xl p-2.5">
@@ -1352,7 +1356,7 @@ const AppFeature: React.FC = () => (
             {
               icon: Coins,
               title: '多元集點',
-              desc: '遊戲、任務、打卡三種方式自主累積點數，消費者自己操作，不打擾餐廳營運',
+              desc: '加入 LINE 好友、下載 APP、推薦好友、玩小遊戲，多種方式輕鬆累積點數，消費者自主操作',
               color: 'from-emerald-500 to-teal-500'
             },
             {
