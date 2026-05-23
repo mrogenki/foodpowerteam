@@ -72,7 +72,7 @@ const Home: React.FC<HomeProps> = ({ activities, memberActivities }) => {
     
     updateMeta('og:title', '食在力量');
     updateMeta('og:description', '食在力量 - 連結產業，創造共好。匯聚各產業菁英，提供講座論壇、企業參訪、專業課程等活動報名與會員管理服務。');
-    updateMeta('og:image', 'https://www.foodpowerteam.com/festival/og-festival.jpg');
+    updateMeta('og:image', 'https://www.foodpowerteam.com/og-brand.jpg');
     updateMeta('og:url', 'https://www.foodpowerteam.com/');
   }, []);
 

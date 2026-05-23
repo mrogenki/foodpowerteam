@@ -1,5 +1,8 @@
-// Vercel serverless function: server-rendered OG tags for activity share links.
+// Vercel serverless function: server-rendered OG tags for share links.
 // 對應 vercel.json rewrite：/share/:id → /api/share?id=:id
+// 支援兩種 id：
+//   1. STATIC_SHARES 中的 key（如 "festival"）— 走自訂分享卡
+//   2. activity UUID — 從 Supabase 撈活動資料動態產生
 
 type VercelHandler = (req: any, res: any) => Promise<void>;
 
@@ -23,10 +26,58 @@ const extractPlainText = (raw: string | null | undefined): string => {
   return String(raw).replace(/<[^>]+>/g, '').trim();
 };
 
+// 靜態分享卡：固定頁面（非活動 UUID）對應的 OG 設定
+const STATIC_SHARES: Record<string, { title: string; description: string; image: string; redirect: string }> = {
+  festival: {
+    title: '燒肉祭 × 火鍋祭｜食在力量招商中',
+    description: '全台餐飲業者獨家整合行銷祭典。上架費 NT$3,000，優惠券價值 NT$20,000，行銷總價值 NT$100,000+。',
+    image: '/festival/og-festival.jpg',
+    redirect: '/#/festival',
+  },
+};
+
 const handler: VercelHandler = async (req, res) => {
   const id = req.query?.id;
   if (!id || typeof id !== 'string') {
     res.status(400).send('Missing id');
+    return;
+  }
+
+  const origin = `https://${req.headers?.host || 'www.foodpowerteam.com'}`;
+
+  // 命中靜態分享卡 → 直接回 HTML，不打 Supabase
+  const staticEntry = STATIC_SHARES[id];
+  if (staticEntry) {
+    const shareUrl = `${origin}/share/${encodeURIComponent(id)}`;
+    const imageUrl = staticEntry.image.startsWith('http') ? staticEntry.image : `${origin}${staticEntry.image}`;
+    const html = `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(staticEntry.title)}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="食在力量">
+<meta property="og:title" content="${escapeHtml(staticEntry.title)}">
+<meta property="og:description" content="${escapeHtml(staticEntry.description)}">
+<meta property="og:image" content="${escapeHtml(imageUrl)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="${escapeHtml(shareUrl)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(staticEntry.title)}">
+<meta name="twitter:description" content="${escapeHtml(staticEntry.description)}">
+<meta name="twitter:image" content="${escapeHtml(imageUrl)}">
+<script>window.location.replace(${JSON.stringify(staticEntry.redirect)});</script>
+</head>
+<body style="font-family:system-ui;padding:2em;text-align:center;color:#444">
+<p>正在開啟頁面...</p>
+<p><a href="${escapeHtml(staticEntry.redirect)}">如未自動跳轉請點此</a></p>
+</body>
+</html>`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+    res.status(200).send(html);
     return;
   }
 
@@ -53,7 +104,6 @@ const handler: VercelHandler = async (req, res) => {
   }
 
   const redirectTarget = `/#/activity/${encodeURIComponent(id)}`;
-  const origin = `https://${req.headers?.host || 'www.foodpowerteam.com'}`;
   const shareUrl = `${origin}/share/${encodeURIComponent(id)}`;
 
   const title = activity?.title ? `${activity.title} - 食在力量` : '食在力量活動';
