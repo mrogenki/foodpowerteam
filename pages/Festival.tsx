@@ -30,6 +30,9 @@ const scrollTo = (id: string) => {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+// ====== 報名表單（Google Form）======
+const APPLY_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdf3Lpb9rZc0VazvtxdwM9HgK4wJTUhtLk4V4fdHIGBfQFBBQ/viewform?usp=send_form';
+
 // ====== Mini Header (活潑風格) ======
 const FestivalHeader: React.FC = () => (
   <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/80 border-b border-amber-100 shadow-sm">
@@ -43,12 +46,14 @@ const FestivalHeader: React.FC = () => (
           <div className="text-[10px] text-orange-600 font-semibold tracking-wider">燒肉祭・火鍋祭</div>
         </div>
       </div>
-      <button
-        onClick={() => scrollTo('join-process')}
+      <a
+        href={APPLY_FORM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         className="px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-200 hover:shadow-xl hover:scale-105 transition-all"
       >
         立即報名
-      </button>
+      </a>
     </div>
   </header>
 );
@@ -124,12 +129,14 @@ const Hero: React.FC = () => (
         </motion.div>
 
         <motion.div variants={fadeUp} className="flex flex-wrap gap-3">
-          <button
-            onClick={() => scrollTo('join-process')}
-            className="px-7 py-3.5 rounded-full bg-white text-red-600 font-bold shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+          <a
+            href={APPLY_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-7 py-3.5 rounded-full bg-white text-red-600 font-bold shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2"
           >
             立即報名合作 <ArrowRight size={18} />
-          </button>
+          </a>
           <button
             onClick={() => scrollTo('event-intro')}
             className="px-7 py-3.5 rounded-full bg-white/15 backdrop-blur border-2 border-white/40 text-white font-bold hover:bg-white/25 transition-all"
@@ -305,19 +312,6 @@ const AssociationIntro: React.FC = () => (
             </div>
           </div>
           {/* 浮動裝飾卡 */}
-          <motion.div
-            animate={{ y: [0, -10, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3 border border-orange-100"
-          >
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 grid place-items-center text-white">
-              <Award size={24} />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-900">產業共好獎</div>
-              <div className="text-xs text-gray-500">2025 年度肯定</div>
-            </div>
-          </motion.div>
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
@@ -736,18 +730,14 @@ const BrandWall: React.FC = () => (
                 <div className="flex-1 grid place-items-center bg-gray-50/30 overflow-hidden">
                   <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
                 </div>
-                <div className="border-t border-orange-100 px-3 py-2 text-center bg-white flex-shrink-0">
+                <div className="px-2 py-1.5 text-center bg-white/70 backdrop-blur-sm flex-shrink-0">
                   <div className="text-xs sm:text-sm font-bold text-gray-900">{b.name}</div>
-                  <div className="text-[10px] text-gray-500">{b.category}</div>
                 </div>
               </>
             ) : (
               <div className="h-full grid place-items-center p-5 text-center">
-                <div>
-                  <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
-                    {b.name}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">{b.category}</div>
+                <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
+                  {b.name}
                 </div>
               </div>
             )}
@@ -755,10 +745,12 @@ const BrandWall: React.FC = () => (
         ))}
 
         {/* 「下一個是您嗎」CTA 卡片 — 麻吉貓加持 */}
-        <motion.button
+        <motion.a
           variants={fadeUp}
-          onClick={() => scrollTo('join-process')}
-          className="aspect-square rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-orange-300 grid place-items-center p-5 hover:border-orange-500 hover:bg-orange-100/50 transition-all group relative overflow-hidden"
+          href={APPLY_FORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="aspect-square rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-orange-300 grid place-items-center p-5 hover:border-orange-500 hover:bg-orange-100/50 transition-all group relative overflow-hidden cursor-pointer"
         >
           <img
             src={MASCOT.gift}
@@ -770,7 +762,7 @@ const BrandWall: React.FC = () => (
             <div className="text-xs text-orange-600 mt-0.5">下一個就是你 →</div>
             <div className="text-[10px] text-pink-600 mt-1 font-semibold">麻吉貓在等你 ♥</div>
           </div>
-        </motion.button>
+        </motion.a>
       </motion.div>
     </div>
   </section>
@@ -1478,12 +1470,14 @@ const JoinProcess: React.FC = () => (
         variants={fadeUp}
         className="mt-14 text-center"
       >
-        <button
-          onClick={() => scrollTo('final-cta')}
+        <a
+          href={APPLY_FORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="px-10 py-4 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-lg shadow-2xl shadow-orange-200 hover:scale-105 transition-all inline-flex items-center gap-2"
         >
           立即填寫合作申請 <ArrowRight size={20} />
-        </button>
+        </a>
         <p className="text-xs text-gray-500 mt-3">＊填寫後協會專員 1 個工作天內聯繫您</p>
       </motion.div>
     </div>
@@ -1662,8 +1656,9 @@ const FinalCTA: React.FC = () => (
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
           <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); alert('合作申請表單即將上線，請先用下方聯絡方式洽詢'); }}
+            href={APPLY_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-8 py-4 rounded-full bg-white text-red-600 font-black text-lg shadow-2xl hover:scale-105 transition-all inline-flex items-center gap-2"
           >
             立即填寫合作申請 <ArrowRight size={22} />
