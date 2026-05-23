@@ -258,14 +258,6 @@ const MASCOT = {
 // ====== 1. 協會介紹 ======
 const AssociationIntro: React.FC = () => (
   <section id="association" className="relative py-20 sm:py-28 bg-white overflow-hidden">
-    {/* 角落麻吉貓裝飾 — 揮手歡迎 */}
-    <motion.img
-      src={MASCOT.wave}
-      alt="麻吉貓"
-      className="absolute top-6 right-2 sm:right-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }}
-      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -275,8 +267,17 @@ const AssociationIntro: React.FC = () => (
         className="grid lg:grid-cols-2 gap-12 items-center"
       >
         <motion.div variants={fadeUp}>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold mb-4">
-            <Heart size={14} /> 關於我們
+          <div className="flex items-center gap-3 mb-4">
+            <motion.img
+              src={MASCOT.wave}
+              alt="麻吉貓"
+              className="w-16 sm:w-20 flex-shrink-0"
+              animate={{ y: [0, -6, 0], rotate: [-4, 4, -4] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+              <Heart size={14} /> 關於我們
+            </div>
           </div>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-6 leading-tight">
             食在力量<br />
@@ -545,14 +546,6 @@ const journeyStages = [
 
 const EventIntro: React.FC = () => (
   <section id="event-intro" className="relative py-20 sm:py-28 bg-gradient-to-b from-amber-50 to-orange-50 overflow-hidden">
-    {/* 角落麻吉貓 — 跳躍興奮（看到福利） */}
-    <motion.img
-      src={MASCOT.jump}
-      alt="麻吉貓"
-      className="absolute top-8 left-2 sm:left-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -10, 0], rotate: [3, -3, 3] }}
-      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       {/* 標題 */}
       <motion.div
@@ -562,6 +555,14 @@ const EventIntro: React.FC = () => (
         variants={stagger}
         className="text-center mb-16"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.jump}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -10, 0], rotate: [3, -3, 3] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-4">
           <Flame size={14} /> 活動方案
         </motion.div>
@@ -901,14 +902,6 @@ const RoleBlock: React.FC<{
 
 const Sponsors: React.FC = () => (
   <section id="sponsors" className="relative py-20 sm:py-28 bg-gradient-to-b from-white to-amber-50 overflow-hidden">
-    {/* 角落麻吉貓 — 吃飯（感謝贊助餐） */}
-    <motion.img
-      src={MASCOT.eat}
-      alt="麻吉貓"
-      className="absolute top-6 right-2 sm:right-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
-      transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -917,6 +910,14 @@ const Sponsors: React.FC = () => (
         variants={stagger}
         className="text-center mb-12"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.eat}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold mb-4">
           <Heart size={14} /> 活動陣容
         </motion.div>
@@ -1014,14 +1015,6 @@ const tocoArticles = [
 
 const TocoFeature: React.FC = () => (
   <section id="toco" className="relative py-20 sm:py-28 bg-white overflow-hidden">
-    {/* 角落麻吉貓 — 趴著（閱讀放鬆） */}
-    <motion.img
-      src={MASCOT.rest}
-      alt="麻吉貓"
-      className="absolute top-8 left-2 sm:left-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
-      transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -1030,6 +1023,14 @@ const TocoFeature: React.FC = () => (
         variants={stagger}
         className="text-center mb-12"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.rest}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold mb-4">
           <BookOpen size={14} /> 已上線合作案例
         </motion.div>
@@ -1157,14 +1158,6 @@ const kolCases = [
 
 const KOLShowcase: React.FC = () => (
   <section id="kol" className="relative py-20 sm:py-28 bg-gradient-to-b from-rose-50 to-pink-50 overflow-hidden">
-    {/* 角落麻吉貓 — 心動（喜歡網紅內容） */}
-    <motion.img
-      src={MASCOT.love}
-      alt="麻吉貓"
-      className="absolute top-6 right-2 sm:right-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }}
-      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -1173,6 +1166,14 @@ const KOLShowcase: React.FC = () => (
         variants={stagger}
         className="text-center mb-12"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.love}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-100 text-pink-700 text-xs font-bold mb-4">
           <Camera size={14} /> 真實合作案例
         </motion.div>
@@ -1285,14 +1286,6 @@ const KOLShowcase: React.FC = () => (
 // ====== 5. 活動 APP (Mobile Cards) ======
 const AppFeature: React.FC = () => (
   <section id="app" className="relative py-20 sm:py-28 bg-gradient-to-br from-emerald-50 via-white to-teal-50 overflow-hidden">
-    {/* 角落麻吉貓 — 禮物盒（驚喜獎品） */}
-    <motion.img
-      src={MASCOT.gift}
-      alt="麻吉貓"
-      className="absolute top-8 left-2 sm:left-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -8, 0], rotate: [-3, 3, -3] }}
-      transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -1301,6 +1294,14 @@ const AppFeature: React.FC = () => (
         variants={stagger}
         className="text-center mb-12"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.gift}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -8, 0], rotate: [-3, 3, -3] }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-4">
           <Smartphone size={14} /> 協會會員系統
         </motion.div>
@@ -1491,14 +1492,6 @@ const joinSteps = [
 
 const JoinProcess: React.FC = () => (
   <section id="join-process" className="relative py-20 sm:py-28 bg-white overflow-hidden">
-    {/* 角落麻吉貓 — 跳舞（歡迎合作） */}
-    <motion.img
-      src={MASCOT.dance}
-      alt="麻吉貓"
-      className="absolute top-6 right-2 sm:right-8 w-16 sm:w-24 pointer-events-none z-10"
-      animate={{ y: [0, -10, 0], rotate: [-4, 4, -4] }}
-      transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-    />
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
       <motion.div
         initial="hidden"
@@ -1507,6 +1500,14 @@ const JoinProcess: React.FC = () => (
         variants={stagger}
         className="text-center mb-14"
       >
+        <motion.img
+          variants={fadeUp}
+          src={MASCOT.dance}
+          alt="麻吉貓"
+          className="mx-auto w-20 sm:w-24 mb-2"
+          animate={{ y: [0, -10, 0], rotate: [-4, 4, -4] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold mb-4">
           <CheckCircle2 size={14} /> 4 步驟・極速上架
         </motion.div>
@@ -1615,14 +1616,6 @@ const FAQ: React.FC = () => {
   const [open, setOpen] = useState<number | null>(0);
   return (
     <section id="faq" className="relative py-20 sm:py-28 bg-gradient-to-b from-amber-50 to-white overflow-hidden">
-      {/* 角落麻吉貓 — 趴著（解答中放鬆思考） */}
-      <motion.img
-        src={MASCOT.rest}
-        alt="麻吉貓"
-        className="absolute top-8 right-2 sm:right-8 w-16 sm:w-24 pointer-events-none z-10"
-        animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
-        transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
-      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <motion.div
           initial="hidden"
@@ -1631,6 +1624,14 @@ const FAQ: React.FC = () => {
           variants={stagger}
           className="text-center mb-12"
         >
+          <motion.img
+            variants={fadeUp}
+            src={MASCOT.rest}
+            alt="麻吉貓"
+            className="mx-auto w-20 sm:w-24 mb-2"
+            animate={{ y: [0, -6, 0], rotate: [-3, 3, -3] }}
+            transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+          />
           <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold mb-4">
             <MessageSquare size={14} /> 常見問題
           </motion.div>
