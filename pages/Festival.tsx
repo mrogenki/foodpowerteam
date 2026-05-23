@@ -777,14 +777,9 @@ const BrandWall: React.FC = () => (
             className="aspect-square rounded-2xl bg-white shadow-md hover:shadow-xl transition-all border border-orange-100 overflow-hidden group flex flex-col"
           >
             {b.logo ? (
-              <>
-                <div className="flex-1 grid place-items-center bg-gray-50/30 overflow-hidden">
-                  <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
-                </div>
-                <div className="px-2 py-1.5 text-center bg-white/70 backdrop-blur-sm flex-shrink-0">
-                  <div className="text-xs sm:text-sm font-bold text-gray-900">{b.name}</div>
-                </div>
-              </>
+              <div className="w-full h-full grid place-items-center bg-gray-50/30 overflow-hidden">
+                <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
+              </div>
             ) : (
               <div className="h-full grid place-items-center p-5 text-center">
                 <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
