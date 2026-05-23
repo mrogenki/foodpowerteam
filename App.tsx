@@ -19,6 +19,11 @@ const MemberRenewal = lazy(() => import('./pages/MemberRenewal'));
 const RenewalPayment = lazy(() => import('./pages/RenewalPayment'));
 const AboutUs = lazy(() => import('./pages/AboutUs'));
 const MilestoneTimeline = lazy(() => import('./pages/MilestoneTimeline'));
+const Festival = lazy(() => import('./pages/Festival'));
+const DesignDemoIndex = lazy(() => import('./pages/DesignDemoIndex'));
+const DesignDemoJP = lazy(() => import('./pages/DesignDemoJP'));
+const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
+const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
 
 import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
@@ -33,6 +38,10 @@ const ScrollToTop: React.FC = () => {
   }, [pathname]);
   return null;
 };
+
+// Landing page (例：燒肉祭/火鍋祭、設計風格 demo) 使用自帶 Header/Footer，不顯示全站導覽
+const isStandaloneLandingPath = (pathname: string) =>
+  pathname.startsWith('/festival') || pathname.startsWith('/design');
 
 // 載入中元件
 const PageLoader = () => (
@@ -51,6 +60,7 @@ const Header: React.FC = () => {
   const isAdminPage = location.pathname.startsWith('/admin');
 
   if (isAdminPage) return null;
+  if (isStandaloneLandingPath(location.pathname)) return null;
 
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
@@ -110,6 +120,7 @@ const Header: React.FC = () => {
 const Footer: React.FC = () => {
   const location = useLocation();
   if (location.pathname.startsWith('/admin')) return null;
+  if (isStandaloneLandingPath(location.pathname)) return null;
   return (
     <footer className="bg-white border-t py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -901,6 +912,11 @@ const App: React.FC = () => {
               <Route path="/pay-activity/:id" element={<ActivityPayment />} />
               <Route path="/payment-result" element={<PaymentResult />} />
               <Route path="/milestones" element={<MilestoneTimeline />} />
+              <Route path="/festival" element={<Festival />} />
+              <Route path="/design" element={<DesignDemoIndex />} />
+              <Route path="/design/jp" element={<DesignDemoJP />} />
+              <Route path="/design/eu" element={<DesignDemoEU />} />
+              <Route path="/design/cn" element={<DesignDemoCN />} />
 
               <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <LoginPage />} />
               
