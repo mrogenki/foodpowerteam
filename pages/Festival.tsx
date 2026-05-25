@@ -829,7 +829,7 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '猴子燒肉', category: '燒肉名店', logo: '/festival/brand-monkey.jpg' },
   { name: '純水燒肉', category: '燒肉名店', logo: '/festival/brand-chunshui.jpg' },
   { name: 'SOMESOME燒肉', category: '燒肉名店', logo: '/festival/brand-somesome.jpg' },
-  { name: '老井麻神', category: '燒肉名店' }
+  { name: '老井麻神', category: '燒肉名店', logo: '/festival/brand-laojin-mashen.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
