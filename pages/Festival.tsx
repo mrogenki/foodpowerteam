@@ -828,8 +828,7 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '炭伙居酒屋', category: '燒肉名店', logo: '/festival/brand-tankaho.jpg' },
   { name: '猴子燒肉', category: '燒肉名店', logo: '/festival/brand-monkey.jpg' },
   { name: '純水燒肉', category: '燒肉名店', logo: '/festival/brand-chunshui.jpg' },
-  { name: 'SOMESOME燒肉', category: '燒肉名店', logo: '/festival/brand-somesome.jpg' },
-  { name: '老井麻神', category: '燒肉名店', logo: '/festival/brand-laojin-mashen.jpg' }
+  { name: 'SOMESOME燒肉', category: '燒肉名店', logo: '/festival/brand-somesome.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
@@ -849,7 +848,8 @@ const hotpotBrands: BrandEntry[] = [
   { name: '米釉鍋物', category: '精緻鍋物', logo: '/festival/brand-miyou.jpg' },
   { name: '阿忠羊肉爐', category: '羊肉爐', logo: '/festival/brand-azhong.jpg' },
   { name: '潮牛殿', category: '潮汕鍋物', logo: '/festival/brand-chaoniudian.jpg' },
-  { name: '聚食釜', category: '精緻鍋物', logo: '/festival/brand-jushifu.jpg' }
+  { name: '聚食釜', category: '精緻鍋物', logo: '/festival/brand-jushifu.jpg' },
+  { name: '老井麻神', category: '鍋物', logo: '/festival/brand-laojin-mashen.jpg' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
