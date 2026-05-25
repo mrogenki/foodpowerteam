@@ -747,7 +747,9 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '燒肉政宗', category: '日式燒肉', logo: '/festival/brand-masamune.jpg' },
   { name: '焦糖楓', category: '燒肉名店', logo: '/festival/brand-maple.jpg' },
   { name: '烤烤豬', category: '日式燒肉', logo: '/festival/brand-kaokao.jpg' },
-  { name: 'COCA泰式串燒酒場', category: '泰式串燒' }
+  { name: 'COCA泰式串燒酒場', category: '泰式串燒', logo: '/festival/brand-coca.jpg' },
+  { name: '炭伙居酒屋', category: '燒肉名店', logo: '/festival/brand-tankaho.jpg' },
+  { name: '猴子燒肉', category: '燒肉名店', logo: '/festival/brand-monkey.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
