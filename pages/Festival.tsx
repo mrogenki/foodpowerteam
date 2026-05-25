@@ -255,6 +255,94 @@ const MASCOT = {
   rest: '/festival/mascot-explorer-rest.png'   // 趴著休息
 };
 
+// ====== 啟動記者會 ======
+const LaunchEvent: React.FC = () => (
+  <section className="relative py-14 sm:py-20 overflow-hidden bg-gray-950">
+    {/* 背景裝飾 */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute -top-32 left-1/4 w-96 h-96 rounded-full bg-red-600/20 blur-3xl" />
+      <div className="absolute -bottom-32 right-1/4 w-96 h-96 rounded-full bg-orange-500/15 blur-3xl" />
+    </div>
+
+    <div className="relative max-w-5xl mx-auto px-4 sm:px-6 z-10">
+      <motion.div
+        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}
+        className="text-center mb-10"
+      >
+        <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/20 border border-red-500/40 text-red-400 text-xs font-bold mb-4 tracking-widest">
+          <Flame size={13} /> 即將登場
+        </motion.div>
+        <motion.h2 variants={fadeUp} className="text-3xl sm:text-5xl font-black text-white mb-3 tracking-tight">
+          7 月 8 日・啟動記者會
+        </motion.h2>
+        <motion.p variants={fadeUp} className="text-gray-400 text-base sm:text-lg">
+          燒肉祭 × 火鍋祭 正式宣告開跑，誠摯邀請合作品牌共同出席
+        </motion.p>
+      </motion.div>
+
+      {/* 時程卡片 */}
+      <motion.div
+        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-10"
+      >
+        {/* 11:00 記者會 */}
+        <motion.div variants={fadeUp} className="relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur p-7 group hover:border-orange-500/50 transition-all">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 grid place-items-center flex-shrink-0 shadow-lg shadow-orange-900/40">
+              <Newspaper size={26} className="text-white" />
+            </div>
+            <div>
+              <div className="text-orange-400 font-black text-xl mb-1">11:00</div>
+              <div className="text-white font-black text-2xl mb-2">記者會</div>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                宣布燒肉祭 × 火鍋祭正式啟動，媒體聯訪、品牌代表致詞，現場曝光協會年度合作品牌陣容。
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 13:00 產業論壇 */}
+        <motion.div variants={fadeUp} className="relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur p-7 group hover:border-red-500/50 transition-all">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 grid place-items-center flex-shrink-0 shadow-lg shadow-red-900/40">
+              <Mic size={26} className="text-white" />
+            </div>
+            <div>
+              <div className="text-red-400 font-black text-xl mb-1">13:00</div>
+              <div className="text-white font-black text-2xl mb-2">產業論壇</div>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                餐飲產業趨勢分享、整合行銷實戰案例解析，與各合作品牌深度交流，共同開創新客流。
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* 品牌方邀請 CTA */}
+      <motion.div
+        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+        className="rounded-3xl border border-dashed border-orange-500/50 bg-orange-500/5 p-7 sm:p-10 text-center"
+      >
+        <div className="flex justify-center mb-4">
+          <img src={MASCOT.jump} alt="麻吉貓" className="w-20 drop-shadow-xl" />
+        </div>
+        <h3 className="text-white font-black text-xl sm:text-2xl mb-2">合作品牌方・誠摯邀請出席 🎉</h3>
+        <p className="text-gray-400 text-sm sm:text-base mb-6 max-w-xl mx-auto leading-relaxed">
+          現有及有意向的合作餐廳，歡迎帶著您的夥伴一同出席。當天可與協會專員面對面洽談，確認合作細節。
+        </p>
+        <a
+          href={APPLY_FORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-base shadow-xl shadow-orange-900/30 hover:scale-105 transition-all"
+        >
+          填寫報名表・確認出席 <ArrowRight size={18} />
+        </a>
+      </motion.div>
+    </div>
+  </section>
+);
+
 // ====== 1. 協會介紹 ======
 const AssociationIntro: React.FC = () => (
   <section id="association" className="relative py-20 sm:py-28 bg-white overflow-hidden">
@@ -1976,6 +2064,7 @@ const Festival: React.FC = () => {
     <div className="min-h-screen bg-white">
       <FestivalHeader />
       <Hero />
+      <LaunchEvent />
       <AssociationIntro />
       <MascotIntro />
       <EventIntro />
