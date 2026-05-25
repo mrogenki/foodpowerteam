@@ -970,6 +970,7 @@ const App: React.FC = () => {
                     onDeleteMemberRegistration={handleDeleteMemberRegistration}
                     onAddRegistrations={handleAddRegistrations}
                     onAddMemberRegistrations={handleAddMemberRegistrations}
+                    onRefreshRegistrations={refreshRegistrations}
                     onAddUser={handleAddUser}
                     onDeleteUser={handleDeleteUser}
                     onAddMember={handleAddMember}

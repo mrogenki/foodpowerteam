@@ -738,7 +738,11 @@ const brandWall: { name: string; category: string; logo?: string }[] = [
   { name: '延香炭食', category: '炭火燒肉', logo: '/festival/brand-yanxiang.jpg' },
   { name: '老井極上燒肉', category: '極上和牛', logo: '/festival/brand-laojin.png' },
   { name: '侍老井精品和牛燒肉會所', category: '精品和牛', logo: '/festival/brand-samurai.jpg' },
-  { name: '烤狀猿日式燒肉', category: '日式燒肉', logo: '/festival/brand-kabuto.png' }
+  { name: '烤狀猿日式燒肉', category: '日式燒肉', logo: '/festival/brand-kabuto.png' },
+  { name: '一鷺燒肉', category: '日式燒肉', logo: '/festival/brand-ichiro.jpg' },
+  { name: '路易奇電力公司', category: '燒肉名店', logo: '/festival/brand-luigi-electric.jpg' },
+  { name: '路易奇火力公司', category: '燒肉名店', logo: '/festival/brand-luigi-fire.png' },
+  { name: '燒肉政宗', category: '日式燒肉', logo: '/festival/brand-masamune.jpg' }
 ];
 
 const BrandWall: React.FC = () => (
