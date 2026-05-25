@@ -742,7 +742,9 @@ const brandWall: { name: string; category: string; logo?: string }[] = [
   { name: '一鷺燒肉', category: '日式燒肉', logo: '/festival/brand-ichiro.jpg' },
   { name: '路易奇電力公司', category: '燒肉名店', logo: '/festival/brand-luigi-electric.jpg' },
   { name: '路易奇火力公司', category: '燒肉名店', logo: '/festival/brand-luigi-fire.png' },
-  { name: '燒肉政宗', category: '日式燒肉', logo: '/festival/brand-masamune.jpg' }
+  { name: '燒肉政宗', category: '日式燒肉', logo: '/festival/brand-masamune.jpg' },
+  { name: '焦糖楓', category: '燒肉名店', logo: '/festival/brand-maple.jpg' },
+  { name: '烤烤豬', category: '日式燒肉', logo: '/festival/brand-kaokao.jpg' }
 ];
 
 const BrandWall: React.FC = () => (
