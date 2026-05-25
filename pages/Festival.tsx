@@ -728,7 +728,9 @@ const EventIntro: React.FC = () => (
 );
 
 // ====== 2.5 品牌牆（參加活動的合作餐廳） ======
-const brandWall: { name: string; category: string; logo?: string }[] = [
+type BrandEntry = { name: string; category: string; logo?: string };
+
+const yakinikuBrands: BrandEntry[] = [
   { name: '屋馬燒肉', category: '燒肉名店', logo: '/festival/brand-umma.png' },
   { name: '尚屋韓式烤肉', category: '韓式烤肉', logo: '/festival/brand-sangok.jpg' },
   { name: '燒肉眾', category: '燒肉名店', logo: '/festival/brand-sioumazang.jpg' },
@@ -747,15 +749,75 @@ const brandWall: { name: string; category: string; logo?: string }[] = [
   { name: '烤烤豬', category: '日式燒肉', logo: '/festival/brand-kaokao.jpg' }
 ];
 
+// 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
+const hotpotBrands: BrandEntry[] = [
+  // 範例：{ name: '某火鍋', category: '麻辣鍋', logo: '/festival/火鍋logo/brand-xxx.jpg' },
+];
+
+const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
+  <motion.div
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, margin: '-50px' }}
+    variants={stagger}
+    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
+  >
+    {brands.map((b) => (
+      <motion.div
+        key={b.name}
+        variants={fadeUp}
+        whileHover={{ y: -4 }}
+        className="aspect-square rounded-2xl bg-white shadow-md hover:shadow-xl transition-all border border-orange-100 overflow-hidden group flex flex-col"
+      >
+        {b.logo ? (
+          <div className="w-full h-full grid place-items-center bg-gray-50/30 overflow-hidden">
+            <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
+          </div>
+        ) : (
+          <div className="h-full grid place-items-center p-5 text-center">
+            <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
+              {b.name}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    ))}
+
+    {showCta && (
+      /* 「下一個是您嗎」CTA 卡片 — 麻吉貓加持 */
+      <motion.a
+        variants={fadeUp}
+        href={APPLY_FORM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="aspect-square rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-orange-300 grid place-items-center p-5 hover:border-orange-500 hover:bg-orange-100/50 transition-all group relative overflow-hidden cursor-pointer"
+      >
+        <img
+          src={MASCOT.gift}
+          alt="麻吉貓在禮物盒"
+          className="absolute -bottom-2 -right-2 w-20 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition-transform"
+        />
+        <div className="text-center relative z-10">
+          <div className="text-base font-bold text-orange-700">您的品牌</div>
+          <div className="text-xs text-orange-600 mt-0.5">下一個就是你 →</div>
+          <div className="text-[10px] text-pink-600 mt-1 font-semibold">麻吉貓在等你 ♥</div>
+        </div>
+      </motion.a>
+    )}
+  </motion.div>
+);
+
 const BrandWall: React.FC = () => (
   <section id="brand-wall" className="py-20 sm:py-28 bg-white">
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
+
+      {/* ─── 區塊標題 ─── */}
       <motion.div
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
         variants={stagger}
-        className="text-center mb-12"
+        className="text-center mb-14"
       >
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-4">
           <Store size={14} /> 已加入合作餐廳
@@ -768,54 +830,80 @@ const BrandWall: React.FC = () => (
         </motion.p>
       </motion.div>
 
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-50px' }}
-        variants={stagger}
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
-      >
-        {brandWall.map((b) => (
-          <motion.div
-            key={b.name}
-            variants={fadeUp}
-            whileHover={{ y: -4 }}
-            className="aspect-square rounded-2xl bg-white shadow-md hover:shadow-xl transition-all border border-orange-100 overflow-hidden group flex flex-col"
-          >
-            {b.logo ? (
-              <div className="w-full h-full grid place-items-center bg-gray-50/30 overflow-hidden">
-                <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
-              </div>
-            ) : (
-              <div className="h-full grid place-items-center p-5 text-center">
-                <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
-                  {b.name}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        ))}
+      {/* ─── 燒肉品牌 ─── */}
+      <div className="mb-14">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-3xl">🥩</span>
+          <h3 className="text-2xl sm:text-3xl font-black text-gray-800">燒肉品牌</h3>
+          <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+            {yakinikuBrands.length} 間
+          </span>
+        </div>
+        <BrandGrid brands={yakinikuBrands} showCta={false} />
+      </div>
 
-        {/* 「下一個是您嗎」CTA 卡片 — 麻吉貓加持 */}
-        <motion.a
-          variants={fadeUp}
-          href={APPLY_FORM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="aspect-square rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-orange-300 grid place-items-center p-5 hover:border-orange-500 hover:bg-orange-100/50 transition-all group relative overflow-hidden cursor-pointer"
-        >
-          <img
-            src={MASCOT.gift}
-            alt="麻吉貓在禮物盒"
-            className="absolute -bottom-2 -right-2 w-20 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition-transform"
-          />
-          <div className="text-center relative z-10">
-            <div className="text-base font-bold text-orange-700">您的品牌</div>
-            <div className="text-xs text-orange-600 mt-0.5">下一個就是你 →</div>
-            <div className="text-[10px] text-pink-600 mt-1 font-semibold">麻吉貓在等你 ♥</div>
-          </div>
-        </motion.a>
-      </motion.div>
+      {/* ─── 分隔線 ─── */}
+      <div className="border-t border-dashed border-gray-200 my-10" />
+
+      {/* ─── 火鍋品牌 ─── */}
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-3xl">🍲</span>
+          <h3 className="text-2xl sm:text-3xl font-black text-gray-800">火鍋品牌</h3>
+          {hotpotBrands.length > 0 && (
+            <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+              {hotpotBrands.length} 間
+            </span>
+          )}
+        </div>
+
+        {hotpotBrands.length > 0 ? (
+          <BrandGrid brands={hotpotBrands} showCta={true} />
+        ) : (
+          /* 空狀態：即將公布 + CTA */
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
+          >
+            {/* 3 個「即將加入」佔位卡 */}
+            {[1, 2, 3].map((i) => (
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                className="aspect-square rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50 border border-dashed border-blue-200 grid place-items-center"
+              >
+                <div className="text-center px-3">
+                  <div className="text-2xl mb-1">❄️</div>
+                  <div className="text-xs font-bold text-blue-400">即將加入</div>
+                </div>
+              </motion.div>
+            ))}
+            {/* CTA 卡 */}
+            <motion.a
+              variants={fadeUp}
+              href={APPLY_FORM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="aspect-square rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-orange-300 grid place-items-center p-5 hover:border-orange-500 hover:bg-orange-100/50 transition-all group relative overflow-hidden cursor-pointer"
+            >
+              <img
+                src={MASCOT.gift}
+                alt="麻吉貓在禮物盒"
+                className="absolute -bottom-2 -right-2 w-20 opacity-90 group-hover:scale-110 group-hover:rotate-6 transition-transform"
+              />
+              <div className="text-center relative z-10">
+                <div className="text-base font-bold text-orange-700">您的品牌</div>
+                <div className="text-xs text-orange-600 mt-0.5">下一個就是你 →</div>
+                <div className="text-[10px] text-pink-600 mt-1 font-semibold">麻吉貓在等你 ♥</div>
+              </div>
+            </motion.a>
+          </motion.div>
+        )}
+      </div>
+
     </div>
   </section>
 );
