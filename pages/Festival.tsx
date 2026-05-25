@@ -1439,8 +1439,8 @@ const AppFeature: React.FC = () => (
 
                 <div className="bg-white/15 backdrop-blur rounded-2xl p-4 border border-white/20 mb-4">
                   <div className="text-xs opacity-90">您的累積點數</div>
-                  <div className="text-4xl font-black mt-1">128 <span className="text-sm font-normal">點</span></div>
-                  <div className="text-[10px] opacity-80 mt-2">距離兌換 iPhone 17 抽獎券：再 22 點</div>
+                  <div className="text-4xl font-black mt-1">650 <span className="text-sm font-normal">點</span></div>
+                  <div className="text-[10px] opacity-80 mt-2">距離兌換 iPhone 17 抽獎券：再 150 點</div>
                   <div className="h-1.5 bg-white/20 rounded-full mt-2 overflow-hidden">
                     <div className="h-full w-[85%] bg-yellow-300 rounded-full" />
                   </div>
@@ -1449,10 +1449,10 @@ const AppFeature: React.FC = () => (
                 <div className="text-xs font-semibold mb-2 opacity-90">熱門兌換</div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { emoji: '🥩', name: '燒肉券', pts: '50' },
-                    { emoji: '🍲', name: '火鍋券', pts: '50' },
-                    { emoji: '🎫', name: '抽獎券', pts: '30' },
-                    { emoji: '🎁', name: '神秘禮', pts: '80' }
+                    { emoji: '🥩', name: '燒肉券', pts: '500' },
+                    { emoji: '🍲', name: '火鍋券', pts: '400' },
+                    { emoji: '🎫', name: '抽獎券', pts: '200' },
+                    { emoji: '🎁', name: '神秘禮', pts: '100' }
                   ].map((it) => (
                     <div key={it.name} className="bg-white text-gray-900 rounded-xl p-2.5">
                       <div className="text-2xl text-center">{it.emoji}</div>
