@@ -357,7 +357,7 @@ const AssociationIntro: React.FC = () => (
             <img
               src={MASCOT.wave}
               alt="麻吉貓"
-              className="w-16 sm:w-20 flex-shrink-0"
+              className="w-28 sm:w-36 flex-shrink-0"
             />
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
               <Heart size={14} /> 關於我們
@@ -640,7 +640,7 @@ const EventIntro: React.FC = () => (
         <img
           src={MASCOT.jump}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-4">
           <Flame size={14} /> 活動方案
@@ -1096,7 +1096,7 @@ const Sponsors: React.FC = () => (
         <img
           src={MASCOT.eat}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold mb-4">
           <Heart size={14} /> 活動陣容
@@ -1206,7 +1206,7 @@ const TocoFeature: React.FC = () => (
         <img
           src={MASCOT.rest}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold mb-4">
           <BookOpen size={14} /> 已上線合作案例
@@ -1346,7 +1346,7 @@ const KOLShowcase: React.FC = () => (
         <img
           src={MASCOT.love}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-100 text-pink-700 text-xs font-bold mb-4">
           <Camera size={14} /> 真實合作案例
@@ -1471,7 +1471,7 @@ const AppFeature: React.FC = () => (
         <img
           src={MASCOT.gift}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-4">
           <Smartphone size={14} /> 協會會員系統
@@ -1674,7 +1674,7 @@ const JoinProcess: React.FC = () => (
         <img
           src={MASCOT.dance}
           alt="麻吉貓"
-          className="mx-auto w-20 sm:w-24 mb-2"
+          className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold mb-4">
           <CheckCircle2 size={14} /> 4 步驟・極速上架
@@ -1799,7 +1799,7 @@ const FAQ: React.FC = () => {
           <img
             src={MASCOT.rest}
             alt="麻吉貓"
-            className="mx-auto w-20 sm:w-24 mb-2"
+            className="mx-auto w-48 sm:w-56 mb-4"
           />
           <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold mb-4">
             <MessageSquare size={14} /> 常見問題
