@@ -761,7 +761,13 @@ const hotpotBrands: BrandEntry[] = [
   { name: '百味釜精緻鍋物', category: '精緻鍋物', logo: '/festival/brand-baiweiku.jpg' },
   { name: '祇園禪院壽喜燒', category: '壽喜燒', logo: '/festival/brand-gion.jpg' },
   { name: '老東家重慶麻辣鍋', category: '麻辣鍋', logo: '/festival/brand-laodongja.jpg' },
-  { name: '草原風蒙古火鍋', category: '蒙古火鍋', logo: '/festival/brand-caoyuan.jpg' }
+  { name: '草原風蒙古火鍋', category: '蒙古火鍋', logo: '/festival/brand-caoyuan.jpg' },
+  { name: 'Coca泰式海鮮火鍋', category: '泰式火鍋', logo: '/festival/brand-coca-hotpot.jpg' },
+  { name: '椒心苑', category: '麻辣鍋', logo: '/festival/brand-jiaoxinyuan.jpg' },
+  { name: '深紅汕頭鍋物', category: '汕頭鍋物', logo: '/festival/brand-shenhong.jpg' },
+  { name: '發火鍋', category: '火鍋', logo: '/festival/brand-fahuo.jpg' },
+  { name: '米釉鍋物', category: '精緻鍋物', logo: '/festival/brand-miyou.jpg' },
+  { name: '阿忠羊肉爐', category: '羊肉爐', logo: '/festival/brand-azhong.jpg' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
