@@ -752,7 +752,7 @@ const yakinikuBrands: BrandEntry[] = [
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
 const hotpotBrands: BrandEntry[] = [
-  // 範例：{ name: '某火鍋', category: '麻辣鍋', logo: '/festival/火鍋logo/brand-xxx.jpg' },
+  { name: '馫麻辣', category: '麻辣鍋', logo: '/festival/brand-xunmala.jpg' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
