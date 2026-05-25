@@ -1677,7 +1677,7 @@ const joinSteps = [
     no: '04',
     icon: Rocket,
     title: '正式上架，啟動行銷',
-    desc: '官網品牌牆露出、APP 上架、KOL 媒合、新聞稿排程同步啟動',
+    desc: '官網品牌牆露出、APP 上架、KOL 媒合、品牌專訪排程同步啟動',
     color: 'from-emerald-500 to-teal-500'
   }
 ];
