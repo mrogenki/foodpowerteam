@@ -194,7 +194,7 @@ const Hero: React.FC = () => (
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 text-white text-center">
               <div className="font-black text-2xl mb-0.5" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>火鍋祭</div>
-              <div className="text-xs text-yellow-200 tracking-wider">Hot Pot Festival</div>
+              <div className="text-xs text-yellow-200 tracking-wider">10/1 – 11/30</div>
             </div>
           </motion.div>
           <motion.div
@@ -206,7 +206,7 @@ const Hero: React.FC = () => (
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 text-white text-center">
               <div className="font-black text-2xl mb-0.5" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>燒肉祭</div>
-              <div className="text-xs text-yellow-200 tracking-wider">Yakiniku Festival</div>
+              <div className="text-xs text-yellow-200 tracking-wider">8/1 – 9/30</div>
             </div>
           </motion.div>
           <motion.div
@@ -1692,7 +1692,7 @@ const faqs = [
   },
   {
     q: '活動期間有多久？',
-    a: '燒肉祭與火鍋祭分別有獨立檔期，單檔活動週期約 2-3 個月（含預熱期、活動期、回流期）。完整年度活動排程會在合約中清楚標示。'
+    a: '燒肉祭為 8/1–9/30，火鍋祭為 10/1–11/30，各為兩個月的獨立檔期（含預熱期、活動期、回流期）。兩檔活動前後銜接，全年皆有曝光聲量。'
   },
   {
     q: '我的餐廳需要準備什麼？',
