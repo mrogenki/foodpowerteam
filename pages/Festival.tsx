@@ -147,12 +147,10 @@ const Hero: React.FC = () => (
 
         {/* 美食探險隊長・麻吉貓（隊長報到） */}
         <motion.div variants={fadeUp} className="mt-8 inline-flex items-center gap-4 sm:gap-5">
-          <motion.img
+          <img
             src={MASCOT.wave}
             alt="美食探險隊長 麻吉貓"
             className="w-28 sm:w-32 lg:w-36 flex-shrink-0 drop-shadow-2xl"
-            animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
           <div>
             <div
@@ -179,7 +177,7 @@ const Hero: React.FC = () => (
 
       {/* 右側：火鍋燒肉 emoji 動畫卡片 */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.85 }}
+        initial={{ opacity: 1, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.7, delay: 0.2 }}
         className="hidden lg:block relative"
@@ -1509,7 +1507,7 @@ const AppFeature: React.FC = () => (
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         {/* 左：手機 mockup */}
         <motion.div
-          initial={{ opacity: 0, y: 60 }}
+          initial={{ opacity: 1, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
@@ -1928,7 +1926,7 @@ const FinalCTA: React.FC = () => (
 
     <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center text-white z-20">
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 1, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
