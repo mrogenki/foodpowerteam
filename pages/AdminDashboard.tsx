@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
 import html2pdf from 'html2pdf.js';
@@ -42,6 +43,7 @@ interface AdminDashboardProps {
   onDeleteMemberRegistration: (id: string | number) => void;
   onAddRegistrations?: (regs: Registration[]) => void;
   onAddMemberRegistrations?: (regs: MemberRegistration[]) => void;
+  onRefreshRegistrations?: () => void;
   onAddUser: (user: AdminUser) => void;
   onDeleteUser: (id: string) => void;
   onAddMember: (member: Member) => void;
@@ -1541,6 +1543,112 @@ const ActivityManager: React.FC<{
   );
 };
 
+const CheckInQrModal: React.FC<{ activity: Activity | MemberActivity; onClose: () => void }> = ({ activity, onClose }) => {
+  const checkInUrl = `${window.location.origin}/#/checkin/${activity.id}`;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(checkInUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      alert('複製失敗，請手動複製連結');
+    }
+  };
+
+  const handlePrint = () => {
+    const w = window.open('', '_blank', 'width=600,height=800');
+    if (!w) { alert('請允許瀏覽器彈出視窗'); return; }
+    const svg = document.getElementById('check-in-qr-svg')?.outerHTML || '';
+    w.document.write(`
+      <html><head><title>${activity.title} - 報到 QR</title>
+      <style>
+        body { font-family: -apple-system, sans-serif; text-align: center; padding: 40px 20px; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .meta { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .qr { display: inline-block; padding: 24px; background: white; border: 2px solid #eee; border-radius: 16px; }
+        .qr svg { width: 320px; height: 320px; }
+        .tip { margin-top: 24px; color: #999; font-size: 13px; }
+        .url { margin-top: 8px; color: #aaa; font-size: 11px; word-break: break-all; }
+      </style></head><body>
+        <h1>${activity.title}</h1>
+        <div class="meta">${activity.date}${activity.time ? ' ・ ' + activity.time : ''}</div>
+        <div class="qr">${svg}</div>
+        <div class="tip">📱 請掃描 QR Code 進行報到</div>
+        <div class="url">${checkInUrl}</div>
+        <script>window.onload = () => { window.print(); };</script>
+      </body></html>
+    `);
+    w.document.close();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-black text-gray-900">報到 QR Code</h3>
+            <p className="text-sm text-gray-500 truncate">{activity.title}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full" aria-label="關閉">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 flex items-center justify-center mb-4">
+          <div className="bg-white p-4 rounded-xl shadow-sm">
+            <QRCodeSVG
+              id="check-in-qr-svg"
+              value={checkInUrl}
+              size={256}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 mb-4">
+          <input
+            type="text"
+            readOnly
+            value={checkInUrl}
+            className="flex-1 bg-transparent text-xs text-gray-600 outline-none truncate"
+            onFocus={e => e.currentTarget.select()}
+          />
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition ${copied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+          >
+            {copied ? <><CheckCircle size={14} /> 已複製</> : <><Copy size={14} /> 複製</>}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handlePrint}
+            className="flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition"
+          >
+            <Printer size={18} /> 列印
+          </button>
+          <a
+            href={checkInUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition"
+          >
+            <ExternalLink size={18} /> 預覽
+          </a>
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mt-4">
+          現場將此 QR 印出或顯示，報名者掃描後即可自助報到
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const ActivityCheckInManager: React.FC<{
   type: 'general' | 'member' | 'unified';
   activities: (Activity | MemberActivity)[];
@@ -1557,6 +1665,7 @@ const ActivityCheckInManager: React.FC<{
   const [isBatchIssuing, setIsBatchIssuing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [batchReceiptData, setBatchReceiptData] = useState<any>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const fetchReceipts = async () => {
     try {
@@ -1797,12 +1906,22 @@ const ActivityCheckInManager: React.FC<{
          <button onClick={() => { setSelectedActivityId(null); setSelectedRegIds([]); }} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
            <ArrowLeft size={20} />
          </button>
-         <div>
+         <div className="flex-1">
            <h2 className="text-2xl font-bold">{currentActivity?.title}</h2>
            <p className="text-sm text-gray-500">報到管理列表</p>
          </div>
+         <button
+           onClick={() => setShowQrModal(true)}
+           className="flex items-center gap-2 bg-gradient-to-br from-red-600 to-orange-500 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-red-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+         >
+           <QrCode size={18} /> 顯示報到 QR
+         </button>
        </div>
-       
+
+       {showQrModal && currentActivity && (
+         <CheckInQrModal activity={currentActivity} onClose={() => setShowQrModal(false)} />
+       )}
+
        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
            <div className="relative flex-grow max-w-md">
@@ -2951,8 +3070,18 @@ const UserManager: React.FC<{
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { currentUser, onLogout, memberApplications } = props;
+  const { currentUser, onLogout, memberApplications, onRefreshRegistrations } = props;
   const pendingCount = memberApplications.filter(m => m.status === 'pending').length;
+  const location = useLocation();
+
+  // 切到「活動管理」/「報到管理」tab 時自動重新拉取 registrations，
+  // 避免久未重整頁面 → React state 停留在舊 snapshot → 新報名不顯示
+  useEffect(() => {
+    if (!onRefreshRegistrations) return;
+    if (location.pathname.startsWith('/admin/activities') || location.pathname.startsWith('/admin/check-in')) {
+      onRefreshRegistrations();
+    }
+  }, [location.pathname, onRefreshRegistrations]);
 
   return (
     <div className="flex min-h-screen bg-gray-50">

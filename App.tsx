@@ -24,6 +24,7 @@ const DesignDemoIndex = lazy(() => import('./pages/DesignDemoIndex'));
 const DesignDemoJP = lazy(() => import('./pages/DesignDemoJP'));
 const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
 const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
+const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
 
 import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
@@ -41,7 +42,7 @@ const ScrollToTop: React.FC = () => {
 
 // Landing page (例：燒肉祭/火鍋祭、設計風格 demo) 使用自帶 Header/Footer，不顯示全站導覽
 const isStandaloneLandingPath = (pathname: string) =>
-  pathname.startsWith('/festival') || pathname.startsWith('/design');
+  pathname.startsWith('/festival') || pathname.startsWith('/design') || pathname.startsWith('/checkin');
 
 // 載入中元件
 const PageLoader = () => (
@@ -933,6 +934,7 @@ const App: React.FC = () => {
               <Route path="/design/jp" element={<DesignDemoJP />} />
               <Route path="/design/eu" element={<DesignDemoEU />} />
               <Route path="/design/cn" element={<DesignDemoCN />} />
+              <Route path="/checkin/:activityId" element={<ActivityCheckIn />} />
 
               <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <LoginPage />} />
               
