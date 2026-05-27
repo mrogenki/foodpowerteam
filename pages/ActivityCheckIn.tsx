@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, MapPin, Clock, Loader2, CheckCircle2, Search, UserCheck, AlertCircle, ChevronLeft } from 'lucide-react';
-import { Activity, Registration } from '../types';
+import { Calendar, MapPin, Clock, Loader2, CheckCircle2, Search, UserCheck, AlertCircle, ChevronLeft, AlertTriangle } from 'lucide-react';
+import { Activity, Registration, PaymentStatus } from '../types';
 import { supabase } from '../utils/supabaseClient';
 
 type Status = 'loading' | 'ready' | 'not_found' | 'error';
+
+// 付款狀態判斷：未繳費（pending / failed）→ 顯示但標警示
+const isUnpaid = (ps?: PaymentStatus | string): boolean =>
+  ps === PaymentStatus.PENDING || ps === PaymentStatus.FAILED;
 
 const maskPhone = (phone?: string): string => {
   if (!phone) return '';
@@ -45,7 +49,10 @@ const ActivityCheckIn: React.FC = () => {
         return;
       }
       setActivity(actRes.data as Activity);
-      setRegistrations((regsRes.data as Registration[]) || []);
+      // 已退款者過濾掉（他們已取消，避免誤報到）
+      const allRegs = (regsRes.data as Registration[]) || [];
+      const visibleRegs = allRegs.filter(r => r.payment_status !== PaymentStatus.REFUNDED);
+      setRegistrations(visibleRegs);
       setStatus('ready');
 
       document.title = `${actRes.data.title} - 活動報到`;
@@ -70,7 +77,14 @@ const ActivityCheckIn: React.FC = () => {
   const handleCheckIn = async (reg: Registration) => {
     if (!supabase) return;
     if (reg.check_in_status) return;
-    if (!confirm(`確認您是 ${reg.name || reg.member_name}？確認後即完成報到。`)) return;
+
+    // 未繳費者額外警示
+    if (isUnpaid(reg.payment_status)) {
+      const statusLabel = reg.payment_status === PaymentStatus.FAILED ? '付款失敗' : '尚未繳費';
+      if (!confirm(`⚠️ 您的繳費狀態為「${statusLabel}」\n\n仍要繼續報到嗎？請現場洽工作人員完成繳費。`)) return;
+    } else {
+      if (!confirm(`確認您是 ${reg.name || reg.member_name}？確認後即完成報到。`)) return;
+    }
 
     setSubmittingId(reg.id);
     const { error } = await supabase
@@ -192,6 +206,8 @@ const ActivityCheckIn: React.FC = () => {
             {filtered.map(reg => {
               const isCheckedIn = !!reg.check_in_status;
               const isSubmitting = submittingId === reg.id;
+              const unpaid = isUnpaid(reg.payment_status);
+              const unpaidLabel = reg.payment_status === PaymentStatus.FAILED ? '付款失敗' : '未繳費';
               return (
                 <button
                   key={String(reg.id)}
@@ -200,14 +216,21 @@ const ActivityCheckIn: React.FC = () => {
                   className={`w-full text-left bg-white rounded-2xl p-4 shadow-sm border-2 transition-all active:scale-[0.98] ${
                     isCheckedIn
                       ? 'border-green-200 bg-green-50/50 cursor-default'
+                      : unpaid
+                      ? 'border-red-200 hover:border-red-400 hover:shadow-md'
                       : 'border-transparent hover:border-red-300 hover:shadow-md'
                   } disabled:cursor-wait`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-lg font-bold text-gray-900">{reg.name || reg.member_name}</span>
                         {reg.member_no && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">會員 {reg.member_no}</span>}
+                        {unpaid && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">
+                            <AlertTriangle size={11} /> {unpaidLabel}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500">{maskPhone(reg.phone)}</p>
                     </div>
