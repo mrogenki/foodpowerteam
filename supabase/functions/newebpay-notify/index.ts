@@ -192,6 +192,49 @@ serve(async (req) => {
             }
           };
 
+          // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
+          if (merchantOrderNo.startsWith('FEST_')) {
+            console.log(`[Notify] Attempting to update festival_registrations for ${merchantOrderNo}`);
+            const { data: festData, error: festError } = await supabase
+              .from('festival_registrations')
+              .update(updatePayload)
+              .eq('merchant_order_no', merchantOrderNo)
+              .select()
+              .single()
+
+            if (festError && festError.code !== 'PGRST116') {
+              console.error(`[Notify] festival_registrations update error:`, festError);
+            }
+
+            if (festData) {
+              console.log(`[Notify] Success! Updated Festival Registration: ${merchantOrderNo}`)
+              const festivalLabel = festData.festival_type === 'hotpot' ? '火鍋祭' : '燒肉祭';
+              try {
+                await Promise.all([
+                  sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
+                    to_name: festData.contact_name,
+                    email: festData.contact_email,
+                    activity_title: `【食在力量】${festivalLabel}報名`,
+                    activity_date: new Date().toISOString().slice(0, 10),
+                    activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+                    activity_location: `${festivalLabel}（已完成繳費）`,
+                    activity_price: festData.paid_amount || 0
+                  }),
+                  sendTelegram(`${festivalLabel}報名 (已付款)`, `品牌：${festData.brand_name}\n聯絡人：${festData.contact_name}\n電話：${festData.contact_phone}\nEmail：${festData.contact_email}\n抬頭：${festData.invoice_title || '—'}\n統編：${festData.tax_id || '—'}\n品牌數：${festData.brand_count}\n網紅影音升級：${festData.influencer_video_count}\n金額：NT$ ${festData.paid_amount?.toLocaleString()}`)
+                ]);
+              } catch (emailErr) {
+                console.error(`[Notify] Festival email process error:`, emailErr);
+              }
+            } else {
+              console.warn(`[Notify] Warning: Festival order not found: ${merchantOrderNo}`)
+            }
+
+            return new Response('OK', {
+              headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+              status: 200
+            })
+          }
+
           // 6.1 Update 'registrations' (統一活動表 — 含公開與會員專屬，以 audience 區分)
           console.log(`[Notify] Attempting to update registrations for ${merchantOrderNo}`);
           const { data: regData, error: regError } = await supabase

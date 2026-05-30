@@ -20,6 +20,7 @@ const RenewalPayment = lazy(() => import('./pages/RenewalPayment'));
 const AboutUs = lazy(() => import('./pages/AboutUs'));
 const MilestoneTimeline = lazy(() => import('./pages/MilestoneTimeline'));
 const Festival = lazy(() => import('./pages/Festival'));
+const FestivalPayment = lazy(() => import('./pages/FestivalPayment'));
 const DesignDemoIndex = lazy(() => import('./pages/DesignDemoIndex'));
 const DesignDemoJP = lazy(() => import('./pages/DesignDemoJP'));
 const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
@@ -930,6 +931,7 @@ const App: React.FC = () => {
               <Route path="/payment-result" element={<PaymentResult />} />
               <Route path="/milestones" element={<MilestoneTimeline />} />
               <Route path="/festival" element={<Festival />} />
+              <Route path="/festival/pay" element={<FestivalPayment />} />
               <Route path="/design" element={<DesignDemoIndex />} />
               <Route path="/design/jp" element={<DesignDemoJP />} />
               <Route path="/design/eu" element={<DesignDemoEU />} />
