@@ -30,8 +30,8 @@ const scrollTo = (id: string) => {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-// ====== 報名付款頁（站內 HashRouter 路由）======
-const APPLY_FORM_URL = '#/festival/pay';
+// ====== 報名表單（Google Form）======
+const APPLY_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdf3Lpb9rZc0VazvtxdwM9HgK4wJTUhtLk4V4fdHIGBfQFBBQ/viewform?usp=send_form';
 
 // ====== Mini Header (活潑風格) ======
 const FestivalHeader: React.FC = () => (
@@ -661,7 +661,7 @@ const EventIntro: React.FC = () => (
         whileInView="visible"
         viewport={{ once: true, margin: '-50px' }}
         variants={stagger}
-        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-20"
+        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
       >
         {exposureItems.map((it, i) => (
           <motion.div
@@ -682,7 +682,13 @@ const EventIntro: React.FC = () => (
           </motion.div>
         ))}
       </motion.div>
+    </div>
+  </section>
+);
 
+const MarketingRoadmap: React.FC = () => (
+  <section id="marketing-roadmap" className="relative py-20 sm:py-28 bg-gradient-to-b from-amber-50 to-orange-50 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6">
       {/* 五階段導客旅程 */}
       <motion.div
         initial="hidden"
@@ -2038,10 +2044,11 @@ const Festival: React.FC = () => {
       <AssociationIntro />
       <MascotIntro />
       <EventIntro />
-      <BrandWall />
-      <Sponsors />
       <TocoFeature />
       <KOLShowcase />
+      <MarketingRoadmap />
+      <BrandWall />
+      <Sponsors />
       <AppFeature />
       <JoinProcess />
       <FAQ />
