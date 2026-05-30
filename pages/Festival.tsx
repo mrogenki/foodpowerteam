@@ -1645,7 +1645,8 @@ const joinSteps = [
     icon: FileText,
     title: '填寫合作申請表',
     desc: '提供餐廳基本資料、菜單、活動意願，由協會專員聯繫確認',
-    color: 'from-red-500 to-rose-500'
+    color: 'from-red-500 to-rose-500',
+    cta: { label: '填寫報名表單', href: APPLY_FORM_URL, external: true }
   },
   {
     no: '02',
@@ -1659,7 +1660,8 @@ const joinSteps = [
     icon: CreditCard,
     title: '完成繳費',
     desc: 'NT$3,000 上架費，線上刷卡 / 匯款 / 藍新金流皆可',
-    color: 'from-amber-500 to-yellow-500'
+    color: 'from-amber-500 to-yellow-500',
+    cta: { label: '前往報名繳費', href: '#/festival/pay', external: false }
   },
   {
     no: '04',
@@ -1707,14 +1709,16 @@ const JoinProcess: React.FC = () => (
         <div className="hidden lg:block absolute top-24 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-red-300 via-orange-300 to-emerald-300" />
 
         <div className="grid lg:grid-cols-4 gap-6 lg:gap-4">
-          {joinSteps.map((s) => (
+          {joinSteps.map((s) => {
+            const cta = (s as { cta?: { label: string; href: string; external?: boolean } }).cta;
+            return (
             <motion.div
               key={s.no}
               variants={fadeUp}
               whileHover={{ y: -6 }}
               className="relative"
             >
-              <div className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all p-6 border border-gray-100 h-full">
+              <div className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all p-6 border border-gray-100 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${s.color} grid place-items-center text-white shadow-lg relative z-10`}>
                     <s.icon size={28} />
@@ -1725,9 +1729,19 @@ const JoinProcess: React.FC = () => (
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{s.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{s.desc}</p>
+                {cta && (
+                  <a
+                    href={cta.href}
+                    {...(cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className={`mt-auto px-4 py-2.5 rounded-xl bg-gradient-to-r ${s.color} text-white text-sm font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all inline-flex items-center justify-center gap-1.5`}
+                  >
+                    {cta.label} <ArrowRight size={16} />
+                  </a>
+                )}
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
 
