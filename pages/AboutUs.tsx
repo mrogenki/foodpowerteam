@@ -394,10 +394,10 @@ const AboutUs: React.FC = () => {
                       url: 'https://n.yam.com/Article/20250624541920',
                     },
                     {
-                      source: '波新聞',
-                      date: '2026.04.30',
-                      title: '食在力量攜手彰青匯 打造百業整合生態系',
-                      url: 'https://n.yam.com/Article/20260430954717',
+                      source: '卓越雜誌',
+                      date: '2026.05.05',
+                      title: '打破地域與產業邊界！食在力量結盟彰青匯，百工百業鏈結共創「大食品時代」新生態',
+                      url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36',
                     },
                   ].map((m) => (
                     <a
