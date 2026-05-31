@@ -1,51 +1,16 @@
-import React, { useEffect } from 'react';
-import { motion } from 'motion/react';
-import { History, Users, Briefcase, Award, Globe, Heart, Target } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { History, Users, Briefcase, Award, Globe, Heart, Target, Calendar, Building2, ShieldCheck, Sparkles, Handshake, TrendingUp, Newspaper, X, ZoomIn } from 'lucide-react';
+
+const CERT_IMAGE = '/license-certificate.jpg';
 
 const AboutUs: React.FC = () => {
+  const [certOpen, setCertOpen] = useState(false);
+  const [certAvailable, setCertAvailable] = useState(true);
+
   useEffect(() => {
     document.title = '關於我們 | 食在力量 - 連結產業，創造共好';
   }, []);
-
-  const sections = [
-    {
-      id: 'history',
-      title: '發展歷程',
-      icon: <History className="text-red-600" />,
-      content: '食在力量致力於推動食品產業的創新與交流，從創立至今，我們不斷擴展服務範圍，連結品牌與通路，創造共贏價值。',
-    },
-    {
-      id: 'board',
-      title: '理監事會',
-      icon: <Award className="text-red-600" />,
-      subsections: [
-        { name: '理事長、秘書長', description: '領導協會發展方向，統籌各項事務。' },
-        { name: '理事、監事', description: '監督協會運作，提供專業建議。' },
-        { name: '顧問團', description: '邀請產業資深前輩，提供策略指導。' },
-      ],
-    },
-    {
-      id: 'team',
-      title: '營運團隊',
-      icon: <Briefcase className="text-red-600" />,
-      groups: [
-        { name: '活動組', description: '策劃各類講座論壇、參訪與課程。' },
-        { name: '資訊組', description: '維護系統運作，推動數位轉型。' },
-        { name: '行政組', description: '處理協會日常庶務與會員服務。' },
-        { 
-          name: '通路組', 
-          items: ['企業福委', '國際市場'],
-          description: '對接企業採購與拓展海外市場。'
-        },
-        { 
-          name: '品牌組', 
-          items: ['餐飲人俱樂部', '食品人俱樂部'],
-          description: '深度經營品牌社群，促進同業交流。'
-        },
-        { name: '會員委員會', description: '招募新會員，維護會員權益。' },
-      ],
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -72,11 +37,116 @@ const AboutUs: React.FC = () => {
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
+      {/* 成果數據統計 */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 md:p-8"
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: <Users className="text-red-600" size={24} />, value: '2,500+', label: '產業老闆社群' },
+              { icon: <Award className="text-red-600" size={24} />, value: '150+', label: '協會正式會員', note: '持續成長中' },
+              { icon: <Calendar className="text-red-600" size={24} />, value: '100', label: '累計舉辦活動（場）', note: '2023→2025 逐年成長' },
+              { icon: <Building2 className="text-red-600" size={24} />, value: '2024.02', label: '正式成立' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                className="text-center"
+              >
+                <div className="inline-flex p-3 bg-red-50 rounded-xl mb-3">{stat.icon}</div>
+                <div className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">{stat.value}</div>
+                <div className="text-sm text-gray-600 mt-1">{stat.label}</div>
+                {stat.note && <div className="text-xs text-red-600/70 mt-1">{stat.note}</div>}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* 活動場次逐年成長 */}
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <div className="flex items-center gap-2 mb-4 text-gray-700">
+              <TrendingUp size={18} className="text-red-600" />
+              <span className="text-sm font-bold">活動場次逐年成長</span>
+            </div>
+            <div className="flex items-end justify-around gap-4 h-32">
+              {[
+                { year: '2023', count: 25 },
+                { year: '2024', count: 33 },
+                { year: '2025', count: 42 },
+              ].map((bar, i) => (
+                <div key={bar.year} className="flex-1 flex flex-col items-center justify-end h-full">
+                  <span className="text-sm font-bold text-red-700 mb-1">{bar.count} 場</span>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    whileInView={{ height: `${(bar.count / 42) * 100}%` }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1, duration: 0.6, ease: 'easeOut' }}
+                    className="w-full max-w-[80px] bg-gradient-to-t from-red-600 to-red-400 rounded-t-lg"
+                  />
+                  <span className="text-xs text-gray-500 mt-2">{bar.year}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
+          {/* 使命 / 願景 / 核心價值 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-8 md:p-10 shadow-xl text-white lg:col-span-3 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 -translate-y-1/3 translate-x-1/4 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-3 text-red-100">
+                  <Target size={18} />
+                  <span className="text-sm font-bold tracking-wider">使命 MISSION</span>
+                </div>
+                <p className="text-xl md:text-2xl font-bold leading-relaxed">
+                  連結食品與餐飲產業的每一份力量，協助業者突破通路與資訊的隔閡，攜手成長。
+                </p>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-3 text-red-100">
+                  <Sparkles size={18} />
+                  <span className="text-sm font-bold tracking-wider">願景 VISION</span>
+                </div>
+                <p className="text-xl md:text-2xl font-bold leading-relaxed">
+                  成為台灣最值得信賴的美食產業交流平台，讓好品牌被看見、讓好夥伴能相遇。
+                </p>
+              </div>
+            </div>
+            <div className="relative z-10 border-t border-white/20 pt-6">
+              <div className="text-sm font-bold tracking-wider text-red-100 mb-4">核心價值 VALUES</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { title: '共創', desc: '集結產業智慧，共同開創新商機。' },
+                  { title: '共享', desc: '資源、人脈與經驗無私交流分享。' },
+                  { title: '共贏', desc: '品牌與通路強強聯手，創造多贏。' },
+                ].map((v) => (
+                  <div key={v.title} className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/10">
+                    <div className="text-2xl font-extrabold mb-2">{v.title}</div>
+                    <div className="text-sm text-red-50/90 leading-relaxed">{v.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
           {/* 發展歷程 */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -194,8 +264,200 @@ const AboutUs: React.FC = () => {
             </div>
           </motion.div>
 
+          {/* 合法立案資訊 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 lg:col-span-3"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-red-50 rounded-xl">
+                <ShieldCheck className="text-red-600" size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">合法立案資訊</h2>
+                <p className="text-sm text-gray-500 mt-0.5">依法登記之人民團體，營運公開透明</p>
+              </div>
+            </div>
+            <div className={`grid grid-cols-1 gap-6 ${certAvailable ? 'lg:grid-cols-3' : ''}`}>
+              {/* 資訊欄位 */}
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${certAvailable ? 'lg:col-span-2' : 'lg:grid-cols-3'}`}>
+                {[
+                  { label: '協會全名', value: '食在力量美食產業交流協會' },
+                  { label: '主管機關', value: '內政部' },
+                  { label: '立案字號', value: '台內團字第 1130022533 號' },
+                  { label: '統一編號', value: '00509918' },
+                  { label: '成立日期', value: '中華民國 113 年 2 月 25 日（2024）' },
+                  { label: '組織型態', value: '全國性及區級人民團體（社團法人）' },
+                  { label: '會址', value: '臺北市中正區羅斯福路 3 段 126 號 3 樓' },
+                ].map((item) => (
+                  <div key={item.label} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="text-xs font-bold text-gray-400 mb-1">{item.label}</div>
+                    <div className="text-sm font-semibold text-gray-900">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 立案證書縮圖 */}
+              {certAvailable && (
+                <div className="lg:col-span-1">
+                  <button
+                    type="button"
+                    onClick={() => setCertOpen(true)}
+                    className="group relative w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shadow-sm hover:shadow-md transition-shadow"
+                    aria-label="點擊放大立案證書"
+                  >
+                    <img
+                      src={CERT_IMAGE}
+                      alt="食在力量美食產業交流協會 立案證書"
+                      loading="lazy"
+                      onError={() => setCertAvailable(false)}
+                      className="w-full h-auto object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                      <span className="flex items-center gap-1.5 bg-white/90 text-gray-900 text-xs font-bold px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                        <ZoomIn size={14} /> 點擊放大
+                      </span>
+                    </div>
+                  </button>
+                  <p className="text-xs text-gray-400 text-center mt-2">內政部核發立案證書</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* 合作夥伴 / 媒體報導 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 lg:col-span-3"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-red-50 rounded-xl">
+                <Handshake className="text-red-600" size={28} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">合作夥伴與媒體</h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4 text-gray-700">
+                  <Handshake size={18} className="text-red-600" />
+                  <span className="text-sm font-bold">合作夥伴</span>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { abbr: 'TCCNA', name: '北美洲台灣商會聯合總會', logo: '/tccna-logo.png' },
+                    { abbr: 'ETCC', name: '歐洲台灣商會聯合總會', logo: '/etcc-logo.jpg' },
+                  ].map((p) => (
+                    <div
+                      key={p.abbr}
+                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+                    >
+                      <div className="shrink-0 w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-1.5 shadow-sm">
+                        <img
+                          src={p.logo}
+                          alt={`${p.name} logo`}
+                          loading="lazy"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-gray-400">{p.abbr}</div>
+                        <div className="font-bold text-gray-900">{p.name}</div>
+                        <span className="inline-flex items-center gap-1 mt-1.5 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-100">
+                          <ShieldCheck size={12} /> 已簽署 MOU
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-4 text-gray-700">
+                  <Newspaper size={18} className="text-red-600" />
+                  <span className="text-sm font-bold">媒體報導</span>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    {
+                      source: '卓越雜誌',
+                      date: '2026.03.23',
+                      title: '揭開台灣餐飲淘汰賽下半場！食在力量如何靠資源整合，聯手歐洲台商會翻轉產業新格局？',
+                      url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10234',
+                    },
+                    {
+                      source: '台灣產經新聞網',
+                      date: '2025.06.24',
+                      title: '打造文化輸出與品牌國際化雙引擎 食在力量餐飲代表團赴美參訪',
+                      url: 'https://n.yam.com/Article/20250624541920',
+                    },
+                    {
+                      source: '波新聞',
+                      date: '2026.04.30',
+                      title: '食在力量攜手彰青匯 打造百業整合生態系',
+                      url: 'https://n.yam.com/Article/20260430954717',
+                    },
+                  ].map((m) => (
+                    <a
+                      key={m.url}
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-red-200 hover:bg-red-50/30 transition-colors"
+                    >
+                      <Newspaper size={18} className="text-red-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                          <span className="font-bold text-red-600">{m.source}</span>
+                          <span>·</span>
+                          <span>{m.date}</span>
+                        </div>
+                        <div className="text-sm font-semibold text-gray-800 group-hover:text-red-700 leading-snug">
+                          {m.title}
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
         </div>
       </div>
+
+      {/* 立案證書燈箱 */}
+      <AnimatePresence>
+        {certOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setCertOpen(false)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+          >
+            <button
+              type="button"
+              onClick={() => setCertOpen(false)}
+              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+              aria-label="關閉"
+            >
+              <X size={24} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              src={CERT_IMAGE}
+              alt="食在力量美食產業交流協會 立案證書"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
