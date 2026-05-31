@@ -47,7 +47,7 @@ const AboutUs: React.FC = () => {
         >
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: <Users className="text-red-600" size={24} />, value: '2,500+', label: '產業老闆社群' },
+              { icon: <Users className="text-red-600" size={24} />, value: '2,500+', label: '產業老闆社群', note: '持續成長中' },
               { icon: <Award className="text-red-600" size={24} />, value: '150+', label: '協會正式會員', note: '持續成長中' },
               { icon: <Calendar className="text-red-600" size={24} />, value: '100', label: '累計舉辦活動（場）', note: '2023→2025 逐年成長' },
               { icon: <Building2 className="text-red-600" size={24} />, value: '2024.02', label: '正式成立' },
