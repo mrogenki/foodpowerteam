@@ -1652,9 +1652,8 @@ const joinSteps = [
     no: '02',
     icon: CreditCard,
     title: '完成繳費',
-    desc: '每品牌 NT$3,000 上架費，線上刷卡 / 匯款 / 藍新金流皆可',
-    color: 'from-amber-500 to-yellow-500',
-    cta: { label: '前往報名繳費', href: '#/festival/pay', external: false }
+    desc: '每品牌 NT$3,000 上架費，協會確認後寄送繳費連結，線上刷卡 / 匯款 / 藍新金流皆可',
+    color: 'from-amber-500 to-yellow-500'
   },
   {
     no: '03',
