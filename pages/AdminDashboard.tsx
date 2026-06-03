@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
 import html2pdf from 'html2pdf.js';
 import { supabase } from '../utils/supabaseClient';
 import MemberRenewalManager from './MemberRenewalManager';
+import FestivalApplicationManager from './FestivalApplicationManager';
 import MemberBirthdayManager from './MemberBirthdayManager';
 import ReceiptManager from './ReceiptManager';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
@@ -112,6 +113,24 @@ const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: n
   const isStaff = user.role === UserRole.STAFF;
 
   const [pendingRenewalCount, setPendingRenewalCount] = useState(0);
+  const [pendingFestivalCount, setPendingFestivalCount] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingFestival = async () => {
+      try {
+        const { count } = await supabase
+          .from('festival_applications')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        setPendingFestivalCount(count || 0);
+      } catch (err) {
+        console.error('Error fetching pending festival applications:', err);
+      }
+    };
+    fetchPendingFestival();
+    const interval = setInterval(fetchPendingFestival, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchPendingRenewals = async () => {
@@ -178,6 +197,13 @@ const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: n
           <Link to="/admin/activities" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/activities') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Calendar size={20} /><span>活動管理</span></Link>
           <Link to="/admin/club" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/club') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Crown size={20} /><span>俱樂部管理</span></Link>
           <Link to="/admin/milestones" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/milestones') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><History size={20} /><span>大事記管理</span></Link>
+          <Link to="/admin/festival-applications" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/festival-applications') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}>
+            <Flame size={20} />
+            <div className="flex-grow flex justify-between items-center">
+                <span>燒肉/火鍋祭報名</span>
+                {pendingFestivalCount > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingFestivalCount}</span>}
+            </div>
+          </Link>
 
           <div className="pt-4 pb-2 px-3 text-xs font-bold text-gray-600 uppercase">會員/營運</div>
           <Link to="/admin/members" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/members') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Building2 size={20} /><span>會員資料庫</span></Link>
@@ -3104,6 +3130,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/finances" element={<FinancialManager records={props.financialRecords} onAdd={props.onAddFinancialRecord} onUpdate={props.onUpdateFinancialRecord} onDelete={props.onDeleteFinancialRecord} onUploadImage={props.onUploadImage} />} />
           <Route path="/member-applications" element={<MemberApplicationManager applications={props.memberApplications} onApprove={props.onApproveMemberApplication} onDelete={props.onDeleteMemberApplication} />} />
           <Route path="/member-renewals" element={<MemberRenewalManager />} />
+          <Route path="/festival-applications" element={<FestivalApplicationManager />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />
           <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} />} />

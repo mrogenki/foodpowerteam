@@ -208,7 +208,7 @@ serve(async (req) => {
 
             if (festData) {
               console.log(`[Notify] Success! Updated Festival Registration: ${merchantOrderNo}`)
-              const festivalLabel = festData.festival_type === 'hotpot' ? '火鍋祭' : '燒肉祭';
+              const festivalLabel = festData.festival_type === 'hotpot' ? '火鍋祭' : festData.festival_type === 'both' ? '燒肉祭與火鍋祭' : '燒肉祭';
               try {
                 await Promise.all([
                   sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
