@@ -40,6 +40,8 @@ interface FestivalApplication {
   signer_name?: string;
   agreed_at?: string;
   agreed_ip?: string;
+  attend_press_conference?: boolean;
+  press_conference_attendees?: number | null;
   status: string;
   registration_id?: string | null;
   payment_link?: string | null;
@@ -348,6 +350,7 @@ const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> =
             <Row label="聯絡信箱" value={app.contact_email} />
             <Row label="公司登記地址" value={app.company_address} />
             <Row label="專案聯絡人" value={`${app.project_contact} / ${app.project_contact_phone}`} />
+            <Row label="7/8 記者會" value={app.attend_press_conference ? `出席（${app.press_conference_attendees ?? '-'} 位）` : '不出席'} />
           </section>
 
           <section>

@@ -79,6 +79,10 @@ const FestivalApply: React.FC = () => {
   const [projectContact, setProjectContact] = useState('');
   const [projectContactPhone, setProjectContactPhone] = useState('');
 
+  // 7/8 啟動記者會
+  const [attendPress, setAttendPress] = useState<'yes' | 'no' | ''>('');
+  const [pressAttendees, setPressAttendees] = useState(1);
+
   // 品牌明細（可多筆）
   const [brands, setBrands] = useState<Brand[]>([emptyBrand()]);
 
@@ -130,6 +134,14 @@ const FestivalApply: React.FC = () => {
       setError('請輸入正確的聯絡信箱格式');
       return;
     }
+    if (attendPress !== 'yes' && attendPress !== 'no') {
+      setError('請選擇是否出席 7/8 啟動記者會');
+      return;
+    }
+    if (attendPress === 'yes' && pressAttendees < 1) {
+      setError('請填寫記者會出席人數');
+      return;
+    }
 
     for (let i = 0; i < brands.length; i++) {
       const b = brands[i];
@@ -167,6 +179,8 @@ const FestivalApply: React.FC = () => {
           company_address: companyAddress.trim(),
           project_contact: projectContact.trim(),
           project_contact_phone: projectContactPhone.trim(),
+          attend_press_conference: attendPress === 'yes',
+          press_conference_attendees: attendPress === 'yes' ? pressAttendees : null,
           brands: brands.map((b) => ({
             brand_name: b.brand_name.trim(),
             festival_type: b.festival_type,
@@ -247,6 +261,40 @@ const FestivalApply: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="專案聯絡人" required value={projectContact} onChange={setProjectContact} />
               <Input label="專案聯絡人手機" required value={projectContactPhone} onChange={setProjectContactPhone} placeholder="0912345678" />
+            </div>
+
+            <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
+              <Label required>是否出席 7/8 啟動記者會？</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAttendPress('yes')}
+                  className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                    attendPress === 'yes' ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  出席
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendPress('no')}
+                  className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                    attendPress === 'no' ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  不出席
+                </button>
+              </div>
+              {attendPress === 'yes' && (
+                <div className="mt-3 flex items-center justify-between gap-4">
+                  <Label>出席人數</Label>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => setPressAttendees((n) => Math.max(1, n - 1))} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">−</button>
+                    <span className="w-8 text-center font-bold text-lg text-gray-900">{pressAttendees}</span>
+                    <button type="button" onClick={() => setPressAttendees((n) => n + 1)} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">＋</button>
+                  </div>
+                </div>
+              )}
             </div>
           </Section>
 

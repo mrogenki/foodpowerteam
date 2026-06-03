@@ -64,6 +64,9 @@ serve(async (req) => {
       company_address: body.company_address,
       project_contact: body.project_contact,
       project_contact_phone: body.project_contact_phone,
+      // 7/8 啟動記者會
+      attend_press_conference: body.attend_press_conference === true,
+      press_conference_attendees: body.attend_press_conference === true ? (parseInt(body.press_conference_attendees, 10) || 1) : null,
       // 品牌明細（完整陣列）
       brands,
       // 相容用：以第一個品牌填入舊單品牌欄位
@@ -112,7 +115,8 @@ serve(async (req) => {
         const brandLines = brands
           .map((b: any, i: number) => `${i + 1}. ${b.brand_name}（${FESTIVAL_LABEL[b.festival_type] || b.festival_type}・${b.sponsor_plan === 'B' ? '方案B+4500' : '方案A'}）`)
           .join('\n')
-        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}\n同意時間：${insertPayload.agreed_at}`
+        const pressLine = insertPayload.attend_press_conference ? `出席 7/8 記者會：是（${insertPayload.press_conference_attendees} 位）` : '出席 7/8 記者會：否'
+        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n${pressLine}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}\n同意時間：${insertPayload.agreed_at}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
