@@ -1646,7 +1646,7 @@ const joinSteps = [
     title: '填寫合作申請表',
     desc: '提供餐廳基本資料、菜單、活動意願，由協會專員聯繫確認',
     color: 'from-red-500 to-rose-500',
-    cta: { label: '填寫報名表單', href: APPLY_FORM_URL, external: true }
+    cta: { label: '填寫報名表單', href: '#/festival/apply', external: false }
   },
   {
     no: '02',

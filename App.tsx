@@ -21,6 +21,7 @@ const AboutUs = lazy(() => import('./pages/AboutUs'));
 const MilestoneTimeline = lazy(() => import('./pages/MilestoneTimeline'));
 const Festival = lazy(() => import('./pages/Festival'));
 const FestivalPayment = lazy(() => import('./pages/FestivalPayment'));
+const FestivalApply = lazy(() => import('./pages/FestivalApply'));
 const DesignDemoIndex = lazy(() => import('./pages/DesignDemoIndex'));
 const DesignDemoJP = lazy(() => import('./pages/DesignDemoJP'));
 const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
@@ -932,6 +933,7 @@ const App: React.FC = () => {
               <Route path="/milestones" element={<MilestoneTimeline />} />
               <Route path="/festival" element={<Festival />} />
               <Route path="/festival/pay" element={<FestivalPayment />} />
+              <Route path="/festival/apply" element={<FestivalApply />} />
               <Route path="/design" element={<DesignDemoIndex />} />
               <Route path="/design/jp" element={<DesignDemoJP />} />
               <Route path="/design/eu" element={<DesignDemoEU />} />
