@@ -30,8 +30,8 @@ const scrollTo = (id: string) => {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-// ====== 報名表單（Google Form）======
-const APPLY_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdf3Lpb9rZc0VazvtxdwM9HgK4wJTUhtLk4V4fdHIGBfQFBBQ/viewform?usp=send_form';
+// ====== 報名入口（站內網頁報名表，HashRouter 路由）======
+const APPLY_FORM_URL = '#/festival/apply';
 
 // ====== Mini Header (活潑風格) ======
 const FestivalHeader: React.FC = () => (
