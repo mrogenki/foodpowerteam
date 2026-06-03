@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   Flame, Beef, Camera, BookOpen, Globe, Smartphone, Mic, Store, Gift,
   Users, Award, Bell, Coins, Ticket, QrCode,
-  ChevronDown, FileText, FileSignature, CreditCard, Rocket,
+  ChevronDown, FileText, CreditCard, Rocket,
   Sparkles, Star, ArrowRight, CheckCircle2, MessageSquare,
   Mail, MapPinned, Megaphone, Newspaper, Heart, TrendingUp,
   Instagram, ExternalLink,
@@ -1644,27 +1644,20 @@ const joinSteps = [
     no: '01',
     icon: FileText,
     title: '填寫合作申請表',
-    desc: '提供餐廳基本資料、菜單、活動意願，由協會專員聯繫確認',
+    desc: '線上填寫公司與品牌資料，閱讀並同意合作合約，由協會專員確認',
     color: 'from-red-500 to-rose-500',
     cta: { label: '填寫報名表單', href: '#/festival/apply', external: false }
   },
   {
     no: '02',
-    icon: FileSignature,
-    title: '簽署電子合約',
-    desc: '線上簽約，合作內容、權益、活動期間透明清楚，3 分鐘完成',
-    color: 'from-orange-500 to-amber-500'
-  },
-  {
-    no: '03',
     icon: CreditCard,
     title: '完成繳費',
-    desc: 'NT$3,000 上架費，線上刷卡 / 匯款 / 藍新金流皆可',
+    desc: '每品牌 NT$3,000 上架費，線上刷卡 / 匯款 / 藍新金流皆可',
     color: 'from-amber-500 to-yellow-500',
     cta: { label: '前往報名繳費', href: '#/festival/pay', external: false }
   },
   {
-    no: '04',
+    no: '03',
     icon: Rocket,
     title: '正式上架，啟動行銷',
     desc: '官網品牌牆露出、APP 上架、KOL 媒合、品牌專訪排程同步啟動',
@@ -1688,7 +1681,7 @@ const JoinProcess: React.FC = () => (
           className="mx-auto w-48 sm:w-56 mb-4"
         />
         <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold mb-4">
-          <CheckCircle2 size={14} /> 4 步驟・極速上架
+          <CheckCircle2 size={14} /> 3 步驟・極速上架
         </motion.div>
         <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
           餐廳合作參加流程
@@ -1706,9 +1699,9 @@ const JoinProcess: React.FC = () => (
         className="relative"
       >
         {/* 連接線 (桌機) */}
-        <div className="hidden lg:block absolute top-24 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-red-300 via-orange-300 to-emerald-300" />
+        <div className="hidden lg:block absolute top-24 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-red-300 via-orange-300 to-emerald-300" />
 
-        <div className="grid lg:grid-cols-4 gap-6 lg:gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-5">
           {joinSteps.map((s) => {
             const cta = (s as { cta?: { label: string; href: string; external?: boolean } }).cta;
             return (
