@@ -387,7 +387,7 @@ const FestivalApply: React.FC = () => {
             <label className="flex items-start gap-3 cursor-pointer mt-2">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 w-5 h-5 accent-red-600 shrink-0" />
               <span className="text-sm text-gray-800 font-medium">
-                本人已詳細閱讀並同意上述「活動合作協議書」之全部條款，並代表乙方公司確認簽署。
+                本人已詳細閱讀並同意上述「活動合作協議書」之全部條款，且經乙方合法授權，得代表乙方確認並簽署(填寫)本協議。
               </span>
             </label>
 
