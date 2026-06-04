@@ -363,7 +363,7 @@ const FestivalApply: React.FC = () => {
               <p>2. 本活動合作內容雙方應負保密義務。</p>
               <p>3. 本活動所製作之所有文宣品及其他著作物之著作權皆屬甲方所有。</p>
               <p>4. 雙方同意本於誠信原則履行本協議書內容，如因本協議書涉訟時，雙方同意以臺灣臺北地方法院為第一審管轄法院。</p>
-              <p>5. 本協議書於乙方線上點選同意後始生效力。</p>
+              <p>5. 本協議書於乙方線上點選同意後即生效力。</p>
               <div className="border-t border-gray-300 pt-3 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <p className="font-bold">甲方</p>
