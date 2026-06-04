@@ -113,7 +113,7 @@ const Hero: React.FC = () => (
 
         <motion.div variants={fadeUp} className="flex flex-wrap gap-3 mb-8">
           {[
-            { label: '上架費', value: 'NT$3,000', icon: Ticket },
+            { label: '上架費 專案優惠價', value: 'NT$3,000', note: '原價 NT$9,000', icon: Ticket },
             { label: '優惠券價值', value: 'NT$20,000', icon: Gift },
             { label: '行銷總價值', value: 'NT$100,000+', icon: TrendingUp }
           ].map((s) => (
@@ -124,6 +124,9 @@ const Hero: React.FC = () => (
               <div className="text-xl sm:text-2xl font-black" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                 {s.value}
               </div>
+              {(s as { note?: string }).note && (
+                <div className="text-[11px] text-white/60 line-through leading-tight">{(s as { note?: string }).note}</div>
+              )}
             </div>
           ))}
         </motion.div>
@@ -651,7 +654,7 @@ const EventIntro: React.FC = () => (
         <motion.p variants={fadeUp} className="text-gray-600 text-lg max-w-2xl mx-auto">
           火鍋祭 / 燒肉祭 獨家合作餐廳專屬資源，
           <br className="hidden sm:block" />
-          <strong className="text-orange-600">NT$3,000 上架費 + NT$20,000 優惠券 可獲得：</strong>
+          <strong className="text-orange-600">上架費 <span className="line-through text-orange-400 font-normal">NT$9,000</span> 專案優惠價 NT$3,000 + NT$20,000 優惠券 可獲得：</strong>
         </motion.p>
       </motion.div>
 
@@ -795,9 +798,10 @@ const MarketingRoadmap: React.FC = () => (
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/35 backdrop-blur-md border border-white/25 text-xs font-bold mb-4">
               <Sparkles size={14} className="text-yellow-200" /> 價值換算
             </div>
-            <h3 className="text-2xl sm:text-4xl font-black mb-3" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.55), 0 0 32px rgba(0,0,0,0.3)' }}>
-              NT$3,000 上架費 + NT$20,000 優惠券
+            <h3 className="text-2xl sm:text-4xl font-black mb-1" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.55), 0 0 32px rgba(0,0,0,0.3)' }}>
+              上架費專案優惠價 NT$3,000 + NT$20,000 優惠券
             </h3>
+            <div className="text-white/70 text-base sm:text-lg mb-3 line-through" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>上架費原價 NT$9,000</div>
             <div className="text-yellow-200 text-2xl sm:text-3xl mb-3" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>換得</div>
             <h3 className="text-3xl sm:text-5xl font-black mb-4" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.5)' }}>
               總價值超過 NT$100,000+
@@ -1652,7 +1656,7 @@ const joinSteps = [
     no: '02',
     icon: CreditCard,
     title: '完成繳費',
-    desc: '每品牌 NT$3,000 上架費，協會確認後寄送繳費連結，線上刷卡 / 匯款 / 藍新金流皆可',
+    desc: '每品牌上架費原價 NT$9,000，專案優惠價 NT$3,000，協會確認後寄送繳費連結，線上刷卡 / 匯款 / 藍新金流皆可',
     color: 'from-amber-500 to-yellow-500'
   },
   {
@@ -1762,8 +1766,8 @@ const JoinProcess: React.FC = () => (
 // ====== 7. Q&A ======
 const faqs = [
   {
-    q: '上架費 NT$3,000 包含哪些內容？',
-    a: '七大曝光矩陣（網紅 IG、托可生活誌專訪、官網品牌牆、App 品牌牆、新聞稿、實體宣傳物、贊助商食材）全部包含，等於用 3,000 元換到 NT$100,000+ 的整合行銷資源。'
+    q: '上架費多少？包含哪些內容？',
+    a: '上架費原價每品牌 NT$9,000，本檔專案優惠價為 NT$3,000。七大曝光矩陣（網紅 IG、托可生活誌專訪、官網品牌牆、App 品牌牆、新聞稿、實體宣傳物、贊助商食材）全部包含，等於用 3,000 元換到 NT$100,000+ 的整合行銷資源。'
   },
   {
     q: 'NT$20,000 優惠券是什麼？我需要再額外支付嗎？',
@@ -1795,7 +1799,7 @@ const faqs = [
   },
   {
     q: '集團旗下有多品牌，可以一起參加嗎？',
-    a: '可以！每個品牌為一個參加單位（不限店數），費用依品牌數計算。例如集團旗下 3 個品牌，即 NT$3,000 上架費 × 3 + NT$20,000 優惠券 × 3，每個品牌皆可獨立曝光、各自累積活動流量。'
+    a: '可以！每個品牌為一個參加單位（不限店數），費用依品牌數計算。例如集團旗下 3 個品牌，即上架費專案優惠價 NT$3,000（原價 9,000）× 3 + NT$20,000 優惠券 × 3，每個品牌皆可獨立曝光、各自累積活動流量。'
   }
 ];
 

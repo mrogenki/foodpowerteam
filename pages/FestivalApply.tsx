@@ -308,6 +308,11 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
           {/* 品牌明細 */}
           <Section title={`參加品牌明細（共 ${brands.length} 個品牌）`}>
             <p className="text-xs text-gray-500 -mt-2">每個品牌各自選擇場次與方案、各填一組呼叫KOL 合作細節。多品牌請點下方「新增品牌」。</p>
+            {!waiveListingFee && (
+              <p className="text-xs text-gray-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                每品牌上架費 <span className="line-through text-gray-400">NT$9,000</span> <strong className="text-red-600">專案優惠價 NT$3,000</strong>（方案 B 影音升級另計 +4,500）
+              </p>
+            )}
             {brands.map((b, i) => (
               <BrandCard
                 key={i}
@@ -363,7 +368,7 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
               {waiveListingFee ? (
                 <p>(1) 本次合作經甲、乙雙方協議，<strong className="text-red-600">免收品牌上架費（NT$ 0）</strong>。</p>
               ) : (
-                <p>(1) 乙方同意就每一參加品牌支付新台幣 3,000 元給甲方，作為品牌上架費（每品牌每場次計）。</p>
+                <p>(1) 乙方同意就每一參加品牌支付品牌上架費（每品牌每場次計）。品牌上架費原價為每品牌新台幣 9,000 元，本次專案優惠價為每品牌新台幣 3,000 元。</p>
               )}
               <p>(2) 乙方同意提供下列資源供本活動使用，並作為本活動內容宣傳及行銷用：a) 品牌 Logo；b) 價值 20,000 元以上的優惠券。</p>
               <p>(3) 乙方同意之活動方案：a) 方案A：免費提供 2 位 IG 圖文創作；b) 方案B：方案A 升級成 3 位 IG reels（影音），需另給付新台幣 4,500 元（每品牌計）。各品牌實際選擇如上表。</p>
