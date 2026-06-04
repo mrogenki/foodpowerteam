@@ -816,6 +816,72 @@ const MarketingRoadmap: React.FC = () => (
   </section>
 );
 
+// ====== 2.2 八大曝光管道（觸及力） ======
+const exposureChannels = [
+  { icon: Camera, stat: '300篇+', sub: '網紅圖文 / 影音', title: '網紅開箱矩陣', desc: '每個品牌配置 2 位網紅開箱，下半年大量曝光燒肉祭 / 火鍋祭', color: 'from-pink-500 to-rose-500' },
+  { icon: Mic, stat: '30家+', sub: '線上媒體', title: '啟動記者會', desc: '7/8 燒肉祭 / 火鍋祭啟動記者會，串聯大量線上媒體報導', color: 'from-amber-500 to-orange-500' },
+  { icon: Globe, stat: '官網·FB·IG', sub: '協會自媒體', title: '食在力量官方社群', desc: '協會官方網站與 FB / IG 社群同步露出', color: 'from-blue-500 to-cyan-500' },
+  { icon: Users, stat: '2,500人+', sub: '精準 B 端', title: '產業老闆群組', desc: '食在力量美食產業老闆社群，直接觸及決策者', color: 'from-red-500 to-orange-500' },
+  { icon: BookOpen, stat: '100萬+/月', sub: '瀏覽量', title: '托可生活誌', desc: '托可生活誌官網與 FB / IG，每月百萬級流量曝光', color: 'from-purple-500 to-pink-500' },
+  { icon: Star, stat: '5,000名+', sub: '網紅資料庫', title: '呼叫KOL 私域', desc: '呼叫KOL 平台逾五千名網紅私域擴散', color: 'from-fuchsia-500 to-purple-500' },
+  { icon: Building2, stat: '10,000名+', sub: '私域名單', title: '寶興盛人力派遣', desc: '寶興盛人力派遣逾萬名私域名單同步觸及', color: 'from-teal-500 to-emerald-500' },
+  { icon: Share2, stat: '獎勵機制', sub: '社群裂變', title: '消費者互動分享', desc: '搭配點數 / 抽獎獎勵，驅動消費者自主分享擴散', color: 'from-indigo-500 to-blue-500' },
+];
+
+const ExposureChannels: React.FC = () => (
+  <section id="exposure-reach" className="relative py-20 sm:py-28 bg-gradient-to-b from-white to-amber-50 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+        <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-4">
+          <Megaphone size={14} /> 全方位曝光
+        </motion.div>
+        <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
+          8 大曝光管道・全面引爆聲量
+        </motion.h2>
+        <motion.p variants={fadeUp} className="text-gray-600 text-lg max-w-2xl mx-auto">
+          下半年燒肉祭 / 火鍋祭，從 <strong className="text-orange-600">B 端產業</strong> 到 <strong className="text-orange-600">C 端消費者</strong>、從主流媒體到私域名單，多管齊下觸及百萬級受眾。
+        </motion.p>
+      </motion.div>
+
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-50px' }}
+        variants={stagger}
+        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
+        {exposureChannels.map((c) => (
+          <motion.div
+            key={c.title}
+            variants={fadeUp}
+            whileHover={{ y: -6, transition: { duration: 0.2 } }}
+            className="relative p-6 rounded-3xl bg-white shadow-lg hover:shadow-2xl transition-all border border-orange-100 overflow-hidden group"
+          >
+            <div className={`absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br ${c.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
+            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${c.color} grid place-items-center text-white shadow-md mb-4`}>
+              <c.icon size={28} />
+            </div>
+            <div className={`text-2xl sm:text-3xl font-black bg-gradient-to-br ${c.color} bg-clip-text text-transparent leading-none`}>{c.stat}</div>
+            <div className="text-xs text-gray-400 font-bold mt-1 mb-2">{c.sub}</div>
+            <h3 className="text-base font-bold text-gray-900 mb-1">{c.title}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">{c.desc}</p>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mt-10 flex justify-center">
+        <div className="inline-flex flex-wrap items-center justify-center gap-x-6 gap-y-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold shadow-xl text-center">
+          <span>私域名單合計 <span className="text-yellow-200">17,500+</span></span>
+          <span className="hidden sm:inline opacity-40">|</span>
+          <span>網紅內容 <span className="text-yellow-200">300篇+</span></span>
+          <span className="hidden sm:inline opacity-40">|</span>
+          <span>合作媒體月流量 <span className="text-yellow-200">100萬+</span></span>
+        </div>
+      </motion.div>
+    </div>
+  </section>
+);
+
 // ====== 2.5 品牌牆（參加活動的合作餐廳） ======
 type BrandEntry = { name: string; category: string; logo?: string };
 
@@ -2054,6 +2120,7 @@ const Festival: React.FC = () => {
       <AssociationIntro />
       <MascotIntro />
       <EventIntro />
+      <ExposureChannels />
       <TocoFeature />
       <KOLShowcase />
       <MarketingRoadmap />
