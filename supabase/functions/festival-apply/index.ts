@@ -15,8 +15,8 @@ const FESTIVAL_LABEL: Record<string, string> = {
   both: '燒肉祭與火鍋祭',
 }
 
-const brandAmount = (b: any) =>
-  3000 * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? 4500 : 0)
+const brandAmount = (b: any, listingPrice: number) =>
+  listingPrice * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? 4500 : 0)
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -54,6 +54,8 @@ serve(async (req) => {
     const supabase = createClient(SupabaseUrl, SupabaseKey)
     const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || null
     const first = brands[0]
+    const waive = body.waive_listing_fee === true
+    const listingPrice = waive ? 0 : 3000
 
     const insertPayload = {
       // 公司
@@ -67,6 +69,8 @@ serve(async (req) => {
       // 7/8 啟動記者會
       attend_press_conference: body.attend_press_conference === true,
       press_conference_attendees: body.attend_press_conference === true ? (parseInt(body.press_conference_attendees, 10) || 1) : null,
+      // 免上架費專案
+      waive_listing_fee: waive,
       // 品牌明細（完整陣列）
       brands,
       // 相容用：以第一個品牌填入舊單品牌欄位
@@ -111,12 +115,13 @@ serve(async (req) => {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
       const chatId = Deno.env.get('TELEGRAM_CHAT_ID')
       if (token && chatId) {
-        const total = brands.reduce((s: number, b: any) => s + brandAmount(b), 0)
+        const total = brands.reduce((s: number, b: any) => s + brandAmount(b, listingPrice), 0)
         const brandLines = brands
           .map((b: any, i: number) => `${i + 1}. ${b.brand_name}（${FESTIVAL_LABEL[b.festival_type] || b.festival_type}・${b.sponsor_plan === 'B' ? '方案B+4500' : '方案A'}）`)
           .join('\n')
         const pressLine = insertPayload.attend_press_conference ? `出席 7/8 記者會：是（${insertPayload.press_conference_attendees} 位）` : '出席 7/8 記者會：否'
-        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n${pressLine}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}\n同意時間：${insertPayload.agreed_at}`
+        const waiveLine = waive ? '\n★ 專案：免收上架費' : ''
+        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n${pressLine}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}${waiveLine}\n同意時間：${insertPayload.agreed_at}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -42,6 +42,7 @@ interface FestivalApplication {
   agreed_ip?: string;
   attend_press_conference?: boolean;
   press_conference_attendees?: number | null;
+  waive_listing_fee?: boolean;
   status: string;
   registration_id?: string | null;
   payment_link?: string | null;
@@ -57,8 +58,10 @@ const FESTIVAL_LABEL: Record<string, string> = {
 const planLabel = (p?: string | null) =>
   p === 'B' ? 'B 超值方案（3位影音 +4,500）' : p === 'A' ? 'A 免費方案（2位圖文）' : '未選';
 
-const brandAmount = (b: BrandDetail) =>
-  3000 * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? 4500 : 0);
+const listingOf = (app: FestivalApplication) => (app.waive_listing_fee ? 0 : 3000);
+
+const brandAmount = (b: BrandDetail, listingPrice: number) =>
+  listingPrice * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? 4500 : 0);
 
 // 取得品牌陣列（相容舊單品牌資料）
 const brandsOf = (app: FestivalApplication): BrandDetail[] => {
@@ -69,7 +72,7 @@ const brandsOf = (app: FestivalApplication): BrandDetail[] => {
   return [];
 };
 
-const suggestAmount = (app: FestivalApplication) => brandsOf(app).reduce((s, b) => s + brandAmount(b), 0);
+const suggestAmount = (app: FestivalApplication) => brandsOf(app).reduce((s, b) => s + brandAmount(b, listingOf(app)), 0);
 
 const FestivalApplicationManager: React.FC = () => {
   const [apps, setApps] = useState<FestivalApplication[]>([]);
@@ -119,7 +122,7 @@ const FestivalApplicationManager: React.FC = () => {
       return;
     }
     const suggested = suggestAmount(app);
-    const breakdown = list.map((b) => `${b.brand_name}（${FESTIVAL_LABEL[b.festival_type]}・${b.sponsor_plan === 'B' ? '方案B' : '方案A'}）= NT$ ${brandAmount(b).toLocaleString()}`).join('\n');
+    const breakdown = list.map((b) => `${b.brand_name}（${FESTIVAL_LABEL[b.festival_type]}・${b.sponsor_plan === 'B' ? '方案B' : '方案A'}）= NT$ ${brandAmount(b, listingOf(app)).toLocaleString()}`).join('\n');
     const input = prompt(
       `產生繳費連結（整個集團一次付清）\n\n公司：${app.company_name}\n品牌數：${list.length}\n\n${breakdown}\n\n請確認總金額（NT$）：`,
       String(suggested)
@@ -252,7 +255,10 @@ const FestivalApplicationManager: React.FC = () => {
                         <div key={i}>{b.brand_name}（{FESTIVAL_LABEL[b.festival_type]}・{b.sponsor_plan === 'B' ? 'B' : 'A'}）</div>
                       ))}
                     </div>
-                    <div className="text-xs text-red-600 font-bold mt-0.5">預估 NT$ {suggestAmount(app).toLocaleString()}</div>
+                    <div className="text-xs text-red-600 font-bold mt-0.5">
+                      預估 NT$ {suggestAmount(app).toLocaleString()}
+                      {app.waive_listing_fee && <span className="ml-1 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">免上架費</span>}
+                    </div>
                   </td>
                   <td className="p-4 text-sm">
                     {app.contract_agreed ? (
@@ -351,6 +357,7 @@ const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> =
             <Row label="公司登記地址" value={app.company_address} />
             <Row label="專案聯絡人" value={`${app.project_contact} / ${app.project_contact_phone}`} />
             <Row label="7/8 記者會" value={app.attend_press_conference ? `出席（${app.press_conference_attendees ?? '-'} 位）` : '不出席'} />
+            <Row label="上架費" value={app.waive_listing_fee ? '免收（專案優惠）' : '正常收取'} />
           </section>
 
           <section>
@@ -360,7 +367,7 @@ const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> =
                 <div key={i} className="rounded-xl border border-gray-200 p-3">
                   <div className="font-bold text-gray-900 mb-1">
                     {i + 1}. {b.brand_name}
-                    <span className="ml-2 text-xs font-normal text-gray-500">{FESTIVAL_LABEL[b.festival_type]}・{planLabel(b.sponsor_plan)}・小計 NT$ {brandAmount(b).toLocaleString()}</span>
+                    <span className="ml-2 text-xs font-normal text-gray-500">{FESTIVAL_LABEL[b.festival_type]}・{planLabel(b.sponsor_plan)}・小計 NT$ {brandAmount(b, listingOf(app)).toLocaleString()}</span>
                   </div>
                   <Row label="品牌官網" value={b.brand_website} />
                   <Row label="官方社群" value={b.social_link} />

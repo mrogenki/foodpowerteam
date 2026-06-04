@@ -59,16 +59,17 @@ const emptyBrand = (): Brand => ({
   kol_account_created_confirmed: false,
 });
 
-const brandAmount = (b: Brand) =>
-  BRAND_UNIT_PRICE * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? INFLUENCER_UNIT_PRICE : 0);
+const brandAmount = (b: Brand, listingPrice: number) =>
+  listingPrice * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? INFLUENCER_UNIT_PRICE : 0);
 
 const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const FestivalApply: React.FC = () => {
+const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFee = false }) => {
   const navigate = useNavigate();
+  const listingPrice = waiveListingFee ? 0 : BRAND_UNIT_PRICE;
 
   // 公司基本資料（填一次）
   const [companyName, setCompanyName] = useState('');
@@ -94,7 +95,7 @@ const FestivalApply: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const total = useMemo(() => brands.reduce((s, b) => s + brandAmount(b), 0), [brands]);
+  const total = useMemo(() => brands.reduce((s, b) => s + brandAmount(b, listingPrice), 0), [brands, listingPrice]);
 
   const updateBrand = (i: number, patch: Partial<Brand>) =>
     setBrands((prev) => prev.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
@@ -202,6 +203,7 @@ const FestivalApply: React.FC = () => {
           })),
           contract_agreed: true,
           signer_name: signerName.trim(),
+          waive_listing_fee: waiveListingFee,
         },
       });
 
@@ -248,6 +250,11 @@ const FestivalApply: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold mb-1">燒肉祭 / 火鍋祭 合作報名表</h1>
           <p className="text-white/80 text-sm">公司資料填一次，旗下每個品牌各填一組明細，閱讀同意合約即完成報名</p>
+          {waiveListingFee && (
+            <div className="mt-3 inline-block bg-white/20 border border-white/30 rounded-full px-4 py-1 text-sm font-bold">
+              ★ 專案優惠：本次免收品牌上架費
+            </div>
+          )}
         </div>
 
         <div className="p-6 sm:p-8 space-y-8">
@@ -307,6 +314,7 @@ const FestivalApply: React.FC = () => {
                 index={i}
                 brand={b}
                 canRemove={brands.length > 1}
+                listingPrice={listingPrice}
                 onChange={(patch) => updateBrand(i, patch)}
                 onRemove={() => removeBrand(i)}
                 onToggleWave={(w) => toggleWave(i, w)}
@@ -352,7 +360,11 @@ const FestivalApply: React.FC = () => {
               <p>(1) 甲方應為本活動之內容宣傳及行銷。</p>
               <p>(2) 甲方使用乙方之品牌不得有抵損乙方商譽之行為。</p>
               <p className="font-bold">二、乙方：</p>
-              <p>(1) 乙方同意就每一參加品牌支付新台幣 3,000 元給甲方，作為品牌上架費（每品牌每場次計）。</p>
+              {waiveListingFee ? (
+                <p>(1) 本次合作經甲、乙雙方協議，<strong className="text-red-600">免收品牌上架費（NT$ 0）</strong>。</p>
+              ) : (
+                <p>(1) 乙方同意就每一參加品牌支付新台幣 3,000 元給甲方，作為品牌上架費（每品牌每場次計）。</p>
+              )}
               <p>(2) 乙方同意提供下列資源供本活動使用，並作為本活動內容宣傳及行銷用：a) 品牌 Logo；b) 價值 20,000 元以上的優惠券。</p>
               <p>(3) 乙方同意之活動方案：a) 方案A：免費提供 2 位 IG 圖文創作；b) 方案B：方案A 升級成 3 位 IG reels（影音），需另給付新台幣 4,500 元（每品牌計）。各品牌實際選擇如上表。</p>
               <p>(4) 乙方應提供本活動所需宣傳之品牌 LOGO、負責人肖像或其他著作物供甲方使用與曝光，但甲方於贊助文宣曝光前應提供乙方確認文宣內容後始得發布。另，乙方應保證前開提供甲方之宣傳內容皆屬合法授權。</p>
@@ -434,18 +446,19 @@ interface BrandCardProps {
   index: number;
   brand: Brand;
   canRemove: boolean;
+  listingPrice: number;
   onChange: (patch: Partial<Brand>) => void;
   onRemove: () => void;
   onToggleWave: (w: string) => void;
 }
 
-const BrandCard: React.FC<BrandCardProps> = ({ index, brand, canRemove, onChange, onRemove, onToggleWave }) => (
+const BrandCard: React.FC<BrandCardProps> = ({ index, brand, canRemove, listingPrice, onChange, onRemove, onToggleWave }) => (
   <div className="rounded-2xl border-2 border-orange-100 bg-orange-50/30 p-4 sm:p-5 space-y-4">
     <div className="flex items-center justify-between">
       <h3 className="font-bold text-gray-900 flex items-center gap-2">
         <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">{index + 1}</span>
         品牌 {index + 1}
-        <span className="text-xs font-normal text-gray-400">（小計 NT$ {brandAmount(brand).toLocaleString()}）</span>
+        <span className="text-xs font-normal text-gray-400">（小計 NT$ {brandAmount(brand, listingPrice).toLocaleString()}）</span>
       </h3>
       {canRemove && (
         <button type="button" onClick={onRemove} className="text-gray-400 hover:text-red-600 flex items-center gap-1 text-sm">

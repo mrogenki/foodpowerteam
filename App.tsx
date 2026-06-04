@@ -936,6 +936,8 @@ const App: React.FC = () => {
               <Route path="/festival" element={<Festival />} />
               <Route path="/festival/pay" element={<FestivalPayment />} />
               <Route path="/festival/apply" element={<FestivalApply />} />
+              {/* 隱藏連結：免上架費專案版（不從站內任何地方連出，僅私下提供給特殊品牌） */}
+              <Route path="/festival/apply-vip" element={<FestivalApply waiveListingFee />} />
               <Route path="/design" element={<DesignDemoIndex />} />
               <Route path="/design/jp" element={<DesignDemoJP />} />
               <Route path="/design/eu" element={<DesignDemoEU />} />
