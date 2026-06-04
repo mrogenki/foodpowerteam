@@ -324,6 +324,7 @@ const FestivalApply: React.FC = () => {
           {/* 合約 */}
           <Section title="活動合作協議書">
             <p className="text-xs text-gray-500">請完整閱讀以下協議書，乙方欄位與參加品牌將依您上方填寫的資料自動帶入。</p>
+            <p className="text-xs text-gray-500">為響應環保，本次「活動合作協議書」將以線上電子填寫方式完成簽約，由甲方留存，不另提供實體紙本合約。經乙方填寫完畢將資料送出即完成本「活動合作協議書」之簽署。</p>
             <div className="h-72 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-5 text-[13px] leading-relaxed text-gray-700 space-y-3">
               <p className="text-center text-base font-bold text-gray-900">活動合作協議書</p>
               <p>立協議書人</p>
