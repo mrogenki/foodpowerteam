@@ -738,7 +738,14 @@ const App: React.FC = () => {
   };
 
   // User management (only for recording, not auth)
-  const handleAddUser = async (newUser: AdminUser) => { if (!supabase) return; await supabase.from('admins').insert([newUser]); fetchData(); };
+  const handleAddUser = async (newUser: AdminUser) => {
+    if (!supabase) return;
+    // password 欄位為舊機制遺留（登入已改走 Supabase Auth），仍給預設值避免相依問題
+    const payload = { ...newUser, password: newUser.password || '', phone: newUser.phone || '' };
+    const { error } = await supabase.from('admins').insert([payload]);
+    if (error) { alert(`新增管理員失敗：${error.message}`); return; }
+    fetchData();
+  };
   const handleDeleteUser = async (id: string) => { if (!supabase) return; await supabase.from('admins').delete().eq('id', id); fetchData(); };
   
   const fetchMembers = async () => {
