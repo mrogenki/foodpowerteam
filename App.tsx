@@ -746,7 +746,12 @@ const App: React.FC = () => {
       body: { name: u.name, email: u.email, password: u.password, phone: u.phone || '', role: u.role },
     });
     if (error || !data?.ok) {
-      const msg = data?.error || error?.message || '請稍後再試';
+      let msg = data?.error || error?.message || '請稍後再試';
+      // FunctionsHttpError 會把後端回應放在 context，取出真正的錯誤原因
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === 'function') {
+        try { const b = await ctx.json(); if (b?.error) msg = b.error; } catch (_) {}
+      }
       alert(`新增管理員失敗：${msg}`);
       return false;
     }
