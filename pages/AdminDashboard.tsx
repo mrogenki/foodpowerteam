@@ -3057,25 +3057,30 @@ const MilestoneManager: React.FC<{
 
 const UserManager: React.FC<{
   users: AdminUser[];
-  onAdd: (u: AdminUser) => void;
+  onAdd: (u: AdminUser) => Promise<boolean>;
   onDelete: (id: string) => void;
 }> = ({ users, onAdd, onDelete }) => {
-  const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', role: UserRole.STAFF });
-  
-  const handleSubmit = (e: React.FormEvent) => {
+  const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', password: '', role: UserRole.STAFF });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ ...newUser, id: crypto.randomUUID() } as any);
-    setNewUser({ name: '', email: '', phone: '', role: UserRole.STAFF });
+    if (submitting) return;
+    setSubmitting(true);
+    const ok = await onAdd({ ...newUser, id: crypto.randomUUID() } as any);
+    setSubmitting(false);
+    if (ok) setNewUser({ name: '', email: '', phone: '', password: '', role: UserRole.STAFF });
   };
 
   return (
     <div className="space-y-6">
        <h1 className="text-2xl font-bold">帳號權限管理</h1>
-       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-gray-100 flex gap-4 items-end">
+       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-wrap gap-4 items-end">
           <div><label className="block text-xs font-bold mb-1">姓名</label><input required className="border rounded p-2 text-sm" value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} /></div>
           <div><label className="block text-xs font-bold mb-1">Email (登入用)</label><input required type="email" className="border rounded p-2 text-sm" value={newUser.email} onChange={e=>setNewUser({...newUser, email: e.target.value})} /></div>
+          <div><label className="block text-xs font-bold mb-1">初始密碼 (至少 6 碼)</label><input required type="text" minLength={6} placeholder="提供給新管理員登入" className="border rounded p-2 text-sm" value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} /></div>
           <div><label className="block text-xs font-bold mb-1">權限</label><select className="border rounded p-2 text-sm" value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value as UserRole})}>{Object.values(UserRole).map(r=><option key={r} value={r}>{r}</option>)}</select></div>
-          <button className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700">新增管理員</button>
+          <button disabled={submitting} className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 disabled:opacity-50">{submitting ? '處理中…' : '新增管理員'}</button>
        </form>
        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <table className="w-full text-left text-sm">

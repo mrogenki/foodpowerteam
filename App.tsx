@@ -738,13 +738,20 @@ const App: React.FC = () => {
   };
 
   // User management (only for recording, not auth)
-  const handleAddUser = async (newUser: AdminUser) => {
-    if (!supabase) return;
-    // password 欄位為舊機制遺留（登入已改走 Supabase Auth），仍給預設值避免相依問題
-    const payload = { ...newUser, password: newUser.password || '', phone: newUser.phone || '' };
-    const { error } = await supabase.from('admins').insert([payload]);
-    if (error) { alert(`新增管理員失敗：${error.message}`); return; }
-    fetchData();
+  // 透過 create-admin Edge Function：同時建立 Supabase Auth 登入帳號 + 寫入 admins 權限表
+  const handleAddUser = async (newUser: AdminUser): Promise<boolean> => {
+    if (!supabase) return false;
+    const u = newUser as any;
+    const { data, error } = await supabase.functions.invoke('create-admin', {
+      body: { name: u.name, email: u.email, password: u.password, phone: u.phone || '', role: u.role },
+    });
+    if (error || !data?.ok) {
+      const msg = data?.error || error?.message || '請稍後再試';
+      alert(`新增管理員失敗：${msg}`);
+      return false;
+    }
+    await fetchData();
+    return true;
   };
   const handleDeleteUser = async (id: string) => { if (!supabase) return; await supabase.from('admins').delete().eq('id', id); fetchData(); };
   
