@@ -1099,7 +1099,10 @@ const credits = {
     { name: 'Mobile.Cards', role: 'APP 技術夥伴', icon: Smartphone, color: 'from-emerald-500 to-teal-500', logo: '/festival/logo-mobilecards.png' }
   ],
   sponsor: [
-    { name: '桂冠食品', role: '食材贊助', icon: Gift, color: 'from-amber-500 to-orange-500', logo: '/festival/logo-laurel.png' }
+    { name: '桂冠食品', role: '食材贊助', icon: Gift, color: 'from-amber-500 to-orange-500', logo: '/festival/logo-laurel.png' },
+    { name: '大苑子', role: '飲品贊助', icon: Gift, color: 'from-lime-500 to-green-500', logo: '/festival/logo-dayuanzi.jpg' },
+    { name: '春一枝', role: '冰品贊助', icon: Gift, color: 'from-rose-500 to-pink-500', logo: '/festival/logo-chunyizhi.png' },
+    { name: '鮮乳坊', role: '乳品贊助', icon: Gift, color: 'from-sky-500 to-blue-500', logo: '/festival/logo-xianrufang.jpeg' }
   ]
 };
 
@@ -1212,13 +1215,12 @@ const Sponsors: React.FC = () => (
           cols="sm:grid-cols-2 lg:grid-cols-3"
         />
 
-        {/* 贊助 */}
+        {/* 贊助：3 欄 */}
         <RoleBlock
           title="贊 助 商"
           titleEn="Sponsors"
           items={credits.sponsor}
-          cols="max-w-2xl mx-auto"
-          large
+          cols="sm:grid-cols-2 lg:grid-cols-3"
         />
       </div>
     </div>
