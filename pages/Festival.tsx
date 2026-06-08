@@ -2131,10 +2131,10 @@ const Festival: React.FC = () => {
       <ExposureChannels />
       <TocoFeature />
       <KOLShowcase />
+      <AppFeature />
       <MarketingRoadmap />
       <BrandWall />
       <Sponsors />
-      <AppFeature />
       <JoinProcess />
       <FAQ />
       <FinalCTA />
