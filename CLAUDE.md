@@ -19,7 +19,7 @@
 ---
 
 ## 程式碼位置
-- **GitHub**：https://github.com/mrogenki/foodpowerteam1
+- **GitHub**：https://github.com/mrogenki/foodpowerteam
 - **Vercel 專案 ID**：prj_zTFk42XfHEhkFQ4VJjAQq0mmU7NS
 - **Vercel Team slug**：jacks-projects-42fe82a9
 
