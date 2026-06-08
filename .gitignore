@@ -31,3 +31,6 @@ dist-ssr
 # claude code local state
 .claude/
 .vercel
+
+# 角色設計參考圖（不上線，僅本機保留）
+public/festival/麻吉貓三視圖.png
