@@ -173,7 +173,7 @@ index.js 已從 503KB 優化至 212KB（-58%）
 ## 專案結構
 
 ```
-foodpowerteam1/
+foodpowerteam/
 ├── App.tsx              # 主路由、全域 state、Header、Footer
 ├── pages/               # 各頁面元件
 ├── components/          # 共用元件（BatchReceiptGenerator、BlockEditor 等）
