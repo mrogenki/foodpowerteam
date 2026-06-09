@@ -15,6 +15,15 @@ const FESTIVAL_LABEL: Record<string, string> = {
   both: '燒肉祭與火鍋祭',
 }
 
+const sanitizeNames = (raw: any): string[] => {
+  const arr = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(/[\n,，、]/)
+      : []
+  return arr.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 50)
+}
+
 const brandAmount = (b: any, listingPrice: number) =>
   listingPrice * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? 4500 : 0)
 
@@ -69,6 +78,11 @@ serve(async (req) => {
       // 7/8 啟動記者會
       attend_press_conference: body.attend_press_conference === true,
       press_conference_attendees: body.attend_press_conference === true ? (parseInt(body.press_conference_attendees, 10) || 1) : null,
+      press_conference_attendee_names: body.attend_press_conference === true ? sanitizeNames(body.press_conference_attendee_names) : [],
+      // 7/8 產業論壇
+      attend_forum: body.attend_forum === true,
+      forum_attendees: body.attend_forum === true ? (parseInt(body.forum_attendees, 10) || 1) : null,
+      forum_attendee_names: body.attend_forum === true ? sanitizeNames(body.forum_attendee_names) : [],
       // 免上架費專案
       waive_listing_fee: waive,
       // 品牌明細（完整陣列）
@@ -119,9 +133,12 @@ serve(async (req) => {
         const brandLines = brands
           .map((b: any, i: number) => `${i + 1}. ${b.brand_name}（${FESTIVAL_LABEL[b.festival_type] || b.festival_type}・${b.sponsor_plan === 'B' ? '方案B+4500' : '方案A'}）`)
           .join('\n')
-        const pressLine = insertPayload.attend_press_conference ? `出席 7/8 記者會：是（${insertPayload.press_conference_attendees} 位）` : '出席 7/8 記者會：否'
+        const pressNamesText = insertPayload.press_conference_attendee_names.length ? `（${insertPayload.press_conference_attendee_names.join('、')}）` : ''
+        const pressLine = insertPayload.attend_press_conference ? `出席 7/8 記者會：是（${insertPayload.press_conference_attendees} 位）${pressNamesText}` : '出席 7/8 記者會：否'
+        const forumNamesText = insertPayload.forum_attendee_names.length ? `（${insertPayload.forum_attendee_names.join('、')}）` : ''
+        const forumLine = insertPayload.attend_forum ? `出席 7/8 產業論壇：是（${insertPayload.forum_attendees} 位）${forumNamesText}` : '出席 7/8 產業論壇：否'
         const waiveLine = waive ? '\n★ 專案：免收上架費' : ''
-        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n${pressLine}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}${waiveLine}\n同意時間：${insertPayload.agreed_at}`
+        const text = `🔔 <b>新通知：燒肉/火鍋祭合作報名 (待審核)</b>\n\n公司：${body.company_name}（統編 ${body.tax_id}）\n負責人：${body.representative}\n專案聯絡人：${body.project_contact} / ${body.project_contact_phone}\nEmail：${body.contact_email}\n簽署人：${body.signer_name}\n${pressLine}\n${forumLine}\n\n參加品牌（${brands.length}）：\n${brandLines}\n\n預估合計：NT$ ${total.toLocaleString()}${waiveLine}\n同意時間：${insertPayload.agreed_at}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

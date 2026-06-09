@@ -62,6 +62,12 @@ const emptyBrand = (): Brand => ({
 const brandAmount = (b: Brand, listingPrice: number) =>
   listingPrice * (b.festival_type === 'both' ? 2 : 1) + (b.sponsor_plan === 'B' ? INFLUENCER_UNIT_PRICE : 0);
 
+const parseNames = (raw: string): string[] =>
+  raw
+    .split(/[\n,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -83,6 +89,12 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
   // 7/8 啟動記者會
   const [attendPress, setAttendPress] = useState<'yes' | 'no' | ''>('');
   const [pressAttendees, setPressAttendees] = useState(1);
+  const [pressNames, setPressNames] = useState('');
+
+  // 7/8 產業論壇
+  const [attendForum, setAttendForum] = useState<'yes' | 'no' | ''>('');
+  const [forumAttendees, setForumAttendees] = useState(1);
+  const [forumNames, setForumNames] = useState('');
 
   // 品牌明細（可多筆）
   const [brands, setBrands] = useState<Brand[]>([emptyBrand()]);
@@ -143,6 +155,22 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
       setError('請填寫記者會出席人數');
       return;
     }
+    if (attendPress === 'yes' && parseNames(pressNames).length === 0) {
+      setError('請填寫記者會出席人員大名');
+      return;
+    }
+    if (attendForum !== 'yes' && attendForum !== 'no') {
+      setError('請選擇是否出席 7/8 產業論壇');
+      return;
+    }
+    if (attendForum === 'yes' && forumAttendees < 1) {
+      setError('請填寫產業論壇出席人數');
+      return;
+    }
+    if (attendForum === 'yes' && parseNames(forumNames).length === 0) {
+      setError('請填寫產業論壇出席人員大名');
+      return;
+    }
 
     for (let i = 0; i < brands.length; i++) {
       const b = brands[i];
@@ -182,6 +210,10 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
           project_contact_phone: projectContactPhone.trim(),
           attend_press_conference: attendPress === 'yes',
           press_conference_attendees: attendPress === 'yes' ? pressAttendees : null,
+          press_conference_attendee_names: attendPress === 'yes' ? parseNames(pressNames) : [],
+          attend_forum: attendForum === 'yes',
+          forum_attendees: attendForum === 'yes' ? forumAttendees : null,
+          forum_attendee_names: attendForum === 'yes' ? parseNames(forumNames) : [],
           brands: brands.map((b) => ({
             brand_name: b.brand_name.trim(),
             festival_type: b.festival_type,
@@ -272,6 +304,7 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
 
             <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
               <Label required>是否出席 7/8 啟動記者會？</Label>
+              <p className="text-xs text-gray-500 -mt-0.5 mb-2">11:00–11:45・88號樂章（臺北市內湖區湖元里民善街 88 號 5 樓）</p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -293,14 +326,75 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
                 </button>
               </div>
               {attendPress === 'yes' && (
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <Label>出席人數</Label>
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => setPressAttendees((n) => Math.max(1, n - 1))} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">−</button>
-                    <span className="w-8 text-center font-bold text-lg text-gray-900">{pressAttendees}</span>
-                    <button type="button" onClick={() => setPressAttendees((n) => n + 1)} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">＋</button>
+                <>
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <Label>出席人數</Label>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setPressAttendees((n) => Math.max(1, n - 1))} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">−</button>
+                      <span className="w-8 text-center font-bold text-lg text-gray-900">{pressAttendees}</span>
+                      <button type="button" onClick={() => setPressAttendees((n) => n + 1)} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">＋</button>
+                    </div>
                   </div>
-                </div>
+                  <div className="mt-3">
+                    <Label required>出席人員大名</Label>
+                    <p className="text-xs text-gray-500 mb-1.5">一行一位（或用逗號分隔），方便現場接待。</p>
+                    <textarea
+                      value={pressNames}
+                      onChange={(e) => setPressNames(e.target.value)}
+                      rows={2}
+                      placeholder="例：王小明&#10;陳大華"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none bg-white"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
+              <Label required>是否出席 7/8 產業論壇？</Label>
+              <p className="text-xs text-gray-500 -mt-0.5 mb-2">13:00–17:00・88號樂章（臺北市內湖區湖元里民善街 88 號 5 樓）</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAttendForum('yes')}
+                  className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                    attendForum === 'yes' ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  出席
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendForum('no')}
+                  className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                    attendForum === 'no' ? 'border-red-600 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  不出席
+                </button>
+              </div>
+              {attendForum === 'yes' && (
+                <>
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <Label>出席人數</Label>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setForumAttendees((n) => Math.max(1, n - 1))} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">−</button>
+                      <span className="w-8 text-center font-bold text-lg text-gray-900">{forumAttendees}</span>
+                      <button type="button" onClick={() => setForumAttendees((n) => n + 1)} className="w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-100">＋</button>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Label required>出席人員大名</Label>
+                    <p className="text-xs text-gray-500 mb-1.5">一行一位（或用逗號分隔），方便現場接待。</p>
+                    <textarea
+                      value={forumNames}
+                      onChange={(e) => setForumNames(e.target.value)}
+                      rows={2}
+                      placeholder="例：王小明&#10;陳大華"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none bg-white"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </Section>

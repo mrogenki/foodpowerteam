@@ -42,6 +42,10 @@ interface FestivalApplication {
   agreed_ip?: string;
   attend_press_conference?: boolean;
   press_conference_attendees?: number | null;
+  press_conference_attendee_names?: string[] | null;
+  attend_forum?: boolean;
+  forum_attendees?: number | null;
+  forum_attendee_names?: string[] | null;
   waive_listing_fee?: boolean;
   status: string;
   registration_id?: string | null;
@@ -356,7 +360,22 @@ const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> =
             <Row label="聯絡信箱" value={app.contact_email} />
             <Row label="公司登記地址" value={app.company_address} />
             <Row label="專案聯絡人" value={`${app.project_contact} / ${app.project_contact_phone}`} />
-            <Row label="7/8 記者會" value={app.attend_press_conference ? `出席（${app.press_conference_attendees ?? '-'} 位）` : '不出席'} />
+            <Row
+              label="7/8 記者會"
+              value={
+                app.attend_press_conference
+                  ? `出席（${app.press_conference_attendees ?? '-'} 位）${app.press_conference_attendee_names?.length ? `：${app.press_conference_attendee_names.join('、')}` : ''}`
+                  : '不出席'
+              }
+            />
+            <Row
+              label="7/8 產業論壇"
+              value={
+                app.attend_forum
+                  ? `出席（${app.forum_attendees ?? '-'} 位）${app.forum_attendee_names?.length ? `：${app.forum_attendee_names.join('、')}` : ''}`
+                  : '不出席'
+              }
+            />
             <Row label="上架費" value={app.waive_listing_fee ? '免收（專案優惠）' : '正常收取'} />
           </section>
 

@@ -8,7 +8,7 @@ import {
   Mail, MapPinned, Megaphone, Newspaper, Heart, TrendingUp,
   Instagram, ExternalLink,
   Building2, Plane, Share2, Utensils,
-  Gamepad2, Target
+  Gamepad2, Target, MapPin
 } from 'lucide-react';
 
 // ====== 共用動畫設定 ======
@@ -293,11 +293,22 @@ const LaunchEvent: React.FC = () => (
               <Newspaper size={26} className="text-white" />
             </div>
             <div>
-              <div className="text-orange-400 font-black text-xl mb-1">11:00</div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="text-orange-400 font-black text-xl">11:00</div>
+                <span className="text-orange-400/60 font-bold">–</span>
+                <div className="text-orange-400 font-black text-xl">11:45</div>
+              </div>
               <div className="text-white font-black text-2xl mb-2">記者會</div>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <p className="text-gray-400 text-sm leading-relaxed mb-3">
                 宣布燒肉祭 × 火鍋祭正式啟動，媒體聯訪、品牌代表致詞，現場曝光協會年度合作品牌陣容。
               </p>
+              <div className="flex items-start gap-2 text-gray-300 text-sm">
+                <MapPin size={16} className="text-orange-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-white">88號樂章</div>
+                  <div className="text-gray-400">臺北市內湖區湖元里民善街 88 號 5 樓</div>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -309,11 +320,43 @@ const LaunchEvent: React.FC = () => (
               <Mic size={26} className="text-white" />
             </div>
             <div>
-              <div className="text-red-400 font-black text-xl mb-1">13:00</div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="text-red-400 font-black text-xl">13:00</div>
+                <span className="text-red-400/60 font-bold">–</span>
+                <div className="text-red-400 font-black text-xl">17:00</div>
+              </div>
               <div className="text-white font-black text-2xl mb-2">產業論壇</div>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <p className="text-gray-400 text-sm leading-relaxed mb-3">
                 餐飲產業趨勢分享、整合行銷實戰案例解析，與各合作品牌深度交流，共同開創新客流。
               </p>
+              <div className="flex items-start gap-2 text-gray-300 text-sm mb-4">
+                <MapPin size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-white">88號樂章</div>
+                  <div className="text-gray-400">臺北市內湖區湖元里民善街 88 號 5 樓</div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Megaphone size={16} className="text-red-400" />
+                  <span className="text-white font-bold text-sm">論壇焦點亮點</span>
+                </div>
+                <ul className="space-y-2">
+                  {[
+                    { brand: '一鷺炭火燒鳥工房', name: '劉士綱' },
+                    { brand: '千葉火鍋', name: '呂秀春' },
+                    { brand: '桂冠食品', name: '陳玉翎' },
+                    { brand: '天帷企管', name: '林剛羽' },
+                  ].map((s) => (
+                    <li key={s.brand} className="flex items-center gap-2 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                      <span className="text-white font-semibold">{s.brand}</span>
+                      <span className="text-gray-500 flex-shrink-0">·</span>
+                      <span className="text-gray-300 flex-shrink-0 whitespace-nowrap">{s.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </motion.div>
