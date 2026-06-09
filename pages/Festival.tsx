@@ -917,6 +917,8 @@ const yakinikuBrands: BrandEntry[] = [
 const hotpotBrands: BrandEntry[] = [
   { name: '千葉火鍋', category: '涮涮鍋', logo: '/festival/brand-chiba.webp' },
   { name: '雞湯大叔', category: '雞湯鍋', logo: '/festival/brand-jitangdashu.jpg' },
+  { name: '撈王', category: '養生鍋', logo: '/festival/brand-laowang.jpeg' },
+  { name: '賴山嶼', category: '鍋物', logo: '/festival/brand-laishanyu.jpeg' },
   { name: '二本松涮涮屋', category: '涮涮鍋', logo: '/festival/brand-nihonmatsu.jpg' },
   { name: '橋山壽喜燒', category: '壽喜燒', logo: '/festival/brand-hashiyama.jpg' },
   { name: '祇園禪院壽喜燒', category: '壽喜燒', logo: '/festival/brand-gion.jpg' },
