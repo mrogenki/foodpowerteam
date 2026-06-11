@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, RefreshCcw, CheckCircle, XCircle, Link2, Eye, X, Flame } from 'lucide-react';
+import { Loader2, RefreshCcw, CheckCircle, XCircle, Link2, Eye, X, Flame, Receipt } from 'lucide-react';
+import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 
 interface BrandDetail {
   brand_name: string;
@@ -53,6 +54,20 @@ interface FestivalApplication {
   created_at: string;
 }
 
+interface FestivalRegistration {
+  id: string;
+  amount?: number;
+  paid_amount?: number | null;
+  paid_at?: string | null;
+  payment_status?: string | null;
+  payment_method?: string | null;
+  merchant_order_no?: string | null;
+  invoice_title?: string | null;
+  tax_id?: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+}
+
 const FESTIVAL_LABEL: Record<string, string> = {
   yakiniku: '燒肉祭',
   hotpot: '火鍋祭',
@@ -83,6 +98,9 @@ const FestivalApplicationManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<FestivalApplication | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [regMap, setRegMap] = useState<Record<string, FestivalRegistration>>({});
+  const [receiptMap, setReceiptMap] = useState<Record<string, string>>({});
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
 
   const fetchApps = async () => {
     setLoading(true);
@@ -100,8 +118,40 @@ const FestivalApplicationManager: React.FC = () => {
     }
   };
 
+  const fetchRegistrations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('festival_registrations')
+        .select('id, amount, paid_amount, paid_at, payment_status, payment_method, merchant_order_no, invoice_title, tax_id, contact_name, contact_email');
+      if (error) throw error;
+      const map: Record<string, FestivalRegistration> = {};
+      (data as FestivalRegistration[] | null)?.forEach((r) => {
+        if (r.id) map[r.id] = r;
+      });
+      setRegMap(map);
+    } catch (err) {
+      console.error('Error fetching festival registrations:', err);
+    }
+  };
+
+  const fetchReceipts = async () => {
+    try {
+      const { data, error } = await supabase.from('receipts').select('order_no, status');
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data as any[] | null)?.forEach((r) => {
+        if (r.order_no) map[r.order_no] = r.status;
+      });
+      setReceiptMap(map);
+    } catch (err) {
+      console.error('Error fetching receipts:', err);
+    }
+  };
+
   useEffect(() => {
     fetchApps();
+    fetchRegistrations();
+    fetchReceipts();
   }, []);
 
   const setStatus = async (app: FestivalApplication, status: string) => {
@@ -183,6 +233,7 @@ const FestivalApplicationManager: React.FC = () => {
         prompt('繳費連結已產生，請手動複製：', link);
       }
       await fetchApps();
+      await fetchRegistrations();
     } catch (err: any) {
       console.error('Generate link error:', err);
       alert('產生連結失敗: ' + err.message);
@@ -221,6 +272,45 @@ const FestivalApplicationManager: React.FC = () => {
     return <span className={`px-2 py-1 rounded text-xs font-bold ${cls}`}>{label}</span>;
   };
 
+  // 取得申請對應的繳費紀錄
+  const regOf = (app: FestivalApplication) => (app.registration_id ? regMap[app.registration_id] : undefined);
+  const isPaidOf = (app: FestivalApplication) => regOf(app)?.payment_status === 'paid';
+  const orderNoOf = (reg?: FestivalRegistration) => reg?.merchant_order_no || (reg ? `MANUAL_${reg.id}` : '');
+  const receiptIssued = (reg?: FestivalRegistration) => {
+    const ono = orderNoOf(reg);
+    return !!ono && (receiptMap[ono] === 'sent' || receiptMap[ono] === 'issued');
+  };
+
+  const openReceipt = (app: FestivalApplication) => {
+    const reg = regOf(app);
+    if (!reg) return;
+    setReceiptData({
+      payerName: reg.contact_name || app.project_contact || app.company_name,
+      companyName: reg.invoice_title || app.company_name,
+      taxId: reg.tax_id || app.tax_id || '',
+      amount: reg.paid_amount || reg.amount || suggestAmount(app),
+      paymentMethod: '信用卡',
+      feeType: 'donation',
+      orderNo: orderNoOf(reg),
+      email: reg.contact_email || app.contact_email || '',
+    });
+  };
+
+  const paymentBadge = (app: FestivalApplication) => {
+    const reg = regOf(app);
+    if (!reg) return <span className="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-500">尚未產生連結</span>;
+    const paid = reg.payment_status === 'paid';
+    return (
+      <div>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          {paid ? '已付款' : '待付款'}
+        </span>
+        <div className="text-xs text-gray-400 mt-1">NT$ {(reg.paid_amount || reg.amount || 0).toLocaleString()}</div>
+        {paid && reg.paid_at && <div className="text-[10px] text-gray-400">{new Date(reg.paid_at).toLocaleString('zh-TW')}</div>}
+      </div>
+    );
+  };
+
   const renderTable = (items: FestivalApplication[], isProcessed: boolean) => (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 mb-8">
       <div className="p-4 border-b border-gray-50 bg-gray-50/50">
@@ -238,6 +328,7 @@ const FestivalApplicationManager: React.FC = () => {
               <th className="p-4">參加品牌</th>
               <th className="p-4">合約同意</th>
               <th className="p-4">狀態</th>
+              <th className="p-4">繳費狀態</th>
               <th className="p-4">操作</th>
             </tr>
           </thead>
@@ -273,6 +364,7 @@ const FestivalApplicationManager: React.FC = () => {
                     {app.signer_name && <div className="text-xs text-gray-400 mt-0.5">簽署：{app.signer_name}</div>}
                   </td>
                   <td className="p-4">{statusBadge(app.status)}</td>
+                  <td className="p-4">{paymentBadge(app)}</td>
                   <td className="p-4">
                     <div className="flex gap-2 flex-wrap">
                       <button onClick={() => setDetail(app)} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 font-bold flex items-center gap-1">
@@ -286,6 +378,19 @@ const FestivalApplicationManager: React.FC = () => {
                         {busyId === app.id ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
                         {app.payment_link ? '重新產生連結' : '產生繳費連結'}
                       </button>
+                      {isPaidOf(app) && (
+                        <button
+                          onClick={() => openReceipt(app)}
+                          disabled={receiptIssued(regOf(app))}
+                          className={`text-xs px-2 py-1 rounded font-bold flex items-center gap-1 border ${
+                            receiptIssued(regOf(app))
+                              ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                              : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                          }`}
+                        >
+                          <Receipt size={12} /> {receiptIssued(regOf(app)) ? '已開立' : '開立收據'}
+                        </button>
+                      )}
                       {!isProcessed && (
                         <>
                           <button onClick={() => setStatus(app, 'approved')} disabled={busyId === app.id} className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold disabled:opacity-50">核准</button>
@@ -307,7 +412,7 @@ const FestivalApplicationManager: React.FC = () => {
               );
             })}
             {items.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-gray-400">目前無{isProcessed ? '已處理' : '待審核'}申請</td></tr>
+              <tr><td colSpan={7} className="p-8 text-center text-gray-400">目前無{isProcessed ? '已處理' : '待審核'}申請</td></tr>
             )}
           </tbody>
         </table>
@@ -322,7 +427,7 @@ const FestivalApplicationManager: React.FC = () => {
           <h2 className="text-2xl font-bold flex items-center gap-2"><Flame className="text-red-600" size={24} /> 燒肉/火鍋祭 合作報名</h2>
           <p className="text-gray-500 text-sm mt-1">前台網頁報名表（含合約同意）送來的申請。審核後可一鍵產生繳費連結（整個集團一次付清）寄給品牌方。</p>
         </div>
-        <button onClick={fetchApps} className="flex items-center gap-2 text-gray-500 hover:text-gray-900">
+        <button onClick={() => { fetchApps(); fetchRegistrations(); fetchReceipts(); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-900">
           <RefreshCcw size={18} /> 重新整理
         </button>
       </div>
@@ -331,6 +436,17 @@ const FestivalApplicationManager: React.FC = () => {
       {renderTable(processed, true)}
 
       {detail && <DetailModal app={detail} onClose={() => setDetail(null)} />}
+
+      {receiptData && (
+        <ReceiptModal
+          isOpen={!!receiptData}
+          onClose={() => {
+            setReceiptData(null);
+            fetchReceipts();
+          }}
+          initialData={receiptData}
+        />
+      )}
     </div>
   );
 };
