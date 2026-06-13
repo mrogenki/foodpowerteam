@@ -953,7 +953,9 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '炎上燒肉', category: '日式燒肉', logo: '/festival/brand-enjo.jpg' },
   { name: '烤狀猿', category: '燒肉名店', logo: '/festival/brand-kaozhuangyuan.png' },
   { name: '燒肉來1喀', category: '燒肉名店', logo: '/festival/brand-laika.jpg' },
-  { name: '老燒肉', category: '燒肉名店', logo: '/festival/brand-laoshaorou.jpeg' }
+  { name: '老燒肉', category: '燒肉名店', logo: '/festival/brand-laoshaorou.jpeg' },
+  { name: '一頭牛日式燒肉', category: '日式燒肉', logo: '/festival/brand-yitouniu.png' },
+  { name: 'Char Char Steak & Bar', category: '牛排酒吧', logo: '/festival/brand-charchar.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
