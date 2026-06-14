@@ -56,6 +56,7 @@ interface FestivalApplication {
 
 interface FestivalRegistration {
   id: string;
+  created_at?: string;
   amount?: number;
   paid_amount?: number | null;
   paid_at?: string | null;
@@ -66,6 +67,12 @@ interface FestivalRegistration {
   tax_id?: string | null;
   contact_name?: string | null;
   contact_email?: string | null;
+  contact_phone?: string | null;
+  brand_name?: string | null;
+  festival_type?: string | null;
+  brand_count?: number | null;
+  influencer_video_count?: number | null;
+  application_id?: string | null;
 }
 
 const FESTIVAL_LABEL: Record<string, string> = {
@@ -99,6 +106,7 @@ const FestivalApplicationManager: React.FC = () => {
   const [detail, setDetail] = useState<FestivalApplication | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [regMap, setRegMap] = useState<Record<string, FestivalRegistration>>({});
+  const [regs, setRegs] = useState<FestivalRegistration[]>([]);
   const [receiptMap, setReceiptMap] = useState<Record<string, string>>({});
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
 
@@ -122,13 +130,16 @@ const FestivalApplicationManager: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('festival_registrations')
-        .select('id, amount, paid_amount, paid_at, payment_status, payment_method, merchant_order_no, invoice_title, tax_id, contact_name, contact_email');
+        .select('id, created_at, amount, paid_amount, paid_at, payment_status, payment_method, merchant_order_no, invoice_title, tax_id, contact_name, contact_email, contact_phone, brand_name, festival_type, brand_count, influencer_video_count, application_id')
+        .order('created_at', { ascending: false });
       if (error) throw error;
+      const list = (data as FestivalRegistration[] | null) || [];
       const map: Record<string, FestivalRegistration> = {};
-      (data as FestivalRegistration[] | null)?.forEach((r) => {
+      list.forEach((r) => {
         if (r.id) map[r.id] = r;
       });
       setRegMap(map);
+      setRegs(list);
     } catch (err) {
       console.error('Error fetching festival registrations:', err);
     }
@@ -311,6 +322,127 @@ const FestivalApplicationManager: React.FC = () => {
     );
   };
 
+  // ===== 自助繳費（品牌自行從 #/festival/pay 付款，無申請表）=====
+  const selfServiceRegs = regs.filter((r) => !r.application_id);
+
+  const handleDeleteReg = async (reg: FestivalRegistration) => {
+    if (!confirm(`確定永久刪除自助繳費紀錄「${reg.brand_name || ''}」？此操作無法復原。`)) return;
+    setBusyId(reg.id);
+    try {
+      const { data, error } = await supabase.from('festival_registrations').delete().eq('id', reg.id).select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('權限不足或找不到資料');
+      await fetchRegistrations();
+    } catch (err: any) {
+      alert('刪除失敗: ' + err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const openReceiptReg = (reg: FestivalRegistration) => {
+    setReceiptData({
+      payerName: reg.contact_name || reg.brand_name || '',
+      companyName: reg.invoice_title || reg.brand_name || '',
+      taxId: reg.tax_id || '',
+      amount: reg.paid_amount || reg.amount || 0,
+      paymentMethod: '信用卡',
+      feeType: 'donation',
+      orderNo: orderNoOf(reg),
+      email: reg.contact_email || '',
+    });
+  };
+
+  const paymentBadgeReg = (reg: FestivalRegistration) => {
+    const paid = reg.payment_status === 'paid';
+    return (
+      <div>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          {paid ? '已付款' : '待付款'}
+        </span>
+        <div className="text-xs text-gray-400 mt-1">NT$ {(reg.paid_amount || reg.amount || 0).toLocaleString()}</div>
+        {paid && reg.paid_at && <div className="text-[10px] text-gray-400">{new Date(reg.paid_at).toLocaleString('zh-TW')}</div>}
+      </div>
+    );
+  };
+
+  const renderSelfServiceTable = () => (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 mb-8">
+      <div className="p-4 border-b border-gray-50 bg-gray-50/50">
+        <h2 className="text-lg font-bold text-gray-800">
+          自助繳費
+          <span className="text-sm font-normal text-gray-500 ml-2">共 {selfServiceRegs.length} 筆</span>
+        </h2>
+        <p className="text-xs text-gray-400 mt-1">品牌自行從付款頁（/#/festival/pay）填寫並繳費，無申請表。</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <tr>
+              <th className="p-4">繳費時間</th>
+              <th className="p-4">品牌 / 場次</th>
+              <th className="p-4">聯絡</th>
+              <th className="p-4">發票抬頭 / 統編</th>
+              <th className="p-4">繳費狀態</th>
+              <th className="p-4">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {selfServiceRegs.map((reg) => (
+              <tr key={reg.id} className="hover:bg-gray-50 align-top">
+                <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
+                  {reg.created_at ? new Date(reg.created_at).toLocaleString('zh-TW') : '—'}
+                  {reg.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{reg.merchant_order_no}</div>}
+                </td>
+                <td className="p-4 text-sm">
+                  <div className="font-bold text-gray-900">{reg.brand_name || '—'}</div>
+                  <div className="text-xs text-gray-500">
+                    {reg.festival_type ? FESTIVAL_LABEL[reg.festival_type] || reg.festival_type : '—'}
+                    {typeof reg.brand_count === 'number' && reg.brand_count > 0 && `・${reg.brand_count} 品牌`}
+                    {typeof reg.influencer_video_count === 'number' && reg.influencer_video_count > 0 && `・${reg.influencer_video_count} 影音`}
+                  </div>
+                </td>
+                <td className="p-4 text-sm">
+                  <div className="text-gray-800">{reg.contact_name || '—'}</div>
+                  <div className="text-xs text-gray-400">{reg.contact_phone}</div>
+                  <div className="text-xs text-gray-400">{reg.contact_email}</div>
+                </td>
+                <td className="p-4 text-sm">
+                  <div className="text-gray-800">{reg.invoice_title || '—'}</div>
+                  <div className="text-xs text-gray-400">{reg.tax_id ? `統編 ${reg.tax_id}` : ''}</div>
+                </td>
+                <td className="p-4">{paymentBadgeReg(reg)}</td>
+                <td className="p-4">
+                  <div className="flex gap-2 flex-wrap">
+                    {reg.payment_status === 'paid' && (
+                      <button
+                        onClick={() => openReceiptReg(reg)}
+                        disabled={receiptIssued(reg)}
+                        className={`text-xs px-2 py-1 rounded font-bold flex items-center gap-1 border ${
+                          receiptIssued(reg)
+                            ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                            : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Receipt size={12} /> {receiptIssued(reg) ? '已開立' : '開立收據'}
+                      </button>
+                    )}
+                    <button onClick={() => handleDeleteReg(reg)} disabled={busyId === reg.id} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50">
+                      <XCircle size={14} /> 刪除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {selfServiceRegs.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center text-gray-400">目前無自助繳費紀錄</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   const renderTable = (items: FestivalApplication[], isProcessed: boolean) => (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 mb-8">
       <div className="p-4 border-b border-gray-50 bg-gray-50/50">
@@ -434,6 +566,7 @@ const FestivalApplicationManager: React.FC = () => {
 
       {renderTable(pending, false)}
       {renderTable(processed, true)}
+      {renderSelfServiceTable()}
 
       {detail && <DetailModal app={detail} onClose={() => setDetail(null)} />}
 
