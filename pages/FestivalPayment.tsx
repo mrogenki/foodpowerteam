@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { submitNewebPayForm } from '../utils/newebpay';
-import { Loader2, CreditCard, Flame, Minus, Plus, AlertCircle } from 'lucide-react';
+import { Loader2, CreditCard, Flame, Minus, Plus, AlertCircle, Crown, CheckCircle2 } from 'lucide-react';
 
 const BRAND_UNIT_PRICE = 3000;
 const INFLUENCER_UNIT_PRICE = 4500;
+// VIP 免上架費連結代碼：/#/festival/pay?vip=VIP2026
+const VIP_CODE = 'VIP2026';
 
 type FestivalType = 'yakiniku' | 'hotpot';
 
@@ -16,6 +18,8 @@ const FESTIVAL_LABEL: Record<FestivalType, string> = {
 
 const FestivalPayment: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isVip = searchParams.get('vip') === VIP_CODE;
 
   const [festivalType, setFestivalType] = useState<FestivalType>('yakiniku');
   const [brandName, setBrandName] = useState('');
@@ -29,10 +33,13 @@ const FestivalPayment: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [freeDone, setFreeDone] = useState(false);
+
+  const brandUnitPrice = isVip ? 0 : BRAND_UNIT_PRICE;
 
   const total = useMemo(
-    () => brandCount * BRAND_UNIT_PRICE + influencerCount * INFLUENCER_UNIT_PRICE,
-    [brandCount, influencerCount]
+    () => brandCount * brandUnitPrice + influencerCount * INFLUENCER_UNIT_PRICE,
+    [brandCount, influencerCount, brandUnitPrice]
   );
 
   const clamp = (n: number, min: number) => (Number.isFinite(n) && n >= min ? Math.floor(n) : min);
@@ -61,6 +68,7 @@ const FestivalPayment: React.FC = () => {
     setSubmitting(true);
     try {
       const merchantOrderNo = `FEST_${Date.now()}`;
+      const isFree = total === 0;
 
       const { error: insertError } = await supabase.from('festival_registrations').insert({
         festival_type: festivalType,
@@ -74,12 +82,23 @@ const FestivalPayment: React.FC = () => {
         influencer_video_count: influencerCount,
         amount: total,
         merchant_order_no: merchantOrderNo,
-        payment_status: 'pending',
+        waive_listing_fee: isVip,
+        // NT$0（VIP 免上架費且未加購影音）無法走金流，直接標記完成
+        payment_status: isFree ? 'paid' : 'pending',
+        paid_amount: isFree ? 0 : null,
+        paid_at: isFree ? new Date().toISOString() : null,
+        payment_method: isFree ? 'vip_free' : null,
       });
 
       if (insertError) {
         console.error('Failed to create festival registration:', insertError);
         setError('系統錯誤，無法建立報名資料，請稍後再試');
+        setSubmitting(false);
+        return;
+      }
+
+      if (isFree) {
+        setFreeDone(true);
         setSubmitting(false);
         return;
       }
@@ -97,6 +116,35 @@ const FestivalPayment: React.FC = () => {
     }
   };
 
+  if (freeDone) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-red-50 to-white flex flex-col items-center justify-center p-4 py-10">
+        <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full border border-green-100 overflow-hidden text-center">
+          <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-8 py-10 text-white">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 size={36} />
+            </div>
+            <h1 className="text-2xl font-bold mb-1">報名完成！</h1>
+            <p className="text-white/90 text-sm">VIP 免上架費，無須繳費</p>
+          </div>
+          <div className="p-8 space-y-4">
+            <p className="text-gray-700">
+              感謝 <span className="font-bold">{brandName.trim()}</span> 報名
+              {FESTIVAL_LABEL[festivalType]}！您的報名已成功建立，協會專員將盡快與您聯繫後續事宜。
+            </p>
+            <p className="text-sm text-gray-400">確認信將寄至 {contactEmail.trim()}</p>
+            <button
+              onClick={() => navigate('/festival')}
+              className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors"
+            >
+              返回活動介紹
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-red-50 to-white flex flex-col items-center justify-center p-4 py-10">
       <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full border border-orange-100 overflow-hidden">
@@ -107,6 +155,13 @@ const FestivalPayment: React.FC = () => {
           <h1 className="text-2xl font-bold mb-1">燒肉祭 / 火鍋祭 報名繳費</h1>
           <p className="text-white/80 text-sm">填寫品牌資料並選擇方案，立即完成報名</p>
         </div>
+
+        {isVip && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center justify-center gap-2 text-amber-800">
+            <Crown size={18} className="text-amber-500" />
+            <span className="font-bold text-sm">VIP 專屬連結 ‧ 免 NT$3,000 上架費</span>
+          </div>
+        )}
 
         <div className="p-8 space-y-6">
           {/* 祭典選擇 */}
@@ -203,7 +258,11 @@ const FestivalPayment: React.FC = () => {
           <div className="space-y-4 bg-gray-50 p-5 rounded-2xl">
             <Stepper
               title="報名品牌數"
-              subtitle={`每個品牌 NT$ ${BRAND_UNIT_PRICE.toLocaleString()}`}
+              subtitle={
+                isVip
+                  ? `VIP 免上架費（原價每品牌 NT$ ${BRAND_UNIT_PRICE.toLocaleString()}）`
+                  : `每個品牌 NT$ ${BRAND_UNIT_PRICE.toLocaleString()}`
+              }
               value={brandCount}
               min={1}
               onChange={(v) => setBrandCount(clamp(v, 1))}
@@ -239,13 +298,19 @@ const FestivalPayment: React.FC = () => {
               <>
                 <Loader2 className="animate-spin" size={22} /> 處理中...
               </>
+            ) : total === 0 ? (
+              <>
+                <CheckCircle2 size={24} /> 確認報名（免費）
+              </>
             ) : (
               <>
                 <CreditCard size={24} /> 立即前往繳費
               </>
             )}
           </button>
-          <p className="text-xs text-center text-gray-400">點擊後將轉導至藍新金流安全支付頁面</p>
+          <p className="text-xs text-center text-gray-400">
+            {total === 0 ? 'VIP 免上架費，確認後直接完成報名' : '點擊後將轉導至藍新金流安全支付頁面'}
+          </p>
           <button
             onClick={() => navigate('/festival')}
             className="w-full text-sm text-gray-400 hover:text-gray-600"

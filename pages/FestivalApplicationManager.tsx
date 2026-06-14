@@ -72,6 +72,7 @@ interface FestivalRegistration {
   festival_type?: string | null;
   brand_count?: number | null;
   influencer_video_count?: number | null;
+  waive_listing_fee?: boolean | null;
   application_id?: string | null;
 }
 
@@ -130,7 +131,7 @@ const FestivalApplicationManager: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('festival_registrations')
-        .select('id, created_at, amount, paid_amount, paid_at, payment_status, payment_method, merchant_order_no, invoice_title, tax_id, contact_name, contact_email, contact_phone, brand_name, festival_type, brand_count, influencer_video_count, application_id')
+        .select('id, created_at, amount, paid_amount, paid_at, payment_status, payment_method, merchant_order_no, invoice_title, tax_id, contact_name, contact_email, contact_phone, brand_name, festival_type, brand_count, influencer_video_count, waive_listing_fee, application_id')
         .order('created_at', { ascending: false });
       if (error) throw error;
       const list = (data as FestivalRegistration[] | null) || [];
@@ -395,7 +396,10 @@ const FestivalApplicationManager: React.FC = () => {
                   {reg.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{reg.merchant_order_no}</div>}
                 </td>
                 <td className="p-4 text-sm">
-                  <div className="font-bold text-gray-900">{reg.brand_name || '—'}</div>
+                  <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                    {reg.brand_name || '—'}
+                    {reg.waive_listing_fee && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">VIP 免上架費</span>}
+                  </div>
                   <div className="text-xs text-gray-500">
                     {reg.festival_type ? FESTIVAL_LABEL[reg.festival_type] || reg.festival_type : '—'}
                     {typeof reg.brand_count === 'number' && reg.brand_count > 0 && `・${reg.brand_count} 品牌`}
