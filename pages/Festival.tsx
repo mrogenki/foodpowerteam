@@ -956,7 +956,8 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '老燒肉', category: '燒肉名店', logo: '/festival/brand-laoshaorou.jpeg' },
   { name: '一頭牛日式燒肉', category: '日式燒肉', logo: '/festival/brand-yitouniu.png' },
   { name: 'Char Char Steak & Bar', category: '牛排酒吧', logo: '/festival/brand-charchar.jpg' },
-  { name: '燒肉smile', category: '日式燒肉', logo: '/festival/brand-smile.jpeg' }
+  { name: '燒肉smile', category: '日式燒肉', logo: '/festival/brand-smile.jpeg' },
+  { name: '大河屋', category: '日式燒肉', logo: '/festival/brand-dahewu.png' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
@@ -965,6 +966,7 @@ const hotpotBrands: BrandEntry[] = [
   { name: '雞湯大叔', category: '雞湯鍋', logo: '/festival/brand-jitangdashu.jpg' },
   { name: '撈王', category: '養生鍋', logo: '/festival/brand-laowang.jpeg' },
   { name: '賴山嶼', category: '鍋物', logo: '/festival/brand-laishanyu.jpeg' },
+  { name: '築間幸福鍋物', category: '精緻鍋物', logo: '/festival/brand-zhujian.jpg' },
   { name: '二本松涮涮屋', category: '涮涮鍋', logo: '/festival/brand-nihonmatsu.jpg' },
   { name: '橋山壽喜燒', category: '壽喜燒', logo: '/festival/brand-hashiyama.jpg' },
   { name: '祇園禪院壽喜燒', category: '壽喜燒', logo: '/festival/brand-gion.jpg' },
@@ -984,8 +986,7 @@ const hotpotBrands: BrandEntry[] = [
   { name: '潮肉壽喜燒', category: '壽喜燒', logo: '/festival/brand-chaorou-sukiyaki.jpeg' },
   { name: '尚石苑', category: '精緻鍋物', logo: '/festival/brand-shangshiyuan.jpg' },
   { name: '徐泰山汕頭火鍋', category: '汕頭鍋物', logo: '/festival/brand-xutaishan.png' },
-  { name: '今之旬', category: '鍋物', logo: '/festival/brand-jinzhixun.png' },
-  { name: '築間幸福鍋物', category: '精緻鍋物', logo: '/festival/brand-zhujian.jpg' }
+  { name: '今之旬', category: '鍋物', logo: '/festival/brand-jinzhixun.png' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
