@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, RefreshCcw, CheckCircle, XCircle, Link2, Eye, X, Flame, Receipt } from 'lucide-react';
+import { Loader2, RefreshCcw, CheckCircle, XCircle, Link2, Eye, X, Flame, Receipt, Download } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
+import FestivalContractDocument from '../components/FestivalContractDocument';
 
 interface BrandDetail {
   brand_name: string;
@@ -597,12 +599,61 @@ const Row: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, valu
 
 const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> = ({ app, onClose }) => {
   const list = brandsOf(app);
+  const contractRef = useRef<HTMLDivElement>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const contractData = {
+    companyName: app.company_name,
+    representative: app.representative,
+    taxId: app.tax_id,
+    companyAddress: app.company_address,
+    projectContact: app.project_contact,
+    brands: list.map((b) => ({
+      brandName: b.brand_name,
+      festivalLabel: FESTIVAL_LABEL[b.festival_type],
+      planText: b.sponsor_plan === 'A' ? '方案A（免費）' : b.sponsor_plan === 'B' ? '方案B（影音 +4,500）' : '尚未選方案',
+    })),
+    total: suggestAmount(app),
+    waiveListingFee: !!app.waive_listing_fee,
+  };
+
+  const handleDownloadContract = async () => {
+    if (!contractRef.current) return;
+    setPdfLoading(true);
+    try {
+      const opt = {
+        margin: 12,
+        filename: `活動合作協議書_${app.company_name || '品牌'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+        pagebreak: { mode: ['css', 'legacy'] },
+      };
+      await html2pdf().set(opt).from(contractRef.current).save();
+    } catch (e) {
+      console.error('合約 PDF 產生失敗', e);
+      alert('合約 PDF 產生失敗，請稍後再試。');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-gray-900">{app.company_name} — 申請明細</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={22} /></button>
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center gap-3">
+          <h3 className="text-lg font-bold text-gray-900 truncate">{app.company_name} — 申請明細</h3>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleDownloadContract}
+              disabled={pdfLoading}
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {pdfLoading ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
+              下載協議書 PDF
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={22} /></button>
+          </div>
         </div>
         <div className="p-6 space-y-5">
           <section>
@@ -683,6 +734,10 @@ const DetailModal: React.FC<{ app: FestivalApplication; onClose: () => void }> =
             </section>
           )}
         </div>
+      </div>
+      {/* 隱藏：供 html2pdf 擷取的合約文件（離屏渲染，不顯示於畫面） */}
+      <div aria-hidden className="absolute -left-[9999px] top-0 w-[760px] bg-white p-6 pointer-events-none">
+        <FestivalContractDocument ref={contractRef} data={contractData} />
       </div>
     </div>
   );
