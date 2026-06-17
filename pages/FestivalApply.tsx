@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, Flame, AlertCircle, CheckCircle2, FileText, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Flame, AlertCircle, CheckCircle2, FileText, Plus, Trash2, Download } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 type FestivalType = 'yakiniku' | 'hotpot' | 'both';
 
@@ -102,6 +103,31 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
   // 合約同意
   const [agreed, setAgreed] = useState(false);
   const [signerName, setSignerName] = useState('');
+
+  // 合作協議書 PDF 下載
+  const contractRef = useRef<HTMLDivElement>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadContract = async () => {
+    if (!contractRef.current) return;
+    setPdfLoading(true);
+    try {
+      const opt = {
+        margin: 12,
+        filename: `活動合作協議書_${companyName || '品牌'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+        pagebreak: { mode: ['css', 'legacy'] },
+      };
+      await html2pdf().set(opt).from(contractRef.current).save();
+    } catch (e) {
+      console.error('合約 PDF 產生失敗', e);
+      setError('合約 PDF 產生失敗，請稍後再試。');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -431,8 +457,9 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
           {/* 合約 */}
           <Section title="活動合作協議書">
             <p className="text-xs text-gray-500">請完整閱讀以下協議書，乙方欄位與參加品牌將依您上方填寫的資料自動帶入。</p>
-            <p className="text-xs text-gray-500">為響應環保，本次「活動合作協議書」將以線上電子填寫方式完成簽約，由甲方留存，不另提供實體紙本合約。經乙方填寫完畢將資料送出即完成本「活動合作協議書」之簽署。</p>
-            <div className="h-72 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-5 text-[13px] leading-relaxed text-gray-700 space-y-3">
+            <p className="text-xs text-gray-500">為響應環保，本次「活動合作協議書」將以線上電子填寫方式完成簽約，由甲方留存，不另提供實體紙本合約。經乙方填寫完畢將資料送出即完成本「活動合作協議書」之簽署。乙方可於下方點選「下載合作協議書 PDF」自行留存一份電子檔。</p>
+            <div className="h-72 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-5">
+              <div ref={contractRef} className="bg-white text-[13px] leading-relaxed text-gray-700 space-y-3">
               <p className="text-center text-base font-bold text-gray-900">活動合作協議書</p>
               <p>立協議書人</p>
               <p>
@@ -493,7 +520,19 @@ const FestivalApply: React.FC<{ waiveListingFee?: boolean }> = ({ waiveListingFe
                   <p>聯絡人：{projectContact || '—'}</p>
                 </div>
               </div>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleDownloadContract}
+              disabled={pdfLoading}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-600 text-red-600 font-semibold hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {pdfLoading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              下載合作協議書 PDF
+            </button>
+            <p className="text-xs text-gray-400 -mt-1">下載前請先填妥上方公司與品牌資料，PDF 會自動帶入您填寫的內容。</p>
 
             <label className="flex items-start gap-3 cursor-pointer mt-2">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 w-5 h-5 accent-red-600 shrink-0" />
