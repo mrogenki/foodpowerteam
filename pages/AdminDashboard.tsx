@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
@@ -104,7 +104,7 @@ const NotesInput: React.FC<{ value?: string; onSave: (val: string) => void }> = 
 };
 
 // Sidebar
-const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: number }> = ({ user, onLogout, pendingCount }) => {
+const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: number; mobileOpen?: boolean; onClose?: () => void }> = ({ user, onLogout, pendingCount, mobileOpen = false, onClose }) => {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
   
@@ -174,12 +174,15 @@ const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: n
   }, []);
 
   return (
-    <div className="w-64 bg-gray-900 text-gray-400 flex flex-col min-h-screen shrink-0">
+    <div className={`fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-gray-900 text-gray-400 flex flex-col transform transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:min-h-screen lg:max-w-none shrink-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
       <div className="p-6 border-b border-gray-800">
-        <Link to="/" className="flex items-center gap-3 text-white">
-          <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold">食</div>
-          <span className="font-bold tracking-tight">管理系統</span>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 text-white">
+            <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center text-white font-bold">食</div>
+            <span className="font-bold tracking-tight">管理系統</span>
+          </Link>
+          <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-white p-1 -mr-1" aria-label="關閉選單"><X size={22} /></button>
+        </div>
         <div className="mt-4 px-3 py-2 rounded bg-gray-800 border border-gray-700">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{user.role}</p>
           <p className="text-sm text-white font-medium truncate">{user.name}</p>
@@ -3104,6 +3107,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const { currentUser, onLogout, memberApplications, onRefreshRegistrations } = props;
   const pendingCount = memberApplications.filter(m => m.status === 'pending').length;
   const location = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // 路由切換時自動關閉手機側邊選單
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
 
   // 切到「活動管理」/「報到管理」tab 時自動重新拉取 registrations，
   // 避免久未重整頁面 → React state 停留在舊 snapshot → 新報名不顯示
@@ -3115,9 +3122,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   }, [location.pathname, onRefreshRegistrations]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={currentUser} onLogout={onLogout} pendingCount={pendingCount} />
-      <main className="flex-1 h-screen overflow-y-auto p-8">
+    <div className="lg:flex min-h-screen bg-gray-50">
+      {/* 手機版頂部列 */}
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between bg-gray-900 text-white px-4 h-14 shadow-md">
+        <Link to="/admin" className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-red-600 rounded-md flex items-center justify-center text-white font-bold text-sm">食</div>
+          <span className="font-bold tracking-tight text-sm">管理系統</span>
+        </Link>
+        <button onClick={() => setMobileNavOpen(true)} className="p-2 -mr-2" aria-label="開啟選單"><Menu size={24} /></button>
+      </header>
+
+      {/* 手機版遮罩 */}
+      {mobileNavOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
+
+      <Sidebar user={currentUser} onLogout={onLogout} pendingCount={pendingCount} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <main className="flex-1 lg:h-screen lg:overflow-y-auto p-4 sm:p-6 lg:p-8 min-w-0">
         <Routes>
           <Route path="/" element={<DashboardHome {...props} />} />
           
