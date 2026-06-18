@@ -246,7 +246,7 @@ const MemberRenewalManager: React.FC = () => {
           </button>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -356,6 +356,60 @@ const MemberRenewalManager: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 手機版卡片視圖 */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {items.map(renewal => (
+          <div key={renewal.id} className="p-4">
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-gray-900">{renewal.member_name}</div>
+                <div className="text-xs text-gray-400">{renewal.member_no}</div>
+                {renewal.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono">#{renewal.merchant_order_no}</div>}
+              </div>
+              <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${
+                renewal.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
+                renewal.payment_status === 'processed' ? 'bg-gray-100 text-gray-700' :
+                renewal.payment_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {renewal.payment_status === 'paid' ? '已付款' :
+                 renewal.payment_status === 'processed' ? '已處理' :
+                 renewal.payment_status === 'failed' ? '失敗' : '待付款'}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+              <span className="font-mono">NT$ {renewal.amount.toLocaleString()}</span>
+              <span className="text-xs text-gray-500">{renewal.renewal_date} · {translatePaymentMethod(renewal.payment_method)}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 items-center">
+              {(renewal.payment_status === 'paid' || renewal.payment_status === 'processed') && (
+                <button
+                  onClick={() => setReceiptData({ payerName: renewal.member_name, companyName: (renewal as any).member_company, taxId: renewal.member_tax_id, amount: renewal.amount || 5000, paymentMethod: translatePaymentMethod(renewal.payment_method), feeType: 'annual', orderNo: renewal.merchant_order_no || '', email: renewal.member_email || '' })}
+                  disabled={renewal.receipt_status === 'sent'}
+                  className={`text-xs px-2 py-1.5 rounded font-bold border ${renewal.receipt_status === 'sent' ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}
+                >
+                  {renewal.receipt_status === 'sent' ? '已開立' : '開立收據'}
+                </button>
+              )}
+              {!isProcessed && renewal.payment_status !== 'paid' && renewal.receipt_status !== 'sent' && (
+                <>
+                  <button onClick={() => handleMarkAsPaid(renewal)} className="text-xs bg-green-50 text-green-600 px-2 py-1.5 rounded hover:bg-green-100 font-bold">標記已付</button>
+                  <button onClick={() => handleResendLink(renewal)} disabled={sendingEmail.includes(renewal.id)} className="text-xs bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 font-bold flex items-center gap-1">
+                    {sendingEmail.includes(renewal.id) ? <Loader2 size={10} className="animate-spin"/> : <Send size={10}/>} 重寄
+                  </button>
+                </>
+              )}
+              {isProcessed && renewal.payment_status !== 'processed' && (
+                <button onClick={() => handleMarkAsProcessed(renewal)} className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-1 rounded hover:bg-blue-100 font-bold">標記為已處理</button>
+              )}
+              <button onClick={() => handleDelete(renewal.id)} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors ml-auto flex items-center gap-1"><XCircle size={14} /> 刪除</button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="p-8 text-center text-gray-400">目前無{isProcessed ? '已處理' : '待處理'}續約申請</div>
+        )}
       </div>
     </div>
   );

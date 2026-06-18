@@ -1985,13 +1985,13 @@ const ActivityCheckInManager: React.FC<{
            </div>
          </div>
          
-         <div className="overflow-x-auto">
+         <div className="hidden md:block overflow-x-auto">
            <table className="w-full text-left border-collapse">
              <thead>
                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                  <th className="p-4 rounded-tl-lg w-10">
-                   <input 
-                     type="checkbox" 
+                   <input
+                     type="checkbox"
                      checked={selectedRegIds.length === filteredRegs.length && filteredRegs.length > 0}
                      onChange={toggleSelectAll}
                      className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
@@ -2100,8 +2100,79 @@ const ActivityCheckInManager: React.FC<{
              </tbody>
            </table>
          </div>
+
+         {/* 手機版卡片視圖 */}
+         <div className="md:hidden space-y-3">
+           {filteredRegs.length > 0 && (
+             <label className="flex items-center gap-2 text-sm text-gray-500 px-1">
+               <input type="checkbox" checked={selectedRegIds.length === filteredRegs.length && filteredRegs.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500" />
+               全選
+             </label>
+           )}
+           {filteredRegs.map((reg: any) => {
+             const member = members?.find(m => String(m.id) === String(reg.memberId));
+             const name = reg.name || reg.member_name || member?.name || '';
+             const phone = reg.phone || member?.phone || '';
+             const company = reg.company_title || reg.company || member?.company_title || member?.company || '';
+             const title = reg.title || member?.job_title || '';
+             const receiptKey = reg.merchant_order_no || `MANUAL_${reg.id}`;
+             const receiptIssued = receiptMap[receiptKey] === 'sent' || receiptMap[receiptKey] === 'issued';
+             return (
+               <div key={reg.id} className={`border rounded-xl p-4 shadow-sm ${reg.check_in_status ? 'border-green-200 bg-green-50/30' : 'border-gray-100'} ${reg.payment_status === 'refunded' ? 'bg-gray-50' : ''}`}>
+                 <div className="flex justify-between items-start gap-2">
+                   <div className="flex items-start gap-2 min-w-0">
+                     <input type="checkbox" checked={selectedRegIds.includes(String(reg.id))} onChange={() => toggleSelectReg(String(reg.id))} className="w-4 h-4 mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 shrink-0" />
+                     <div className="min-w-0">
+                       <div className={`font-bold flex items-center gap-2 flex-wrap ${reg.payment_status === 'refunded' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                         {name}
+                         {reg.payment_status === 'refunded' && <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-bold no-underline">已退費</span>}
+                       </div>
+                       {phone && <div className="text-sm text-gray-500">{phone}</div>}
+                       {(company || title) && <div className="text-xs text-gray-500 mt-0.5">{company}{company && title ? ' / ' : ''}{title}</div>}
+                     </div>
+                   </div>
+                   <div className="text-right shrink-0">
+                     <div className="font-mono text-gray-700 text-sm">NT$ {reg.paid_amount}</div>
+                     <div className="text-[11px] text-gray-400">{translatePaymentMethod(reg.payment_method)}</div>
+                   </div>
+                 </div>
+
+                 <div className="mt-3 flex flex-wrap items-center gap-2">
+                   <button onClick={() => onUpdateReg({...reg, check_in_status: !reg.check_in_status})} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm transition-all active:scale-95 ${reg.check_in_status ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                     {reg.check_in_status ? <CheckCircle size={16}/> : <XCircle size={16}/>} {reg.check_in_status ? '已報到' : '未報到'}
+                   </button>
+                   <button onClick={() => handlePaymentStatusToggle(reg)} className={`flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold transition-colors ${reg.payment_status === PaymentStatus.PAID ? 'bg-green-100 text-green-700' : (reg.payment_status === 'refunded' ? 'bg-gray-200 text-gray-500' : 'bg-yellow-100 text-yellow-700')}`}>
+                     {reg.payment_status === PaymentStatus.PAID ? '已付款' : (reg.payment_status === 'refunded' ? '已退費' : '待付款')}
+                     {reg.payment_status === PaymentStatus.PAID && <RefreshCcw size={10} className="ml-1 opacity-50"/>}
+                     {reg.payment_status === 'refunded' && <Ban size={10} className="ml-1 opacity-50"/>}
+                   </button>
+                   {(reg.payment_status === PaymentStatus.PENDING || !reg.payment_status) && (
+                     <button onClick={() => handleResendPaymentLink(reg)} disabled={sendingEmail.includes(String(reg.id))} className="text-xs text-blue-600 underline flex items-center gap-1 disabled:opacity-50">
+                       {sendingEmail.includes(String(reg.id)) ? <Loader2 size={10} className="animate-spin"/> : <Send size={10}/>} 重寄連結
+                     </button>
+                   )}
+                   {reg.payment_status === PaymentStatus.PAID && (
+                     <button
+                       onClick={() => setReceiptData({ payerName: name, companyName: company, taxId: reg.tax_id || member?.tax_id || '', amount: reg.paid_amount || 0, paymentMethod: translatePaymentMethod(reg.payment_method), feeType: 'donation', orderNo: receiptKey, email: reg.email || member?.email || '', remarks: `活動：${currentActivity?.title || ''}` })}
+                       disabled={receiptIssued}
+                       className={`px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${receiptIssued ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200'}`}
+                     >
+                       {receiptIssued ? '已開立收據' : '開立收據'}
+                     </button>
+                   )}
+                 </div>
+
+                 <div className="mt-3 text-xs text-gray-600 space-y-1 border-t border-gray-100 pt-2">
+                   {reg.audience !== 'member_only' && reg.referrer && <div><span className="font-bold text-gray-400">引薦:</span> {reg.referrer}</div>}
+                   <div className="flex items-start gap-1"><span className="font-bold text-gray-400 shrink-0">備註:</span> <NotesInput value={reg.notes} onSave={(val) => onUpdateReg({...reg, notes: val})} /></div>
+                 </div>
+               </div>
+             );
+           })}
+           {filteredRegs.length === 0 && <div className="p-8 text-center text-gray-400">查無資料，請嘗試其他關鍵字</div>}
+         </div>
        </div>
-       
+
        {receiptData && (
          <ReceiptModal
            isOpen={!!receiptData}
@@ -2629,7 +2700,7 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
            </div>
        </div>
        )}
-       <div className="bg-white p-6 rounded-2xl border border-gray-100"><div className="mb-4 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" placeholder="搜尋會員 (姓名、編號、電話)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"/></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse text-sm"><thead><tr className="bg-gray-50 text-gray-500"><th className="p-3">編號</th><th className="p-3">姓名</th><th className="p-3">品牌/職稱</th><th className="p-3">效期</th><th className="p-3">狀態</th><th className="p-3">操作</th></tr></thead><tbody className="divide-y">{filtered.map(m => { const isExpired = m.membership_expiry_date && m.membership_expiry_date < new Date().toISOString().slice(0, 10); const displayStatus = (m.status === 'active' && !isExpired) ? 'active' : 'inactive'; return (<tr key={m.id} className="hover:bg-gray-50"><td className="p-3 font-mono text-gray-500">{(m.member_no || '').toString().padStart(5, '0')}</td><td className="p-3 font-bold">{m.name}</td><td className="p-3"><div>{m.company_title || m.brand_name || m.company}</div><div className="text-xs text-gray-400">{m.job_title}</div></td><td className="p-3">{m.membership_expiry_date || '-'}</td><td className="p-3">{displayStatus === 'active' ? (<span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">有效</span>) : (<span className="bg-gray-200 text-gray-500 px-2 py-1 rounded text-xs font-bold">失效</span>)}</td><td className="p-3 flex gap-2"><button onClick={() => handleEdit(m)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Edit size={16}/></button><button onClick={() => {if(confirm('確定刪除此會員？')) onDelete(m.id)}} className="text-red-600 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button></td></tr>); })}{filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-gray-400">無相符資料</td></tr>}</tbody></table></div></div>
+       <div className="bg-white p-6 rounded-2xl border border-gray-100"><div className="mb-4 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" placeholder="搜尋會員 (姓名、編號、電話)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"/></div><div className="hidden md:block overflow-x-auto"><table className="w-full text-left border-collapse text-sm"><thead><tr className="bg-gray-50 text-gray-500"><th className="p-3">編號</th><th className="p-3">姓名</th><th className="p-3">品牌/職稱</th><th className="p-3">效期</th><th className="p-3">狀態</th><th className="p-3">操作</th></tr></thead><tbody className="divide-y">{filtered.map(m => { const isExpired = m.membership_expiry_date && m.membership_expiry_date < new Date().toISOString().slice(0, 10); const displayStatus = (m.status === 'active' && !isExpired) ? 'active' : 'inactive'; return (<tr key={m.id} className="hover:bg-gray-50"><td className="p-3 font-mono text-gray-500">{(m.member_no || '').toString().padStart(5, '0')}</td><td className="p-3 font-bold">{m.name}</td><td className="p-3"><div>{m.company_title || m.brand_name || m.company}</div><div className="text-xs text-gray-400">{m.job_title}</div></td><td className="p-3">{m.membership_expiry_date || '-'}</td><td className="p-3">{displayStatus === 'active' ? (<span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">有效</span>) : (<span className="bg-gray-200 text-gray-500 px-2 py-1 rounded text-xs font-bold">失效</span>)}</td><td className="p-3 flex gap-2"><button onClick={() => handleEdit(m)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Edit size={16}/></button><button onClick={() => {if(confirm('確定刪除此會員？')) onDelete(m.id)}} className="text-red-600 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button></td></tr>); })}{filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-gray-400">無相符資料</td></tr>}</tbody></table></div><div className="md:hidden space-y-3">{filtered.map(m => { const isExpired = m.membership_expiry_date && m.membership_expiry_date < new Date().toISOString().slice(0, 10); const displayStatus = (m.status === 'active' && !isExpired) ? 'active' : 'inactive'; return (<div key={m.id} className="border border-gray-100 rounded-xl p-4 shadow-sm"><div className="flex justify-between items-start gap-2"><div className="min-w-0"><div className="flex items-center gap-2 flex-wrap"><span className="font-bold text-gray-900">{m.name}</span>{displayStatus === 'active' ? (<span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold shrink-0">有效</span>) : (<span className="bg-gray-200 text-gray-500 px-2 py-0.5 rounded text-xs font-bold shrink-0">失效</span>)}</div><p className="text-xs font-mono text-gray-400 mt-0.5">#{(m.member_no || '').toString().padStart(5, '0')}</p></div><div className="flex gap-1 shrink-0"><button onClick={() => handleEdit(m)} className="text-blue-600 hover:bg-blue-50 p-2 rounded" aria-label="編輯"><Edit size={18}/></button><button onClick={() => {if(confirm('確定刪除此會員？')) onDelete(m.id)}} className="text-red-600 hover:bg-red-50 p-2 rounded" aria-label="刪除"><Trash2 size={18}/></button></div></div><div className="mt-2 text-sm text-gray-600">{m.company_title || m.brand_name || m.company || '-'}{m.job_title && <span className="text-gray-400"> · {m.job_title}</span>}</div><div className="mt-1 text-xs text-gray-400">效期：{m.membership_expiry_date || '-'}</div></div>); })}{filtered.length === 0 && <div className="p-6 text-center text-gray-400">無相符資料</div>}</div></div>
     </div>
   );
 };

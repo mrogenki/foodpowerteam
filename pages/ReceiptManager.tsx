@@ -177,7 +177,7 @@ const ReceiptManager: React.FC = () => {
         <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto" /></div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
@@ -249,6 +249,46 @@ const ReceiptManager: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* 手機版卡片視圖 */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {filteredReceipts.map(receipt => (
+              <div key={receipt.id} className="p-4">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <div className="font-mono font-bold text-red-600 text-sm">{receipt.receipt_no}</div>
+                    <div className="font-bold text-gray-900 mt-0.5">{receipt.payer_name}</div>
+                    {receipt.tax_id && <div className="text-xs text-gray-500">統編: {receipt.tax_id}</div>}
+                  </div>
+                  {receipt.status === 'sent' ? (
+                    <span className="px-2 py-1 rounded text-xs font-bold bg-green-50 text-green-700 shrink-0">已開立寄出</span>
+                  ) : (
+                    <span className="px-2 py-1 rounded text-xs font-bold bg-gray-50 text-gray-500 shrink-0">已開立</span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="px-2 py-1 rounded text-xs font-bold bg-blue-50 text-blue-700">{translateFeeType(receipt.fee_type)}</span>
+                  <div className="text-right">
+                    <div className="font-bold">NT$ {receipt.amount.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{receipt.payment_method}</div>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-400">
+                  <span>{receipt.issue_date}{receipt.order_no ? ` · #${receipt.order_no}` : ''}</span>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handlePrint(receipt)} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 font-bold flex items-center gap-1"><FileText size={14} /> 檢視</button>
+                    <button onClick={() => handleDelete(receipt.id, receipt.receipt_no)} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {filteredReceipts.length === 0 && (
+              <div className="p-12 text-center text-gray-400">
+                <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                <p>目前沒有收據紀錄</p>
+              </div>
+            )}
           </div>
         </div>
       )}
