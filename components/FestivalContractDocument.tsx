@@ -25,7 +25,7 @@ export interface FestivalContractData {
 const FestivalContractDocument = forwardRef<HTMLDivElement, { data: FestivalContractData }>(({ data }, ref) => {
   const { companyName, representative, taxId, companyAddress, projectContact, brands, total, waiveListingFee } = data;
   return (
-    <div ref={ref} className="bg-white text-[13px] leading-relaxed text-gray-700 space-y-3">
+    <div ref={ref} className="bg-white text-[13px] leading-relaxed text-gray-700 space-y-3 [&>*]:break-inside-avoid">
       <p className="text-center text-base font-bold text-gray-900">活動合作協議書</p>
       <p>立協議書人</p>
       <p>
