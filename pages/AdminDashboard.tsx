@@ -546,7 +546,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ currentUser, members, act
         <div className="p-6 border-b border-gray-50">
            <h3 className="text-lg font-bold text-gray-900">{selectedMonth} 各活動營運狀態</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
            <table className="w-full text-left border-collapse">
               <thead>
                  <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
@@ -599,12 +599,35 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ currentUser, members, act
               </tbody>
            </table>
         </div>
+        {/* 手機版卡片視圖 */}
+        <div className="md:hidden divide-y divide-gray-100">
+           {stats.allActivityStats.map((act: any) => (
+              <div key={`${act.category}-${act.id}`} className="p-4">
+                 <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                       <div className="font-bold text-gray-900">{act.title}</div>
+                       <div className="text-xs text-gray-400">{act.date}</div>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${act.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{act.status === 'active' ? '進行中' : '已結束'}</span>
+                 </div>
+                 <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
+                    <span className={`px-2 py-1 rounded font-bold ${act.category === '會員' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>{act.category}</span>
+                    <span className="text-gray-500">報名/已付：<span className="text-gray-900 font-bold">{act.regCount}</span> / <span className="text-blue-600 font-bold">{act.paidCount}</span></span>
+                    <span className="text-gray-500">出席：<span className={`font-bold ${act.checkInCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>{act.checkInCount}</span> / {act.regCount}</span>
+                 </div>
+                 {!isStaff && <div className="mt-1 text-sm font-mono font-bold text-gray-700">累積營收 NT$ {act.revenue.toLocaleString()}</div>}
+              </div>
+           ))}
+           {stats.allActivityStats.length === 0 && (
+              <div className="p-6 text-center text-gray-400">尚無活動資料</div>
+           )}
+        </div>
       </div>
     </div>
   );
 };
 
-const MemberApplicationManager: React.FC<{ 
+const MemberApplicationManager: React.FC<{
   applications: MemberApplication[]; 
   onApprove: (app: MemberApplication) => void;
   onDelete: (id: string | number) => void; 
@@ -707,7 +730,7 @@ const MemberApplicationManager: React.FC<{
       <div className="p-4 border-b border-gray-50 bg-gray-50/50">
         <h2 className="text-lg font-bold text-gray-800">{isApproved ? '已處理申請' : '待處理申請'} <span className="text-sm font-normal text-gray-500 ml-2">共 {apps.length} 筆</span></h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
             <tr className="bg-gray-50 text-gray-500">
@@ -836,6 +859,55 @@ const MemberApplicationManager: React.FC<{
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 手機版卡片視圖 */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {apps.map(app => {
+          const isPaid = app.payment_status === PaymentStatus.PAID;
+          const orderNo = app.merchant_order_no || `MANUAL_${app.id}`;
+          const receiptIssued = receiptMap[orderNo] === 'sent' || receiptMap[orderNo] === 'issued';
+          return (
+            <div key={app.id} className="p-4">
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-gray-900">{app.name}</div>
+                  <div className="text-xs text-gray-500">{app.company_title || app.brand_name}{app.job_title ? ` · ${app.job_title}` : ''}</div>
+                  {app.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono">#{app.merchant_order_no}</div>}
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{isPaid ? '已付款' : '待付款'}</span>
+              </div>
+              <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+                <div>{app.phone}{app.email ? ` · ${app.email}` : ''}</div>
+                <div>引薦人：{app.referrer || '-'} · {translatePaymentMethod(app.payment_method)}{app.paid_amount ? ` · NT$ ${app.paid_amount.toLocaleString()}` : ''}</div>
+              </div>
+              {!isPaid && !isApproved && (
+                <div className="mt-2 flex gap-3 text-xs">
+                  <button onClick={(e) => handleResendPaymentLink(app, e)} disabled={sendingEmailId === app.id} className="text-blue-600 hover:text-blue-800 underline disabled:opacity-50">{sendingEmailId === app.id ? '發送中...' : '補寄連結'}</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleMarkAsPaid(app); }} className="text-green-600 hover:text-green-800 underline">標記已付</button>
+                </div>
+              )}
+              <div className="mt-2 flex items-start gap-1 text-xs"><span className="font-bold text-gray-400 shrink-0 mt-0.5">備註:</span>
+                <NotesInput value={app.notes} onSave={async (val) => { try { const { error } = await supabase.from('member_applications').update({ notes: val }).eq('id', app.id); if (error) throw error; } catch (err) { console.error(err); alert('更新備註失敗'); } }} />
+              </div>
+              <div className="mt-3 flex gap-2 flex-wrap">
+                {isPaid && (
+                  <button
+                    onClick={() => setReceiptData({ payerName: app.name, companyName: app.company_title || '', taxId: app.tax_id || '', amount: app.paid_amount || 5000, paymentMethod: translatePaymentMethod(app.payment_method), feeType: 'initiation', orderNo, email: app.email || '' })}
+                    disabled={receiptIssued}
+                    className={`px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${receiptIssued ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}
+                  >
+                    {receiptIssued ? '已開立' : '開立收據'}
+                  </button>
+                )}
+                <button onClick={() => setSelectedApp(app)} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-700 transition-colors ml-auto">{isApproved ? '詳細資料' : '審核 / 詳細資料'}</button>
+              </div>
+            </div>
+          );
+        })}
+        {apps.length === 0 && (
+          <div className="p-8 text-center text-gray-400">目前沒有{isApproved ? '已處理' : '待審核'}的申請</div>
+        )}
       </div>
     </div>
   );
@@ -1339,13 +1411,13 @@ const ActivityManager: React.FC<{
               </button>
             )}
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                   <th className="p-4 rounded-tl-lg w-10">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={selectedRegIds.length === filteredRegs.length && filteredRegs.length > 0}
                       onChange={toggleSelectAll}
                       className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
@@ -1442,6 +1514,54 @@ const ActivityManager: React.FC<{
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* 手機版卡片視圖 */}
+          <div className="md:hidden space-y-3">
+            {filteredRegs.map((reg: any) => {
+              const member = members?.find(m => String(m.id) === String(reg.memberId));
+              const name = reg.name || reg.member_name || member?.name || '';
+              const phone = reg.phone || member?.phone || '';
+              const company = reg.company_title || reg.company || member?.company_title || member?.company || '';
+              const title = reg.title || member?.job_title || '';
+              const receiptKey = reg.merchant_order_no || `MANUAL_${reg.id}`;
+              const receiptIssued = receiptMap[receiptKey] === 'sent' || receiptMap[receiptKey] === 'issued';
+              return (
+                <div key={reg.id} className={`border rounded-xl p-4 shadow-sm ${reg.payment_status === 'refunded' ? 'bg-gray-50 border-gray-100' : 'border-gray-100'}`}>
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <input type="checkbox" checked={selectedRegIds.includes(String(reg.id))} onChange={(e) => { if (e.target.checked) { setSelectedRegIds(prev => [...prev, String(reg.id)]); } else { setSelectedRegIds(prev => prev.filter(id => id !== String(reg.id))); } }} className="w-4 h-4 mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 shrink-0" />
+                      <div className="min-w-0">
+                        <div className={`font-bold flex items-center gap-2 flex-wrap ${reg.payment_status === 'refunded' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {name}
+                          {reg.payment_status === 'refunded' && <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-bold no-underline">已退費</span>}
+                        </div>
+                        {phone && <div className="text-xs text-gray-400">{phone}</div>}
+                        {(company || title) && <div className="text-xs text-gray-500 mt-0.5">{company}{company && title ? ' / ' : ''}{title}</div>}
+                        {!isMemberMode(currentActivity) && reg.referrer && <div className="text-xs text-gray-500">引薦：{reg.referrer}</div>}
+                      </div>
+                    </div>
+                    <button onClick={() => { if(confirm('確定刪除此報名資料？')) onDeleteReg(reg.id); }} className="text-red-400 hover:text-red-600 p-2 shrink-0" aria-label="刪除"><Trash2 size={16} /></button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button onClick={() => onUpdateReg({...reg, check_in_status: !reg.check_in_status})} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${reg.check_in_status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{reg.check_in_status ? <CheckCircle size={14}/> : <XCircle size={14}/>} {reg.check_in_status ? '已報到' : '未報到'}</button>
+                    <button onClick={() => handlePaymentStatusToggle(reg)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${reg.payment_status === PaymentStatus.PAID ? 'bg-green-100 text-green-700' : (reg.payment_status === 'refunded' ? 'bg-gray-200 text-gray-500' : 'bg-yellow-100 text-yellow-700')}`}>{reg.payment_status === PaymentStatus.PAID ? '已付款' : (reg.payment_status === 'refunded' ? '已退費' : '待付款')}{reg.payment_status === PaymentStatus.PAID && <RefreshCcw size={10} className="ml-1 opacity-50"/>}{reg.payment_status === 'refunded' && <Ban size={10} className="ml-1 opacity-50"/>}</button>
+                    <span className="text-xs text-gray-400">{translatePaymentMethod(reg.payment_method)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-sm"><span className="text-xs text-gray-400">金額</span><PaidAmountInput value={reg.paid_amount} onSave={(val) => onUpdateReg({...reg, paid_amount: val})} /></div>
+                  <div className="mt-2 flex items-start gap-1 text-xs"><span className="font-bold text-gray-400 shrink-0 mt-0.5">備註:</span> <NotesInput value={reg.notes} onSave={(val) => onUpdateReg({...reg, notes: val})} /></div>
+                  {reg.payment_status === PaymentStatus.PAID && (
+                    <button
+                      onClick={() => setReceiptData({ payerName: name, companyName: company, taxId: reg.tax_id || member?.tax_id || '', amount: reg.paid_amount || 0, paymentMethod: translatePaymentMethod(reg.payment_method), feeType: 'donation', orderNo: receiptKey, email: reg.email || member?.email || '', remarks: `活動：${currentActivity?.title || ''}` })}
+                      disabled={receiptIssued}
+                      className={`mt-3 px-3 py-2 rounded-lg font-bold text-xs transition-colors border ${receiptIssued ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}
+                    >
+                      {receiptIssued ? '已開立收據' : '開立收據'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         {receiptData && (
@@ -2742,7 +2862,7 @@ const CouponManager: React.FC<{
        </div>
        <div className="bg-white p-6 rounded-2xl border border-gray-100">
          <h3 className="font-bold text-lg mb-4">折扣券列表 ({coupons.length})</h3>
-         <div className="overflow-x-auto">
+         <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
                <thead><tr className="bg-gray-50"><th className="p-3">代碼</th><th className="p-3">活動</th><th className="p-3">金額</th><th className="p-3">狀態</th></tr></thead>
                <tbody>
@@ -2759,6 +2879,23 @@ const CouponManager: React.FC<{
                   })}
                </tbody>
             </table>
+         </div>
+         {/* 手機版卡片視圖 */}
+         <div className="md:hidden space-y-2">
+            {coupons.slice(0, 50).map(c => {
+              const act = allActs.find(a => String(a.id) === String(c.activity_id));
+              return (
+                <div key={c.id} className="border border-gray-100 rounded-xl p-3 flex justify-between items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="font-mono font-bold text-gray-900">{c.code}</div>
+                    <div className="text-xs text-gray-500 truncate">{act?.title || c.activity_id}</div>
+                    <div className="text-xs text-gray-400">折抵 NT$ {c.discount_amount}</div>
+                  </div>
+                  <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : 'bg-green-100 text-green-700'}`}>{c.is_used ? '已使用' : '未使用'}</span>
+                </div>
+              );
+            })}
+            {coupons.length === 0 && <div className="p-6 text-center text-gray-400">尚無折扣券</div>}
          </div>
        </div>
     </div>
@@ -2897,6 +3034,7 @@ const FinancialManager: React.FC<{
 
       {/* Records Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="bg-gray-50">
@@ -2948,6 +3086,39 @@ const FinancialManager: React.FC<{
             )}
           </tbody>
         </table>
+        </div>
+
+        {/* 手機版卡片視圖 */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {filteredRecords.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">本月尚無記錄</div>
+          ) : (
+            filteredRecords.map(r => (
+              <div key={r.id} className="p-4">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${r.type === FinancialType.INCOME ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{r.type === FinancialType.INCOME ? '收入' : '支出'}</span>
+                      <span className="font-bold text-gray-900">{r.category}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{r.date}{r.party ? ` · ${r.party}` : ''}</div>
+                  </div>
+                  <div className={`font-bold shrink-0 ${r.type === FinancialType.INCOME ? 'text-emerald-700' : 'text-red-600'}`}>${r.amount.toLocaleString()}</div>
+                </div>
+                {(r.invoice_no || r.description) && <div className="mt-1 text-xs text-gray-500">{r.invoice_no ? `發票 ${r.invoice_no}` : ''}{r.invoice_no && r.description ? ' · ' : ''}{r.description || ''}</div>}
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  {r.receipt_url ? (
+                    <a href={r.receipt_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs font-bold"><ImageIcon size={14} /> 查看單據</a>
+                  ) : <span className="text-gray-300 text-xs">無單據</span>}
+                  <div className="flex gap-1">
+                    <button onClick={() => { setIsEditing(true); setCurrentRecord(r); }} className="p-2 text-gray-400 hover:text-red-600" aria-label="編輯"><Edit2 size={16} /></button>
+                    <button onClick={() => { if (confirm('確定刪除此記錄？')) onDelete(r.id); }} className="p-2 text-gray-400 hover:text-red-600" aria-label="刪除"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {isEditing && (
@@ -3157,6 +3328,7 @@ const UserManager: React.FC<{
           <button disabled={submitting} className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 disabled:opacity-50">{submitting ? '處理中…' : '新增管理員'}</button>
        </form>
        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
              <thead><tr className="bg-gray-50"><th className="p-4">姓名</th><th className="p-4">權限</th><th className="p-4">操作</th></tr></thead>
              <tbody>
@@ -3169,6 +3341,20 @@ const UserManager: React.FC<{
                 ))}
              </tbody>
           </table>
+          </div>
+          {/* 手機版卡片視圖 */}
+          <div className="md:hidden divide-y divide-gray-100">
+             {users.map(u => (
+                <div key={u.id} className="p-4 flex justify-between items-center gap-2">
+                   <div className="min-w-0">
+                      <div className="font-bold text-gray-900">{u.name}</div>
+                      <div className="text-xs text-gray-500">{u.role}</div>
+                   </div>
+                   <button onClick={()=>onDelete(u.id)} className="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded text-sm font-bold shrink-0">刪除</button>
+                </div>
+             ))}
+             {users.length === 0 && <div className="p-6 text-center text-gray-400">尚無管理員</div>}
+          </div>
        </div>
     </div>
   );

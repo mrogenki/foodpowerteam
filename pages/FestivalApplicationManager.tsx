@@ -378,7 +378,7 @@ const FestivalApplicationManager: React.FC = () => {
         </h2>
         <p className="text-xs text-gray-400 mt-1">品牌自行從付款頁（/#/festival/pay）填寫並繳費，無申請表。</p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -446,6 +446,45 @@ const FestivalApplicationManager: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* 手機版卡片視圖 */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {selfServiceRegs.map((reg) => (
+          <div key={reg.id} className="p-4">
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                  {reg.brand_name || '—'}
+                  {reg.waive_listing_fee && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">VIP 免上架費</span>}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {reg.festival_type ? FESTIVAL_LABEL[reg.festival_type] || reg.festival_type : '—'}
+                  {typeof reg.brand_count === 'number' && reg.brand_count > 0 && `・${reg.brand_count} 品牌`}
+                  {typeof reg.influencer_video_count === 'number' && reg.influencer_video_count > 0 && `・${reg.influencer_video_count} 影音`}
+                </div>
+              </div>
+              <div className="shrink-0">{paymentBadgeReg(reg)}</div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+              <div>{reg.contact_name || '—'}{reg.contact_phone ? ` · ${reg.contact_phone}` : ''}</div>
+              {reg.contact_email && <div>{reg.contact_email}</div>}
+              {(reg.invoice_title || reg.tax_id) && <div>抬頭：{reg.invoice_title || '—'}{reg.tax_id ? `（統編 ${reg.tax_id}）` : ''}</div>}
+              <div className="text-gray-400">{reg.created_at ? new Date(reg.created_at).toLocaleString('zh-TW') : '—'}{reg.merchant_order_no ? ` · #${reg.merchant_order_no}` : ''}</div>
+            </div>
+            <div className="mt-3 flex gap-2 flex-wrap">
+              {reg.payment_status === 'paid' && (
+                <button onClick={() => openReceiptReg(reg)} disabled={receiptIssued(reg)} className={`text-xs px-2 py-1.5 rounded font-bold flex items-center gap-1 border ${receiptIssued(reg) ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}>
+                  <Receipt size={12} /> {receiptIssued(reg) ? '已開立' : '開立收據'}
+                </button>
+              )}
+              <button onClick={() => handleDeleteReg(reg)} disabled={busyId === reg.id} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded flex items-center gap-1 disabled:opacity-50 ml-auto"><XCircle size={14} /> 刪除</button>
+            </div>
+          </div>
+        ))}
+        {selfServiceRegs.length === 0 && (
+          <div className="p-8 text-center text-gray-400">目前無自助繳費紀錄</div>
+        )}
+      </div>
     </div>
   );
 
@@ -457,7 +496,7 @@ const FestivalApplicationManager: React.FC = () => {
           <span className="text-sm font-normal text-gray-500 ml-2">共 {items.length} 筆</span>
         </h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -554,6 +593,66 @@ const FestivalApplicationManager: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 手機版卡片視圖 */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {items.map((app) => {
+          const list = brandsOf(app);
+          return (
+            <div key={app.id} className="p-4">
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-gray-900">{app.company_name}</div>
+                  <div className="text-xs text-gray-400">統編 {app.tax_id}</div>
+                  <div className="text-xs text-gray-400">{app.project_contact} / {app.project_contact_phone}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">{statusBadge(app.status)}{paymentBadge(app)}</div>
+              </div>
+              <div className="mt-2 text-sm">
+                <div className="font-medium text-gray-800">{list.length} 個品牌</div>
+                <div className="text-xs text-gray-500">
+                  {list.map((b, i) => (<div key={i}>{b.brand_name}（{FESTIVAL_LABEL[b.festival_type]}・{b.sponsor_plan === 'B' ? 'B' : 'A'}）</div>))}
+                </div>
+                <div className="text-xs text-red-600 font-bold mt-0.5">預估 NT$ {suggestAmount(app).toLocaleString()}{app.waive_listing_fee && <span className="ml-1 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">免上架費</span>}</div>
+              </div>
+              <div className="mt-1 text-xs">
+                {app.contract_agreed ? (
+                  <span className="text-green-700 font-medium inline-flex items-center gap-1"><CheckCircle size={14} /> 已同意合約{app.signer_name ? `（${app.signer_name}）` : ''}</span>
+                ) : (
+                  <span className="text-gray-400">合約未同意</span>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2 flex-wrap">
+                <button onClick={() => setDetail(app)} className="text-xs bg-gray-100 text-gray-700 px-2 py-1.5 rounded hover:bg-gray-200 font-bold flex items-center gap-1"><Eye size={12} /> 明細</button>
+                <button onClick={() => handleGenerateLink(app)} disabled={busyId === app.id} className="text-xs bg-red-50 text-red-600 px-2 py-1.5 rounded hover:bg-red-100 font-bold flex items-center gap-1 disabled:opacity-50">
+                  {busyId === app.id ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}{app.payment_link ? '重新產生連結' : '產生繳費連結'}
+                </button>
+                {isPaidOf(app) && (
+                  <button onClick={() => openReceipt(app)} disabled={receiptIssued(regOf(app))} className={`text-xs px-2 py-1.5 rounded font-bold flex items-center gap-1 border ${receiptIssued(regOf(app)) ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}>
+                    <Receipt size={12} /> {receiptIssued(regOf(app)) ? '已開立' : '開立收據'}
+                  </button>
+                )}
+                {!isProcessed && (
+                  <>
+                    <button onClick={() => setStatus(app, 'approved')} disabled={busyId === app.id} className="text-xs bg-green-50 text-green-600 px-2 py-1.5 rounded hover:bg-green-100 font-bold disabled:opacity-50">核准</button>
+                    <button onClick={() => setStatus(app, 'rejected')} disabled={busyId === app.id} className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1.5 rounded hover:bg-yellow-100 font-bold disabled:opacity-50">退件</button>
+                  </>
+                )}
+                {isProcessed && app.status === 'rejected' && (
+                  <button onClick={() => setStatus(app, 'pending')} disabled={busyId === app.id} className="text-xs bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 font-bold disabled:opacity-50">改回待審</button>
+                )}
+                <button onClick={() => handleDelete(app)} disabled={busyId === app.id} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded flex items-center gap-1 disabled:opacity-50 ml-auto"><XCircle size={14} /> 刪除</button>
+              </div>
+              {app.payment_link && (
+                <div className="text-[10px] text-gray-400 font-mono mt-2 break-all">{app.payment_link}</div>
+              )}
+            </div>
+          );
+        })}
+        {items.length === 0 && (
+          <div className="p-8 text-center text-gray-400">目前無{isProcessed ? '已處理' : '待審核'}申請</div>
+        )}
       </div>
     </div>
   );

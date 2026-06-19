@@ -154,7 +154,7 @@ const MemberBirthdayManager: React.FC<MemberBirthdayManagerProps> = ({ members }
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
@@ -221,6 +221,39 @@ const MemberBirthdayManager: React.FC<MemberBirthdayManagerProps> = ({ members }
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 手機版卡片視圖 */}
+        <div className="md:hidden space-y-3">
+          {birthdayMembers.length > 0 ? (
+            birthdayMembers.map((member) => {
+              const isActive = isMemberActive(member);
+              return (
+                <div key={member.id} className="border border-gray-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-gray-900">{member.name}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{isActive ? '有效' : '已過期'}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">{member.member_no || '-'}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-red-500 font-medium shrink-0"><Cake size={14} /> {member.birthday}</div>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">{member.company_title || member.brand_name || '-'}{member.job_title ? <span className="text-gray-400"> · {member.job_title}</span> : ''}</div>
+                  <div className="mt-1 text-xs text-gray-500 space-y-0.5">
+                    {member.phone && <div>{member.phone}</div>}
+                    {member.email && <div className="flex items-center gap-1"><Mail size={12} /> {member.email}</div>}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <Cake size={48} className="mx-auto text-gray-300 mb-3" />
+              <p>這個月沒有壽星，或沒有符合搜尋條件的會員</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
