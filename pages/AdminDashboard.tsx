@@ -56,6 +56,7 @@ interface AdminDashboardProps {
   onUploadImage: (file: File) => Promise<string>;
   onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
   onGenerateVipInvites?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
+  onUpdateCouponNote?: (couponId: string, note: string) => Promise<void>;
   onApproveMemberApplication: (app: MemberApplication) => void; // 新增：核准
   onDeleteMemberApplication: (id: string | number) => void; // 新增：拒絕
   onAddMilestone: (milestone: Milestone) => void;
@@ -2911,7 +2912,8 @@ const CouponManager: React.FC<{
   members: Member[];
   onGenerate?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
   onGenerateVip?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
-}> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip }) => {
+  onUpdateNote?: (couponId: string, note: string) => Promise<void>;
+}> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip, onUpdateNote }) => {
   const [amount, setAmount] = useState(100);
   const [actId, setActId] = useState('');
   const [target, setTarget] = useState('all');
@@ -2925,6 +2927,21 @@ const CouponManager: React.FC<{
   const [vipGenerating, setVipGenerating] = useState(false);
   const [vipResult, setVipResult] = useState<Coupon[]>([]);
   const [copiedCode, setCopiedCode] = useState('');
+
+  // 事後編輯備註
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNoteVal, setEditNoteVal] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const startEditNote = (c: Coupon) => { setEditingNoteId(String(c.id)); setEditNoteVal(c.note || ''); };
+  const cancelEditNote = () => { setEditingNoteId(null); setEditNoteVal(''); };
+  const saveNote = async (c: Coupon) => {
+    if (!onUpdateNote) return;
+    setSavingNote(true);
+    await onUpdateNote(String(c.id), editNoteVal);
+    setSavingNote(false);
+    setEditingNoteId(null);
+    setEditNoteVal('');
+  };
 
   const allActs = [...activities, ...memberActivities].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -3004,7 +3021,20 @@ const CouponManager: React.FC<{
                          <td className="p-3 font-mono">{c.code}</td>
                          <td className="p-3">{act?.title || c.activity_id}</td>
                          <td className="p-3">{c.is_free ? <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">VIP 免費</span> : `NT$ ${c.discount_amount}`}</td>
-                         <td className="p-3 text-gray-500 max-w-[200px] truncate" title={c.note || ''}>{c.note || '—'}</td>
+                         <td className="p-3 text-gray-500 max-w-[220px]">
+                           {editingNoteId === String(c.id) ? (
+                             <div className="flex items-center gap-1">
+                               <input autoFocus value={editNoteVal} onChange={e=>setEditNoteVal(e.target.value)} className="flex-grow min-w-0 px-2 py-1 border rounded text-xs" placeholder="輸入備註" />
+                               <button type="button" disabled={savingNote} onClick={()=>saveNote(c)} className="px-2 py-1 bg-green-600 text-white rounded text-xs font-bold disabled:opacity-50">儲存</button>
+                               <button type="button" onClick={cancelEditNote} className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs">取消</button>
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-1 group">
+                               <span className="truncate" title={c.note || ''}>{c.note || '—'}</span>
+                               {onUpdateNote && <button type="button" onClick={()=>startEditNote(c)} className="text-gray-300 hover:text-blue-600 shrink-0" title="編輯備註"><Edit2 size={13} /></button>}
+                             </div>
+                           )}
+                         </td>
                          <td className="p-3">{c.is_used ? '已使用' : '未使用'}</td>
                          <td className="p-3">{c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>}</td>
                       </tr>
@@ -3023,7 +3053,18 @@ const CouponManager: React.FC<{
                     <div className="font-mono font-bold text-gray-900">{c.code}</div>
                     <div className="text-xs text-gray-500 truncate">{act?.title || c.activity_id}</div>
                     <div className="text-xs text-gray-400">{c.is_free ? 'VIP 免費邀請' : `折抵 NT$ ${c.discount_amount}`}</div>
-                    {c.note && <div className="text-xs text-gray-500 mt-0.5 truncate">備註：{c.note}</div>}
+                    {editingNoteId === String(c.id) ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <input autoFocus value={editNoteVal} onChange={e=>setEditNoteVal(e.target.value)} className="flex-grow min-w-0 px-2 py-1 border rounded text-xs" placeholder="輸入備註" />
+                        <button type="button" disabled={savingNote} onClick={()=>saveNote(c)} className="px-2 py-1 bg-green-600 text-white rounded text-xs font-bold disabled:opacity-50">儲存</button>
+                        <button type="button" onClick={cancelEditNote} className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs">取消</button>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <span className="truncate">備註：{c.note || '—'}</span>
+                        {onUpdateNote && <button type="button" onClick={()=>startEditNote(c)} className="text-gray-300 hover:text-blue-600 shrink-0"><Edit2 size={13} /></button>}
+                      </div>
+                    )}
                     {c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`mt-1 px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{copiedCode===c.code ? '已複製連結' : '複製邀請連結'}</button>}
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : (c.is_free ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')}`}>{c.is_used ? '已使用' : '未使用'}</span>
@@ -3549,7 +3590,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/festival-applications" element={<FestivalApplicationManager />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />
-          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} />} />
+          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} onUpdateNote={props.onUpdateCouponNote} />} />
           
           <Route path="/users" element={<UserManager users={props.users} onAdd={props.onAddUser} onDelete={props.onDeleteUser} />} />
           

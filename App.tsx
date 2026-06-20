@@ -583,6 +583,14 @@ const App: React.FC = () => {
     return (data || []) as Coupon[];
   };
 
+  // 事後編輯折扣券備註
+  const handleUpdateCouponNote = async (couponId: string, note: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('coupons').update({ note: note.trim() || null }).eq('id', couponId);
+    if (error) { alert('更新備註失敗：' + error.message); return; }
+    fetchData();
+  };
+
   // Phase 3：統一 fetch — 一次讀 activities 全表，依 audience 切回三個 slice
   const refreshActivities = async () => {
     if (!supabase) return;
@@ -1079,6 +1087,7 @@ const App: React.FC = () => {
                     onUploadImage={handleUploadImage}
                     onGenerateCoupons={handleGenerateCoupons}
                     onGenerateVipInvites={handleGenerateVipInvites}
+                    onUpdateCouponNote={handleUpdateCouponNote}
                     onApproveMemberApplication={handleApproveMemberApplication}
                     onDeleteMemberApplication={handleDeleteMemberApplication}
                     onAddMilestone={handleAddMilestone}
