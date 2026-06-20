@@ -16,7 +16,7 @@ interface ActivityDetailProps {
   members?: Member[];
   onRegister?: (reg: Registration, couponId?: string) => Promise<boolean>;
   onMemberRegister?: (reg: MemberRegistration, couponId?: string) => Promise<boolean>;
-  validateCoupon: (code: string, activityId: string) => Promise<{valid: boolean, discount?: number, message: string, couponId?: string}>;
+  validateCoupon: (code: string, activityId: string) => Promise<{valid: boolean, discount?: number, message: string, couponId?: string, isFree?: boolean}>;
 }
 
 const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
@@ -39,6 +39,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const [couponMessage, setCouponMessage] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [validCouponId, setValidCouponId] = useState<string | undefined>(undefined);
+  const [couponFree, setCouponFree] = useState(false); // VIP 免費邀請券
 
   // 點數抵扣
   const [pointsApplied, setPointsApplied] = useState(0);
@@ -123,10 +124,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   // 點數抵扣：須先選取會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
   const selectedMember = props.members?.find(m => String(m.id) === String(formData.memberId));
   const memberPoints = selectedMember?.points_balance ?? 0;
-  const priceAfterCoupon = Math.max(0, basePrice - discountAmount);
-  const maxPoints = POINT_TO_TWD > 0 ? Math.max(0, Math.min(memberPoints, Math.floor(priceAfterCoupon / POINT_TO_TWD))) : 0;
+  const priceAfterCoupon = couponFree ? 0 : Math.max(0, basePrice - discountAmount);
+  // VIP 免費券時不需點數抵扣
+  const maxPoints = (couponFree || POINT_TO_TWD <= 0) ? 0 : Math.max(0, Math.min(memberPoints, Math.floor(priceAfterCoupon / POINT_TO_TWD)));
   const pointsDiscount = pointsApplied * POINT_TO_TWD;
-  const finalPrice = Math.max(0, priceAfterCoupon - pointsDiscount);
+  const finalPrice = couponFree ? 0 : Math.max(0, priceAfterCoupon - pointsDiscount);
 
   // 當可用點數上限變動（換會員 / 改折扣券）時，自動夾住已套用點數
   useEffect(() => {
@@ -187,23 +189,37 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     }
   };
 
-  const checkCoupon = async () => {
-    if (!couponCode.trim()) return;
+  const checkCoupon = async (overrideCode?: string) => {
+    const code = (overrideCode ?? couponCode).trim();
+    if (!code) return;
+    if (overrideCode) setCouponCode(overrideCode.toUpperCase());
     setCouponStatus('validating');
-    const result = await props.validateCoupon(couponCode, activity.id as string);
-    
+    const result = await props.validateCoupon(code, activity.id as string);
+
     if (result.valid) {
       setCouponStatus('valid');
-      setDiscountAmount(result.discount || 0);
+      setCouponFree(!!result.isFree);
+      setDiscountAmount(result.isFree ? 0 : (result.discount || 0));
       setValidCouponId(result.couponId);
-      setCouponMessage(`優惠代碼適用！折抵 NT$ ${result.discount}`);
+      setCouponMessage(result.isFree ? '🎉 VIP 免費邀請已套用，本次報名免費' : `優惠代碼適用！折抵 NT$ ${result.discount}`);
     } else {
       setCouponStatus('invalid');
+      setCouponFree(false);
       setDiscountAmount(0);
       setValidCouponId(undefined);
       setCouponMessage(result.message);
     }
   };
+
+  // 自動套用 URL 帶入的邀請碼（VIP 免費連結 / 折扣連結）：/#/activity/:id?c=CODE
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || window.location.search);
+    const urlCode = params.get('c') || params.get('coupon');
+    if (urlCode && activity && couponStatus === 'idle' && !couponCode) {
+      checkCoupon(urlCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity?.id]);
 
   const sendConfirmationEmail = async (name: string, email: string) => {
     if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
@@ -502,21 +518,21 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                   
                   <div><label className="block text-sm font-bold text-gray-700 mb-2">備註 (選填)</label><textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 outline-none transition-all" placeholder="若有特殊需求請在此說明" rows={2} /></div>
 
-                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1"><Ticket size={16} /> 活動折扣券</label>
+                  <div className={`p-4 rounded-xl border ${couponFree ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
+                    <label className={`block text-sm font-bold mb-2 flex items-center gap-1 ${couponFree ? 'text-amber-800' : 'text-gray-700'}`}>{couponFree ? <Crown size={16} /> : <Ticket size={16} />} {couponFree ? 'VIP 免費邀請' : '活動折扣券'}</label>
                     <div className="flex gap-2">
                        <input type="text" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponStatus('idle'); setCouponMessage(''); }} className="flex-grow px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 outline-none uppercase font-mono placeholder:text-gray-300" placeholder="輸入代碼" disabled={couponStatus === 'valid'} />
                        {couponStatus !== 'valid' ? (
-                         <button type="button" onClick={checkCoupon} disabled={!couponCode || couponStatus === 'validating'} className="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold text-sm hover:bg-gray-900 disabled:opacity-50 transition-colors">{couponStatus === 'validating' ? '檢查中...' : '使用'}</button>
+                         <button type="button" onClick={() => checkCoupon()} disabled={!couponCode || couponStatus === 'validating'} className="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold text-sm hover:bg-gray-900 disabled:opacity-50 transition-colors">{couponStatus === 'validating' ? '檢查中...' : '使用'}</button>
                        ) : (
-                         <button type="button" onClick={() => { setCouponStatus('idle'); setCouponCode(''); setDiscountAmount(0); setValidCouponId(undefined); setCouponMessage(''); }} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-bold text-sm hover:bg-red-200 transition-colors">取消</button>
+                         <button type="button" onClick={() => { setCouponStatus('idle'); setCouponCode(''); setDiscountAmount(0); setValidCouponId(undefined); setCouponFree(false); setCouponMessage(''); }} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-bold text-sm hover:bg-red-200 transition-colors">取消</button>
                        )}
                     </div>
-                    {couponMessage && <p className={`text-xs font-bold mt-2 ${couponStatus === 'valid' ? 'text-green-600' : 'text-red-500'}`}>{couponMessage}</p>}
+                    {couponMessage && <p className={`text-xs font-bold mt-2 ${couponStatus === 'valid' ? (couponFree ? 'text-amber-700' : 'text-green-600') : 'text-red-500'}`}>{couponMessage}</p>}
                   </div>
 
-                  {/* 點數抵扣：須先選取會員且有點數 */}
-                  {selectedMember && memberPoints > 0 && (
+                  {/* 點數抵扣：須先選取會員且有點數（VIP 免費時不顯示） */}
+                  {!couponFree && selectedMember && memberPoints > 0 && (
                     <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-bold text-amber-800 flex items-center gap-1"><Crown size={16} /> 會員點數折抵</label>

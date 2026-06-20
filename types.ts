@@ -213,6 +213,7 @@ export interface Coupon {
   activity_id: string;
   member_id?: string;
   discount_amount: number;
+  is_free?: boolean; // VIP 免費邀請券（100% 免費）
   is_used: boolean;
   created_at: string;
   used_at?: string;

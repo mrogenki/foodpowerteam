@@ -555,13 +555,31 @@ const App: React.FC = () => {
     }
   };
 
-  const validateCoupon = async (code: string, activityId: string): Promise<{valid: boolean, discount?: number, message: string, couponId?: string}> => {
+  const validateCoupon = async (code: string, activityId: string): Promise<{valid: boolean, discount?: number, message: string, couponId?: string, isFree?: boolean}> => {
     if (!supabase) return { valid: false, message: '系統連線錯誤' };
     const { data, error } = await supabase.from('coupons').select('*').eq('code', code).single();
     if (error || !data) return { valid: false, message: '無效的折扣碼' };
     if (String(data.activity_id) !== String(activityId)) return { valid: false, message: '此折扣碼不適用於本活動' };
-    if (data.is_used) return { valid: false, message: '此折扣碼已被使用' };
+    if (data.is_used) return { valid: false, message: data.is_free ? '此邀請連結已被使用' : '此折扣碼已被使用' };
+    if (data.is_free) return { valid: true, discount: 0, isFree: true, message: 'VIP 免費邀請已套用，本次報名免費', couponId: data.id };
     return { valid: true, discount: data.discount_amount, message: '折扣碼適用', couponId: data.id };
+  };
+
+  // 產生 VIP 免費邀請券（單次使用、不綁會員），回傳產生的券供後台複製連結
+  const handleGenerateVipInvites = async (activityId: string, count: number): Promise<Coupon[]> => {
+    if (!supabase) return [];
+    const rows = Array.from({ length: count }, () => ({
+      activity_id: activityId,
+      member_id: null,
+      discount_amount: 0,
+      is_free: true,
+      is_used: false,
+      code: `VIP${String(activityId).slice(-3)}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+    }));
+    const { data, error } = await supabase.from('coupons').insert(rows).select();
+    if (error) { alert('產生 VIP 邀請失敗：' + error.message); return []; }
+    fetchData();
+    return (data || []) as Coupon[];
   };
 
   // Phase 3：統一 fetch — 一次讀 activities 全表，依 audience 切回三個 slice
@@ -638,8 +656,10 @@ const App: React.FC = () => {
     const { error } = await supabase.from('registrations').insert([payload]);
     if (error) { alert('報名失敗：' + error.message); return false; }
 
+    const usedPoints = !!(newReg.points_used && newReg.points_used > 0 && newReg.member_id);
+
     // 點數預扣（reserve）：原子檢查餘額並凍結；失敗則回滾剛建立的報名單
-    if (newReg.points_used && newReg.points_used > 0 && newReg.member_id) {
+    if (usedPoints) {
       const { data: rr, error: re } = await supabase.rpc('points_reserve', {
         p_member_id: newReg.member_id,
         p_points: newReg.points_used,
@@ -650,13 +670,14 @@ const App: React.FC = () => {
         alert('報名失敗：' + (rr?.reason === 'insufficient' ? '點數餘額不足' : '點數扣抵失敗'));
         return false;
       }
-      // 0 元訂單（點數+折扣全額抵扣）：直接核銷並標記已付，不進金流
-      if ((newReg.paid_amount ?? 0) === 0) {
-        await supabase.from('registrations').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', newReg.id);
-        await supabase.rpc('points_commit', { p_order_no: newReg.merchant_order_no });
-      }
-      fetchMembers(); // 更新會員餘額顯示
     }
+
+    // 0 元訂單（VIP 免費 / 折扣全免 / 點數全抵）：直接標記已付、不進金流；有預扣點數則一併核銷
+    if ((newReg.paid_amount ?? 0) === 0) {
+      await supabase.from('registrations').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', newReg.id);
+      if (usedPoints) await supabase.rpc('points_commit', { p_order_no: newReg.merchant_order_no });
+    }
+    if (usedPoints) fetchMembers(); // 更新會員餘額顯示
 
     if (couponId) await supabase.from('coupons').update({ is_used: true, used_at: new Date().toISOString() }).eq('id', couponId);
     refreshRegistrations();
@@ -1055,6 +1076,7 @@ const App: React.FC = () => {
                     onFetchPointsLedger={fetchPointsLedger}
                     onUploadImage={handleUploadImage}
                     onGenerateCoupons={handleGenerateCoupons}
+                    onGenerateVipInvites={handleGenerateVipInvites}
                     onApproveMemberApplication={handleApproveMemberApplication}
                     onDeleteMemberApplication={handleDeleteMemberApplication}
                     onAddMilestone={handleAddMilestone}

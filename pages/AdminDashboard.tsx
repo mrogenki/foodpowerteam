@@ -55,6 +55,7 @@ interface AdminDashboardProps {
   onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]>;
   onUploadImage: (file: File) => Promise<string>;
   onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => void;
+  onGenerateVipInvites?: (activityId: string, count: number) => Promise<Coupon[]>;
   onApproveMemberApplication: (app: MemberApplication) => void; // 新增：核准
   onDeleteMemberApplication: (id: string | number) => void; // 新增：拒絕
   onAddMilestone: (milestone: Milestone) => void;
@@ -2909,13 +2910,27 @@ const CouponManager: React.FC<{
   memberActivities: MemberActivity[];
   members: Member[];
   onGenerate?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => void;
-}> = ({ coupons, activities, memberActivities, members, onGenerate }) => {
+  onGenerateVip?: (activityId: string, count: number) => Promise<Coupon[]>;
+}> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip }) => {
   const [amount, setAmount] = useState(100);
   const [actId, setActId] = useState('');
   const [target, setTarget] = useState('all');
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
+  // VIP 免費邀請
+  const [vipActId, setVipActId] = useState('');
+  const [vipCount, setVipCount] = useState(1);
+  const [vipGenerating, setVipGenerating] = useState(false);
+  const [vipResult, setVipResult] = useState<Coupon[]>([]);
+  const [copiedCode, setCopiedCode] = useState('');
+
   const allActs = [...activities, ...memberActivities].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const vipLink = (c: Coupon) => `${window.location.origin}/#/activity/${c.activity_id}?c=${c.code}`;
+  const copyLink = async (c: Coupon) => {
+    try { await navigator.clipboard.writeText(vipLink(c)); setCopiedCode(c.code); setTimeout(() => setCopiedCode(''), 2000); }
+    catch { alert('複製失敗，請手動複製：' + vipLink(c)); }
+  };
 
   const handleGenerate = () => {
      if(!onGenerate) return;
@@ -2926,9 +2941,42 @@ const CouponManager: React.FC<{
      setIsGenerating(false);
   };
 
+  const handleGenerateVip = async () => {
+     if(!onGenerateVip) return;
+     if(!vipActId) { alert('請選擇活動'); return; }
+     if(vipCount < 1 || vipCount > 100) { alert('數量請介於 1~100'); return; }
+     setVipGenerating(true);
+     const created = await onGenerateVip(vipActId, vipCount);
+     setVipResult(created);
+     setVipGenerating(false);
+  };
+
   return (
     <div className="space-y-6">
        <h1 className="text-2xl font-bold">折扣券管理</h1>
+
+       {/* VIP 免費邀請 */}
+       <div className="bg-amber-50/60 p-6 rounded-2xl border border-amber-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-amber-800"><Crown size={18} /> VIP 免費邀請連結</h3>
+          <p className="text-sm text-amber-700/80">為特殊嘉賓產生免費報名連結。每條連結單次使用，嘉賓開啟後自動套用、免付款（仍需填寫報名資料）。</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             <div className="lg:col-span-2"><label className="block text-sm font-bold mb-1">選擇活動</label><select className="w-full p-2 border rounded" value={vipActId} onChange={e=>setVipActId(e.target.value)}><option value="">請選擇...</option>{allActs.map(a=><option key={a.id} value={a.id}>{a.title}</option>)}</select></div>
+             <div><label className="block text-sm font-bold mb-1">產生數量</label><input type="number" min={1} max={100} className="w-full p-2 border rounded" value={vipCount} onChange={e=>setVipCount(Number(e.target.value))} /></div>
+             <div className="flex items-end"><button onClick={handleGenerateVip} disabled={vipGenerating} className="w-full bg-amber-600 text-white p-2 rounded font-bold hover:bg-amber-700 disabled:opacity-50">{vipGenerating ? '處理中...' : '產生邀請連結'}</button></div>
+          </div>
+          {vipResult.length > 0 && (
+            <div className="bg-white rounded-xl border border-amber-100 p-3 space-y-2">
+              <p className="text-xs font-bold text-amber-700">已產生 {vipResult.length} 條連結，請複製後分送給嘉賓：</p>
+              {vipResult.map(c => (
+                <div key={c.code} className="flex items-center gap-2">
+                  <input readOnly value={vipLink(c)} className="flex-grow px-2 py-1.5 rounded border border-gray-200 bg-gray-50 text-xs font-mono text-gray-600" onFocus={e=>e.target.select()} />
+                  <button type="button" onClick={()=>copyLink(c)} className={`px-3 py-1.5 rounded text-xs font-bold whitespace-nowrap ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-600 text-white hover:bg-amber-700'}`}>{copiedCode===c.code ? '已複製' : '複製'}</button>
+                </div>
+              ))}
+            </div>
+          )}
+       </div>
+
        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
           <h3 className="font-bold text-lg">產生折扣券</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2942,7 +2990,7 @@ const CouponManager: React.FC<{
          <h3 className="font-bold text-lg mb-4">折扣券列表 ({coupons.length})</h3>
          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
-               <thead><tr className="bg-gray-50"><th className="p-3">代碼</th><th className="p-3">活動</th><th className="p-3">金額</th><th className="p-3">狀態</th></tr></thead>
+               <thead><tr className="bg-gray-50"><th className="p-3">代碼</th><th className="p-3">活動</th><th className="p-3">類型 / 金額</th><th className="p-3">狀態</th><th className="p-3">操作</th></tr></thead>
                <tbody>
                   {coupons.slice(0, 50).map(c => {
                     const act = allActs.find(a => String(a.id) === String(c.activity_id));
@@ -2950,8 +2998,9 @@ const CouponManager: React.FC<{
                       <tr key={c.id} className="border-b">
                          <td className="p-3 font-mono">{c.code}</td>
                          <td className="p-3">{act?.title || c.activity_id}</td>
-                         <td className="p-3">{c.discount_amount}</td>
+                         <td className="p-3">{c.is_free ? <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">VIP 免費</span> : `NT$ ${c.discount_amount}`}</td>
                          <td className="p-3">{c.is_used ? '已使用' : '未使用'}</td>
+                         <td className="p-3">{c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>}</td>
                       </tr>
                     )
                   })}
@@ -2967,9 +3016,10 @@ const CouponManager: React.FC<{
                   <div className="min-w-0">
                     <div className="font-mono font-bold text-gray-900">{c.code}</div>
                     <div className="text-xs text-gray-500 truncate">{act?.title || c.activity_id}</div>
-                    <div className="text-xs text-gray-400">折抵 NT$ {c.discount_amount}</div>
+                    <div className="text-xs text-gray-400">{c.is_free ? 'VIP 免費邀請' : `折抵 NT$ ${c.discount_amount}`}</div>
+                    {c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`mt-1 px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{copiedCode===c.code ? '已複製連結' : '複製邀請連結'}</button>}
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : 'bg-green-100 text-green-700'}`}>{c.is_used ? '已使用' : '未使用'}</span>
+                  <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : (c.is_free ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')}`}>{c.is_used ? '已使用' : '未使用'}</span>
                 </div>
               );
             })}
@@ -3492,7 +3542,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/festival-applications" element={<FestivalApplicationManager />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />
-          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} />} />
+          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} />} />
           
           <Route path="/users" element={<UserManager users={props.users} onAdd={props.onAddUser} onDelete={props.onDeleteUser} />} />
           
