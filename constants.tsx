@@ -2,6 +2,14 @@
 import { Activity, ActivityType, AdminUser, UserRole, Member } from './types';
 
 // ==========================================
+// 點數機制設定
+// ==========================================
+export const POINT_TO_TWD = 1;        // 1 點 = NT$ 多少（換算率）
+export const POINTS_ON_JOIN = 0;      // 入會贈點（0 = 不贈）
+export const POINTS_ON_RENEWAL = 0;   // 續費贈點（0 = 不贈）
+export const POINTS_EARN_RATE = 0;    // 每消費 N 元回饋 1 點（0 = 不回饋）
+
+// ==========================================
 // EmailJS 設定 (已更新為正式金鑰)
 // ==========================================
 export const EMAIL_CONFIG = {

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, DollarSign, ArrowLeft, CheckCircle2, Share2, CopyCheck, Clock, Loader2, Crown, UserCheck, Ticket, User, Users, Search, ChevronDown, Lock, AlertCircle, CreditCard, Ban, Info, ShieldAlert } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { Activity, MemberActivity, Registration, MemberRegistration, Member, PaymentStatus } from '../types';
-import { EMAIL_CONFIG } from '../constants';
+import { EMAIL_CONFIG, POINT_TO_TWD } from '../constants';
 import { submitNewebPayForm, NEWEB_CONFIG } from '../utils/newebpay';
 import BlockRenderer from '../components/BlockRenderer';
 
@@ -39,6 +39,9 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const [couponMessage, setCouponMessage] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [validCouponId, setValidCouponId] = useState<string | undefined>(undefined);
+
+  // 點數抵扣
+  const [pointsApplied, setPointsApplied] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -116,7 +119,19 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const hasMemberPrice = activity.member_price !== undefined && activity.member_price !== null;
   const isUsingMemberPrice = !!formData.memberId && hasMemberPrice;
   const basePrice = isUsingMemberPrice ? activity.member_price! : (activity.price || 0);
-  const finalPrice = Math.max(0, basePrice - discountAmount);
+
+  // 點數抵扣：須先選取會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
+  const selectedMember = props.members?.find(m => String(m.id) === String(formData.memberId));
+  const memberPoints = selectedMember?.points_balance ?? 0;
+  const priceAfterCoupon = Math.max(0, basePrice - discountAmount);
+  const maxPoints = POINT_TO_TWD > 0 ? Math.max(0, Math.min(memberPoints, Math.floor(priceAfterCoupon / POINT_TO_TWD))) : 0;
+  const pointsDiscount = pointsApplied * POINT_TO_TWD;
+  const finalPrice = Math.max(0, priceAfterCoupon - pointsDiscount);
+
+  // 當可用點數上限變動（換會員 / 改折扣券）時，自動夾住已套用點數
+  useEffect(() => {
+    setPointsApplied(prev => Math.min(prev, maxPoints));
+  }, [maxPoints]);
 
   // 搜尋會員邏輯
   const filteredMembers = (props.members && memberSearchTerm.length >= 1)
@@ -253,15 +268,16 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
         notes: formData.notes,
         paid_amount: finalPrice,
         coupon_code: validCouponId ? couponCode : undefined,
+        points_used: pointsApplied,
         created_at: new Date().toISOString(),
         merchant_order_no: merchantOrderNo,
         payment_status: PaymentStatus.PENDING
       };
 
       if (props.type === 'general' && props.onRegister) {
-        // 公開活動但用會員價時，把 member_id 一起帶上方便後續報表辨識
-        const payload: Registration = isUsingMemberPrice && formData.memberId
-          ? { ...commonData, member_id: String(formData.memberId), member_name: formData.name }
+        // 公開活動但用會員價（或有用點數）時，把 member_id 一起帶上方便後續報表辨識與點數扣抵
+        const payload: Registration = formData.memberId && (isUsingMemberPrice || pointsApplied > 0)
+          ? { ...commonData, member_id: String(formData.memberId), member_name: formData.name, member_no: selectedMember?.member_no || '' }
           : (commonData as Registration);
         success = await props.onRegister(payload, validCouponId);
       } else if (props.type === 'member' && props.onMemberRegister) {
@@ -270,7 +286,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
           member_id: String(formData.memberId),
           memberId: formData.memberId,
           member_name: formData.name,
-          member_no: '',
+          member_no: selectedMember?.member_no || '',
         };
         success = await props.onMemberRegister(newMemberReg, validCouponId);
       }
@@ -498,7 +514,43 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                     </div>
                     {couponMessage && <p className={`text-xs font-bold mt-2 ${couponStatus === 'valid' ? 'text-green-600' : 'text-red-500'}`}>{couponMessage}</p>}
                   </div>
-                  
+
+                  {/* 點數抵扣：須先選取會員且有點數 */}
+                  {selectedMember && memberPoints > 0 && (
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-bold text-amber-800 flex items-center gap-1"><Crown size={16} /> 會員點數折抵</label>
+                        <span className="text-xs font-bold text-amber-700">目前點數：{memberPoints.toLocaleString()} 點</span>
+                      </div>
+                      {maxPoints > 0 ? (
+                        <>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="number"
+                              min={0}
+                              max={maxPoints}
+                              value={pointsApplied === 0 ? '' : pointsApplied}
+                              onChange={e => {
+                                const v = Math.floor(Number(e.target.value) || 0);
+                                setPointsApplied(Math.max(0, Math.min(v, maxPoints)));
+                              }}
+                              className="flex-grow px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                              placeholder={`最多可折抵 ${maxPoints} 點`}
+                            />
+                            <button type="button" onClick={() => setPointsApplied(maxPoints)} className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold text-sm hover:bg-amber-700 transition-colors whitespace-nowrap">全部折抵</button>
+                            {pointsApplied > 0 && (
+                              <button type="button" onClick={() => setPointsApplied(0)} className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg font-bold text-sm hover:bg-amber-200 transition-colors">清除</button>
+                            )}
+                          </div>
+                          {pointsApplied > 0 && <p className="text-xs font-bold mt-2 text-green-600">折抵 NT$ {pointsDiscount.toLocaleString()}（{pointsApplied} 點）</p>}
+                          <p className="text-[11px] text-amber-600/80 mt-1">1 點 = NT$ {POINT_TO_TWD}，點數於付款成功後正式扣除。</p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-amber-600">此活動金額已無可折抵空間。</p>
+                      )}
+                    </div>
+                  )}
+
                   {/* 金流選項 */}
                   {finalPrice > 0 && (
                     <div 

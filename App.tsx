@@ -29,7 +29,7 @@ const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
 const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
 const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
 
-import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord } from './types';
+import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
 import { notifyAdmin } from './utils/notification';
 import { supabase } from './utils/supabaseClient';
@@ -637,6 +637,27 @@ const App: React.FC = () => {
     const payload = { ...newReg, audience: newReg.audience || 'public' };
     const { error } = await supabase.from('registrations').insert([payload]);
     if (error) { alert('報名失敗：' + error.message); return false; }
+
+    // 點數預扣（reserve）：原子檢查餘額並凍結；失敗則回滾剛建立的報名單
+    if (newReg.points_used && newReg.points_used > 0 && newReg.member_id) {
+      const { data: rr, error: re } = await supabase.rpc('points_reserve', {
+        p_member_id: newReg.member_id,
+        p_points: newReg.points_used,
+        p_order_no: newReg.merchant_order_no
+      });
+      if (re || !rr?.ok) {
+        await supabase.from('registrations').delete().eq('id', newReg.id);
+        alert('報名失敗：' + (rr?.reason === 'insufficient' ? '點數餘額不足' : '點數扣抵失敗'));
+        return false;
+      }
+      // 0 元訂單（點數+折扣全額抵扣）：直接核銷並標記已付，不進金流
+      if ((newReg.paid_amount ?? 0) === 0) {
+        await supabase.from('registrations').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', newReg.id);
+        await supabase.rpc('points_commit', { p_order_no: newReg.merchant_order_no });
+      }
+      fetchMembers(); // 更新會員餘額顯示
+    }
+
     if (couponId) await supabase.from('coupons').update({ is_used: true, used_at: new Date().toISOString() }).eq('id', couponId);
     refreshRegistrations();
     return true;
@@ -784,11 +805,35 @@ const App: React.FC = () => {
     if (error) { alert('新增會員失敗：' + error.message); fetchMembers(); }
   };
 
-  const handleUpdateMember = async (updated: Member) => { 
-    setMembers(prev => prev.map(m => m.id === updated.id ? updated : m).sort((a, b) => String(a.member_no || '').localeCompare(String(b.member_no || ''), undefined, { numeric: true })));
-    if (!supabase) return; 
-    const { error } = await supabase.from('members').update(updated).eq('id', updated.id); 
+  const handleUpdateMember = async (updated: Member) => {
+    setMembers(prev => prev.map(m => m.id === updated.id ? { ...updated, points_balance: m.points_balance } : m).sort((a, b) => String(a.member_no || '').localeCompare(String(b.member_no || ''), undefined, { numeric: true })));
+    if (!supabase) return;
+    // points_balance 僅能透過 RPC 異動，會員表單存檔不得覆寫
+    const { points_balance, ...memberUpdate } = updated;
+    const { error } = await supabase.from('members').update(memberUpdate).eq('id', updated.id);
     if (error) { alert('更新會員失敗：' + error.message); fetchMembers(); }
+  };
+
+  // 後台手動調整點數（走 RPC，留痕於 points_ledger）
+  const handleAdjustPoints = async (memberId: string, delta: number, reason: string): Promise<boolean> => {
+    if (!supabase) return false;
+    const { data, error } = await supabase.rpc('points_adjust', {
+      p_member_id: memberId, p_delta: delta, p_reason: reason, p_admin: currentUser?.name || 'admin'
+    });
+    if (error || !data?.ok) {
+      alert('調整點數失敗：' + (data?.reason === 'negative_balance' ? '餘額不足以扣除' : (error?.message || data?.reason || '未知錯誤')));
+      return false;
+    }
+    fetchMembers();
+    return true;
+  };
+
+  // 讀取某會員的點數明細
+  const fetchPointsLedger = async (memberId: string): Promise<PointsLedgerEntry[]> => {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('points_ledger').select('*').eq('member_id', memberId).order('created_at', { ascending: false });
+    if (error) { console.error('讀取點數明細失敗：', error); return []; }
+    return (data || []) as PointsLedgerEntry[];
   };
 
   const handleDeleteMember = async (id: string | number) => { 
@@ -1006,6 +1051,8 @@ const App: React.FC = () => {
                     onAddMembers={handleAddMembers}
                     onUpdateMember={handleUpdateMember}
                     onDeleteMember={handleDeleteMember}
+                    onAdjustPoints={handleAdjustPoints}
+                    onFetchPointsLedger={fetchPointsLedger}
                     onUploadImage={handleUploadImage}
                     onGenerateCoupons={handleGenerateCoupons}
                     onApproveMemberApplication={handleApproveMemberApplication}

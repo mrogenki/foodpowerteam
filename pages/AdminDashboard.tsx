@@ -13,7 +13,7 @@ import ReceiptManager from './ReceiptManager';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 import BatchReceiptGenerator from '../components/BatchReceiptGenerator';
 import BlockEditor from '../components/BlockEditor';
-import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord } from '../types';
+import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry } from '../types';
 import { EMAIL_CONFIG } from '../constants';
 
 interface AdminDashboardProps {
@@ -51,6 +51,8 @@ interface AdminDashboardProps {
   onAddMembers?: (members: Member[]) => void;
   onUpdateMember: (member: Member) => void;
   onDeleteMember: (id: string | number) => void;
+  onAdjustPoints?: (memberId: string, delta: number, reason: string) => Promise<boolean>;
+  onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]>;
   onUploadImage: (file: File) => Promise<string>;
   onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => void;
   onApproveMemberApplication: (app: MemberApplication) => void; // 新增：核准
@@ -1602,7 +1604,7 @@ const ActivityManager: React.FC<{
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動標題</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動類型</label><select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">{Object.values(ActivityType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
-               <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+               <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" lang="en-GB" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">地點</label><input required type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">費用</label><input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div>
@@ -2314,11 +2316,38 @@ const ActivityCheckInManager: React.FC<{
   );
 };
 
-const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; onUpdate: (m: Member) => void; onDelete: (id: string | number) => void; onImport: (ms: Member[]) => void }> = ({ members, onAdd, onUpdate, onDelete, onImport }) => {
+const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; onUpdate: (m: Member) => void; onDelete: (id: string | number) => void; onImport: (ms: Member[]) => void; onAdjustPoints?: (memberId: string, delta: number, reason: string) => Promise<boolean>; onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]> }> = ({ members, onAdd, onUpdate, onDelete, onImport, onAdjustPoints, onFetchPointsLedger }) => {
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // 點數調整 / 明細
+  const [pointsDelta, setPointsDelta] = useState('');
+  const [pointsReason, setPointsReason] = useState('');
+  const [pointsBusy, setPointsBusy] = useState(false);
+  const [ledger, setLedger] = useState<PointsLedgerEntry[]>([]);
+  const [showLedger, setShowLedger] = useState(false);
+
+  const loadLedger = async (memberId: string) => {
+    if (!onFetchPointsLedger) return;
+    setLedger(await onFetchPointsLedger(memberId));
+  };
+
+  const handleAdjustPointsClick = async (sign: 1 | -1) => {
+    if (!onAdjustPoints || !editingId) return;
+    const n = Math.floor(Number(pointsDelta) || 0);
+    if (n <= 0) { alert('請輸入大於 0 的點數'); return; }
+    if (!pointsReason.trim()) { alert('請填寫調整原因'); return; }
+    setPointsBusy(true);
+    const ok = await onAdjustPoints(String(editingId), sign * n, pointsReason.trim());
+    setPointsBusy(false);
+    if (ok) {
+      setPointsDelta(''); setPointsReason('');
+      setFormData((prev: any) => ({ ...prev, points_balance: (prev.points_balance || 0) + sign * n }));
+      loadLedger(String(editingId));
+    }
+  };
   
   // Payment Records State
   interface PaymentRecord {
@@ -2397,8 +2426,12 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
       } catch (e) {
           setPaymentRecords([]);
       }
-      
-      setIsFormOpen(true); 
+
+      // 重置點數調整 UI 並載入明細
+      setPointsDelta(''); setPointsReason(''); setShowLedger(false); setLedger([]);
+      loadLedger(String(m.id));
+
+      setIsFormOpen(true);
   };
 
   const handleAdd = () => { 
@@ -2811,6 +2844,51 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
                            </button>
                        </div>
                    </div>
+
+                   {/* 點數管理區塊（僅編輯既有會員時可調整） */}
+                   {editingId && onAdjustPoints && (
+                   <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-100">
+                       <div className="flex items-center justify-between mb-3 border-b border-amber-100 pb-2">
+                           <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2"><Crown size={16} /> 會員點數</h3>
+                           <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded">目前點數: {(formData.points_balance || 0).toLocaleString()} 點</span>
+                       </div>
+
+                       <div className="bg-white p-3 rounded-lg border border-amber-100 flex flex-wrap gap-2 items-end">
+                           <div className="w-28">
+                               <label className="block text-[10px] font-bold text-gray-500 mb-1">點數</label>
+                               <input type="number" min={1} value={pointsDelta} onChange={e => setPointsDelta(e.target.value)} className="w-full p-1.5 border rounded text-xs" placeholder="數量"/>
+                           </div>
+                           <div className="flex-1 min-w-[150px]">
+                               <label className="block text-[10px] font-bold text-gray-500 mb-1">原因</label>
+                               <input type="text" value={pointsReason} onChange={e => setPointsReason(e.target.value)} className="w-full p-1.5 border rounded text-xs" placeholder="例：活動贈點 / 修正"/>
+                           </div>
+                           <button type="button" disabled={pointsBusy} onClick={() => handleAdjustPointsClick(1)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50 flex items-center gap-1 h-[30px] mb-[1px]"><Plus size={14} /> 加點</button>
+                           <button type="button" disabled={pointsBusy} onClick={() => handleAdjustPointsClick(-1)} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 disabled:opacity-50 flex items-center gap-1 h-[30px] mb-[1px]"><X size={14} /> 扣點</button>
+                       </div>
+
+                       <button type="button" onClick={() => setShowLedger(s => !s)} className="text-xs font-bold text-amber-700 mt-3 flex items-center gap-1 hover:underline"><History size={14} /> {showLedger ? '收合明細' : `點數明細 (${ledger.length})`}</button>
+                       {showLedger && (
+                           <div className="mt-2 max-h-48 overflow-y-auto bg-white rounded-lg border border-amber-100">
+                               {ledger.length > 0 ? (
+                                   <table className="w-full text-xs text-left">
+                                       <thead className="text-gray-500 bg-amber-50/50 sticky top-0"><tr><th className="p-2">時間</th><th className="p-2">類型</th><th className="p-2 text-right">異動</th><th className="p-2 text-right">餘額</th><th className="p-2">原因</th></tr></thead>
+                                       <tbody>
+                                           {ledger.map(l => (
+                                               <tr key={l.id} className="border-b border-amber-50 last:border-0">
+                                                   <td className="p-2 text-gray-400 whitespace-nowrap">{(l.created_at || '').slice(0, 16).replace('T', ' ')}</td>
+                                                   <td className="p-2">{({ earn: '賺取', freeze: '預扣', redeem: '核銷', refund: '回補', adjust: '調整' } as Record<string, string>)[l.type] || l.type}</td>
+                                                   <td className={`p-2 text-right font-mono font-bold ${l.change > 0 ? 'text-green-600' : l.change < 0 ? 'text-red-500' : 'text-gray-400'}`}>{l.change > 0 ? `+${l.change}` : l.change}</td>
+                                                   <td className="p-2 text-right font-mono text-gray-500">{l.balance_after ?? '-'}</td>
+                                                   <td className="p-2 text-gray-500">{l.reason || '-'}{l.created_by ? ` (${l.created_by})` : ''}</td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               ) : <p className="text-center text-gray-400 text-xs py-4">尚無點數異動紀錄</p>}
+                           </div>
+                       )}
+                   </div>
+                   )}
 
                    <div className="flex justify-end gap-3 pt-4 border-t sticky bottom-0 bg-white pb-2">
                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-100 rounded-lg text-gray-600 font-bold hover:bg-gray-200">取消</button>
@@ -3405,7 +3483,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           {/* 向下相容：舊連結 /member-activities 重導 */}
           <Route path="/member-activities" element={<Navigate to="/admin/activities" replace />} />
           
-          <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} />} />
+          <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} onAdjustPoints={props.onAdjustPoints} onFetchPointsLedger={props.onFetchPointsLedger} />} />
           <Route path="/club" element={<ClubManager activities={props.clubActivities} onUpdate={props.onUpdateClubActivity} onAdd={props.onAddClubActivity} onDelete={props.onDeleteClubActivity} onUploadImage={props.onUploadImage} />} />
           <Route path="/milestones" element={<MilestoneManager milestones={props.milestones} onAdd={props.onAddMilestone} onUpdate={props.onUpdateMilestone} onDelete={props.onDeleteMilestone} onUploadImage={props.onUploadImage} />} />
           <Route path="/finances" element={<FinancialManager records={props.financialRecords} onAdd={props.onAddFinancialRecord} onUpdate={props.onUpdateFinancialRecord} onDelete={props.onDeleteFinancialRecord} onUploadImage={props.onUploadImage} />} />

@@ -252,6 +252,14 @@ serve(async (req) => {
             const isMemberOnly = regData.audience === 'member_only';
             console.log(`[Notify] Success! Updated Registration (${regData.audience}): ${merchantOrderNo}`)
 
+            // 點數核銷（commit）：把報名時凍結的點數正式扣除。RPC 為冪等，重複回呼安全。
+            try {
+              const { error: commitErr } = await supabase.rpc('points_commit', { p_order_no: merchantOrderNo });
+              if (commitErr) console.error(`[Notify] points_commit error:`, commitErr);
+            } catch (e) {
+              console.error(`[Notify] points_commit exception:`, e);
+            }
+
             // 從統一 activities 表取活動資訊
             let activityTitle = '活動報名確認';
             let activityDate = '';
@@ -416,6 +424,18 @@ serve(async (req) => {
           }
         } else {
             console.log(`[Notify] Payment Status is not SUCCESS: ${paymentData.Status}`)
+            // 付款失敗/取消：回補報名時凍結的點數（RPC 冪等，非 frozen 單自動 no-op）
+            try {
+              const failedOrderNo = paymentData.Result?.MerchantOrderNo;
+              if (failedOrderNo) {
+                const supabaseFail = createClient(SupabaseUrl, SupabaseKey)
+                const { error: refundErr } = await supabaseFail.rpc('points_refund', { p_order_no: failedOrderNo });
+                if (refundErr) console.error(`[Notify] points_refund error:`, refundErr);
+                else console.log(`[Notify] points_refund processed for ${failedOrderNo}`);
+              }
+            } catch (e) {
+              console.error(`[Notify] points_refund exception:`, e);
+            }
         }
 
         return new Response('OK', { 

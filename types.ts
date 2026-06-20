@@ -74,6 +74,10 @@ export interface Registration {
   paid_amount?: number;
   coupon_code?: string;
 
+  // 點數抵扣
+  points_used?: number;
+  points_status?: 'frozen' | 'redeemed' | 'refunded';
+
   // 會員報名專用
   member_id?: string;
   member_name?: string;
@@ -128,6 +132,7 @@ export interface Member {
   membership_expiry_date?: string; // 會籍到期日 (YYYY-MM-DD)
   notes?: string; // 備註
   payment_records?: any; // 會籍繳費記錄 (文字描述或 JSON string)
+  points_balance?: number; // 會員點數餘額
 
   // --- 個人資料 ---
   member_no: string; // 會員編號 (系統自動產生)
@@ -211,6 +216,21 @@ export interface Coupon {
   is_used: boolean;
   created_at: string;
   used_at?: string;
+}
+
+// 點數帳本（對應 supabase_points.sql 的 points_ledger 表）
+export interface PointsLedgerEntry {
+  id: string;
+  member_id: string;
+  change: number;          // 正=增加, 負=扣除, 0=核銷標記
+  balance_after?: number;  // 異動後餘額快照
+  type: 'earn' | 'freeze' | 'redeem' | 'refund' | 'adjust';
+  reason?: string;
+  ref_type?: 'registration' | 'application' | 'renewal' | 'admin';
+  ref_id?: string;
+  order_no?: string;
+  created_by?: string;     // 手動調整時記管理員 email
+  created_at: string;
 }
 
 export interface Receipt {
