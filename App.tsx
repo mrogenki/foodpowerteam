@@ -566,7 +566,7 @@ const App: React.FC = () => {
   };
 
   // 產生 VIP 免費邀請券（單次使用、不綁會員），回傳產生的券供後台複製連結
-  const handleGenerateVipInvites = async (activityId: string, count: number): Promise<Coupon[]> => {
+  const handleGenerateVipInvites = async (activityId: string, count: number, note?: string): Promise<Coupon[]> => {
     if (!supabase) return [];
     const rows = Array.from({ length: count }, () => ({
       activity_id: activityId,
@@ -574,6 +574,7 @@ const App: React.FC = () => {
       discount_amount: 0,
       is_free: true,
       is_used: false,
+      note: note || null,
       code: `VIP${String(activityId).slice(-3)}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
     }));
     const { data, error } = await supabase.from('coupons').insert(rows).select();
@@ -872,7 +873,7 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
-  const handleGenerateCoupons = async (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => {
+  const handleGenerateCoupons = async (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => {
     if (!supabase) return;
     setLoading(true);
     try {
@@ -881,6 +882,7 @@ const App: React.FC = () => {
         member_id: mid,
         discount_amount: amount,
         is_used: false,
+        note: note || null,
         code: `ACT${activityId.slice(-3)}-M${mid.slice(-3)}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
       }));
       await supabase.from('coupons').insert(coupons);

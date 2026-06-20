@@ -214,6 +214,7 @@ export interface Coupon {
   member_id?: string;
   discount_amount: number;
   is_free?: boolean; // VIP 免費邀請券（100% 免費）
+  note?: string; // 備註：發送對象 / 發放原因
   is_used: boolean;
   created_at: string;
   used_at?: string;

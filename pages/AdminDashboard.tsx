@@ -54,8 +54,8 @@ interface AdminDashboardProps {
   onAdjustPoints?: (memberId: string, delta: number, reason: string) => Promise<boolean>;
   onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]>;
   onUploadImage: (file: File) => Promise<string>;
-  onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => void;
-  onGenerateVipInvites?: (activityId: string, count: number) => Promise<Coupon[]>;
+  onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
+  onGenerateVipInvites?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
   onApproveMemberApplication: (app: MemberApplication) => void; // 新增：核准
   onDeleteMemberApplication: (id: string | number) => void; // 新增：拒絕
   onAddMilestone: (milestone: Milestone) => void;
@@ -2909,17 +2909,19 @@ const CouponManager: React.FC<{
   activities: Activity[];
   memberActivities: MemberActivity[];
   members: Member[];
-  onGenerate?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean) => void;
-  onGenerateVip?: (activityId: string, count: number) => Promise<Coupon[]>;
+  onGenerate?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
+  onGenerateVip?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
 }> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip }) => {
   const [amount, setAmount] = useState(100);
   const [actId, setActId] = useState('');
   const [target, setTarget] = useState('all');
+  const [note, setNote] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // VIP 免費邀請
   const [vipActId, setVipActId] = useState('');
   const [vipCount, setVipCount] = useState(1);
+  const [vipNote, setVipNote] = useState('');
   const [vipGenerating, setVipGenerating] = useState(false);
   const [vipResult, setVipResult] = useState<Coupon[]>([]);
   const [copiedCode, setCopiedCode] = useState('');
@@ -2937,7 +2939,8 @@ const CouponManager: React.FC<{
      if(!actId) { alert('請選擇活動'); return; }
      setIsGenerating(true);
      const memberIds = target === 'all' ? members.filter(m => m.status === 'active').map(m => String(m.id)) : [target];
-     onGenerate(actId, amount, memberIds, false);
+     onGenerate(actId, amount, memberIds, false, note.trim() || undefined);
+     setNote('');
      setIsGenerating(false);
   };
 
@@ -2946,7 +2949,7 @@ const CouponManager: React.FC<{
      if(!vipActId) { alert('請選擇活動'); return; }
      if(vipCount < 1 || vipCount > 100) { alert('數量請介於 1~100'); return; }
      setVipGenerating(true);
-     const created = await onGenerateVip(vipActId, vipCount);
+     const created = await onGenerateVip(vipActId, vipCount, vipNote.trim() || undefined);
      setVipResult(created);
      setVipGenerating(false);
   };
@@ -2963,6 +2966,7 @@ const CouponManager: React.FC<{
              <div className="lg:col-span-2"><label className="block text-sm font-bold mb-1">選擇活動</label><select className="w-full p-2 border rounded" value={vipActId} onChange={e=>setVipActId(e.target.value)}><option value="">請選擇...</option>{allActs.map(a=><option key={a.id} value={a.id}>{a.title}</option>)}</select></div>
              <div><label className="block text-sm font-bold mb-1">產生數量</label><input type="number" min={1} max={100} className="w-full p-2 border rounded" value={vipCount} onChange={e=>setVipCount(Number(e.target.value))} /></div>
              <div className="flex items-end"><button onClick={handleGenerateVip} disabled={vipGenerating} className="w-full bg-amber-600 text-white p-2 rounded font-bold hover:bg-amber-700 disabled:opacity-50">{vipGenerating ? '處理中...' : '產生邀請連結'}</button></div>
+             <div className="md:col-span-3 lg:col-span-4"><label className="block text-sm font-bold mb-1">備註（選填，記錄發送對象 / 原因）</label><input type="text" className="w-full p-2 border rounded" value={vipNote} onChange={e=>setVipNote(e.target.value)} placeholder="例：受邀講者 王大明、贊助商代表" /></div>
           </div>
           {vipResult.length > 0 && (
             <div className="bg-white rounded-xl border border-amber-100 p-3 space-y-2">
@@ -2984,13 +2988,14 @@ const CouponManager: React.FC<{
              <div><label className="block text-sm font-bold mb-1">折扣金額</label><input type="number" className="w-full p-2 border rounded" value={amount} onChange={e=>setAmount(Number(e.target.value))} /></div>
              <div><label className="block text-sm font-bold mb-1">發送對象</label><select className="w-full p-2 border rounded" value={target} onChange={e=>setTarget(e.target.value)}><option value="all">全體有效會員</option>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
              <div className="flex items-end"><button onClick={handleGenerate} disabled={isGenerating} className="w-full bg-red-600 text-white p-2 rounded font-bold hover:bg-red-700">{isGenerating ? '處理中' : '產生折扣券'}</button></div>
+             <div className="md:col-span-2 lg:col-span-4"><label className="block text-sm font-bold mb-1">備註（選填，記錄發送對象 / 原因）</label><input type="text" className="w-full p-2 border rounded" value={note} onChange={e=>setNote(e.target.value)} placeholder="例：年度貴賓、合作夥伴優惠" /></div>
           </div>
        </div>
        <div className="bg-white p-6 rounded-2xl border border-gray-100">
          <h3 className="font-bold text-lg mb-4">折扣券列表 ({coupons.length})</h3>
          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
-               <thead><tr className="bg-gray-50"><th className="p-3">代碼</th><th className="p-3">活動</th><th className="p-3">類型 / 金額</th><th className="p-3">狀態</th><th className="p-3">操作</th></tr></thead>
+               <thead><tr className="bg-gray-50"><th className="p-3">代碼</th><th className="p-3">活動</th><th className="p-3">類型 / 金額</th><th className="p-3">備註</th><th className="p-3">狀態</th><th className="p-3">操作</th></tr></thead>
                <tbody>
                   {coupons.slice(0, 50).map(c => {
                     const act = allActs.find(a => String(a.id) === String(c.activity_id));
@@ -2999,6 +3004,7 @@ const CouponManager: React.FC<{
                          <td className="p-3 font-mono">{c.code}</td>
                          <td className="p-3">{act?.title || c.activity_id}</td>
                          <td className="p-3">{c.is_free ? <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">VIP 免費</span> : `NT$ ${c.discount_amount}`}</td>
+                         <td className="p-3 text-gray-500 max-w-[200px] truncate" title={c.note || ''}>{c.note || '—'}</td>
                          <td className="p-3">{c.is_used ? '已使用' : '未使用'}</td>
                          <td className="p-3">{c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>}</td>
                       </tr>
@@ -3017,6 +3023,7 @@ const CouponManager: React.FC<{
                     <div className="font-mono font-bold text-gray-900">{c.code}</div>
                     <div className="text-xs text-gray-500 truncate">{act?.title || c.activity_id}</div>
                     <div className="text-xs text-gray-400">{c.is_free ? 'VIP 免費邀請' : `折抵 NT$ ${c.discount_amount}`}</div>
+                    {c.note && <div className="text-xs text-gray-500 mt-0.5 truncate">備註：{c.note}</div>}
                     {c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`mt-1 px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{copiedCode===c.code ? '已複製連結' : '複製邀請連結'}</button>}
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : (c.is_free ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')}`}>{c.is_used ? '已使用' : '未使用'}</span>
