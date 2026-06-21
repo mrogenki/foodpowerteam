@@ -1155,9 +1155,13 @@ const credits = {
   ],
   sponsor: [
     { name: '桂冠食品', role: '食材贊助', icon: Gift, color: 'from-amber-500 to-orange-500', logo: '/festival/logo-laurel.png' },
+    { name: '南橋讚岐烏龍麵', role: '麵品贊助', icon: Gift, color: 'from-orange-500 to-red-500', logo: '/festival/logo-nanqiao.jpeg' },
+    { name: '史偉莎', role: '用品贊助', icon: Gift, color: 'from-cyan-500 to-blue-500', logo: '/festival/logo-shiweisha.jpg' },
+    { name: '鮮乳坊', role: '乳品贊助', icon: Gift, color: 'from-sky-500 to-blue-500', logo: '/festival/logo-xianrufang.jpeg' },
     { name: '大苑子', role: '飲品贊助', icon: Gift, color: 'from-lime-500 to-green-500', logo: '/festival/logo-dayuanzi.jpg' },
     { name: '春一枝', role: '冰品贊助', icon: Gift, color: 'from-rose-500 to-pink-500', logo: '/festival/logo-chunyizhi.png' },
-    { name: '鮮乳坊', role: '乳品贊助', icon: Gift, color: 'from-sky-500 to-blue-500', logo: '/festival/logo-xianrufang.jpeg' }
+    { name: '福德生活', role: '食材贊助', icon: Gift, color: 'from-yellow-500 to-amber-500', logo: '/festival/logo-fude.png' },
+    { name: '究好豬', role: '食材贊助', icon: Gift, color: 'from-pink-500 to-rose-500', logo: '/festival/logo-jiuhaozhu.png' }
   ]
 };
 
