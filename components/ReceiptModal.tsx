@@ -469,21 +469,21 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
                       <div className="pdf-checkbox hidden w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white flex-shrink-0">
                         {selectedFeeType === 'initiation' ? <div className="w-3 h-3 bg-blue-600 rounded-sm"></div> : <div className="w-3 h-3"></div>}
                       </div>
-                      <span>入會費</span>
+                      <span className="font-bold">入會費</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer relative whitespace-nowrap">
                       <input type="checkbox" checked={selectedFeeType === 'annual'} onChange={() => setSelectedFeeType('annual')} className="w-6 h-6 cursor-pointer" />
                       <div className="pdf-checkbox hidden w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white flex-shrink-0">
                         {selectedFeeType === 'annual' ? <div className="w-3 h-3 bg-blue-600 rounded-sm"></div> : <div className="w-3 h-3"></div>}
                       </div>
-                      <span>年費</span>
+                      <span className="font-bold">年費</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer relative whitespace-nowrap">
                       <input type="checkbox" checked={selectedFeeType === 'donation'} onChange={() => setSelectedFeeType('donation')} className="w-6 h-6 cursor-pointer" />
                       <div className="pdf-checkbox hidden w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white flex-shrink-0">
                         {selectedFeeType === 'donation' ? <div className="w-3 h-3 bg-blue-600 rounded-sm"></div> : <div className="w-3 h-3"></div>}
                       </div>
-                      <span>捐款</span>
+                      <span className="font-bold">捐款</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer relative whitespace-nowrap">
                       <input type="checkbox" checked={selectedFeeType === 'goods_donation'} onChange={() => setSelectedFeeType('goods_donation')} className="w-6 h-6 cursor-pointer" />
@@ -491,7 +491,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
                         {selectedFeeType === 'goods_donation' ? <div className="w-3 h-3 bg-blue-600 rounded-sm"></div> : <div className="w-3 h-3"></div>}
                       </div>
                       <div className="flex flex-col items-start">
-                        <span>捐物</span>
+                        <span className="font-bold">捐物</span>
                         <span className="text-gray-400 text-[10px] font-normal leading-none">(若為捐物請於備註說明品項)</span>
                       </div>
                     </label>
@@ -516,21 +516,17 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
                   <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full h-full outline-none resize-none print:appearance-none font-bold" rows={4} />
                   <span className="pdf-text w-full h-full font-bold whitespace-pre-wrap">{remarks}</span>
                 </td>
-                <td className="border border-black py-3 relative group" colSpan={2}>
-                  <div className="absolute inset-0 flex items-center justify-center p-2">
-                    {sealImage ? (
-                      <img 
-                        src={sealImage} 
-                        alt="協會簽章" 
-                        className="max-h-full max-w-full object-contain opacity-90" 
-                        style={{ height: '110px' }}
-                      />
-                    ) : (
-                      <div className="text-gray-400 text-xl flex flex-col items-center">
-                        <span className="mb-1">尚未設定印章</span>
-                      </div>
-                    )}
-                  </div>
+                <td className="border border-black py-3 px-2 relative group align-middle text-center" colSpan={2}>
+                  {sealImage ? (
+                    <img
+                      src={sealImage}
+                      alt="協會簽章"
+                      className="inline-block max-w-full object-contain opacity-90"
+                      style={{ height: '110px' }}
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-xl">尚未設定印章</span>
+                  )}
                   <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer print:hidden">
                     <span className="text-sm font-bold">{sealImage ? '更換印章' : '上傳印章'}</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleSealUpload} />
@@ -663,6 +659,8 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         .pdf-generating .rounded-sm { border-radius: 0.125rem !important; }
         .pdf-generating .whitespace-pre-wrap { white-space: pre-wrap !important; }
         .pdf-generating .align-top { vertical-align: top !important; }
+        .pdf-generating .align-middle { vertical-align: middle !important; }
+        .pdf-generating .inline-block { display: inline-block !important; }
         .pdf-generating .relative { position: relative !important; }
         .pdf-generating .absolute { position: absolute !important; }
         .pdf-generating .inset-0 { top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important; }

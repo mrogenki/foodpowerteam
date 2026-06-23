@@ -187,25 +187,25 @@ const BatchReceiptGenerator: React.FC<BatchReceiptGeneratorProps> = ({ receiptsT
                     <div className="pdf-checkbox w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white">
                       {currentReceipt.feeType === 'initiation' && <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>}
                     </div>
-                    <span>入會費</span>
+                    <span className="font-bold">入會費</span>
                   </label>
                   <label className="flex items-center gap-2 relative">
                     <div className="pdf-checkbox w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white">
                       {currentReceipt.feeType === 'annual' && <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>}
                     </div>
-                    <span>年費</span>
+                    <span className="font-bold">年費</span>
                   </label>
                   <label className="flex items-center gap-2 relative">
                     <div className="pdf-checkbox w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white">
                       {currentReceipt.feeType === 'donation' && <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>}
                     </div>
-                    <span>捐款</span>
+                    <span className="font-bold">捐款</span>
                   </label>
                   <label className="flex items-center gap-2 relative">
                     <div className="pdf-checkbox w-6 h-6 border-2 border-gray-400 rounded-sm flex items-center justify-center bg-white">
                       {currentReceipt.feeType === 'goods_donation' && <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>}
                     </div>
-                    <span>捐物</span>
+                    <span className="font-bold">捐物</span>
                     <span className="text-gray-400 text-sm font-normal ml-1">(若為捐物請於備註說明品項)</span>
                   </label>
                 </div>
@@ -225,21 +225,17 @@ const BatchReceiptGenerator: React.FC<BatchReceiptGeneratorProps> = ({ receiptsT
               <td className="border border-black py-3 text-left px-4 align-top pt-4" colSpan={3}>
                 <span className="pdf-text w-full h-full font-bold whitespace-pre-wrap">{currentReceipt.remarks || ''}</span>
               </td>
-              <td className="border border-black py-3 relative group" colSpan={2}>
-                <div className="absolute inset-0 flex items-center justify-center p-2">
-                  {sealImage ? (
-                    <img 
-                      src={sealImage} 
-                      alt="協會簽章" 
-                      className="max-h-full max-w-full object-contain opacity-90" 
-                      style={{ height: '110px' }}
-                    />
-                  ) : (
-                    <div className="text-gray-400 text-xl flex flex-col items-center">
-                      <span className="mb-1">尚未設定印章</span>
-                    </div>
-                  )}
-                </div>
+              <td className="border border-black py-3 px-2 relative group align-middle text-center" colSpan={2}>
+                {sealImage ? (
+                  <img
+                    src={sealImage}
+                    alt="協會簽章"
+                    className="inline-block max-w-full object-contain opacity-90"
+                    style={{ height: '110px' }}
+                  />
+                ) : (
+                  <span className="text-gray-400 text-xl">尚未設定印章</span>
+                )}
               </td>
             </tr>
           </tbody>
@@ -354,6 +350,8 @@ const BatchReceiptGenerator: React.FC<BatchReceiptGeneratorProps> = ({ receiptsT
         .pdf-generating .rounded-sm { border-radius: 0.125rem !important; }
         .pdf-generating .whitespace-pre-wrap { white-space: pre-wrap !important; }
         .pdf-generating .align-top { vertical-align: top !important; }
+        .pdf-generating .align-middle { vertical-align: middle !important; }
+        .pdf-generating .inline-block { display: inline-block !important; }
         .pdf-generating .relative { position: relative !important; }
         .pdf-generating .absolute { position: absolute !important; }
         .pdf-generating .inset-0 { top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important; }
