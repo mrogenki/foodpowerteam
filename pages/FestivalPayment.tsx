@@ -84,6 +84,7 @@ const FestivalPayment: React.FC = () => {
         influencer_video_count: influencerCount,
         amount: total,
         merchant_order_no: merchantOrderNo,
+        order_no_history: [merchantOrderNo],
         waive_listing_fee: isVip,
         // NT$0（VIP 免上架費且未加購影音）無法走金流，直接標記完成
         payment_status: isFree ? 'paid' : 'pending',

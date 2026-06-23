@@ -195,10 +195,11 @@ serve(async (req) => {
           // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
           if (merchantOrderNo.startsWith('FEST_')) {
             console.log(`[Notify] Attempting to update festival_registrations for ${merchantOrderNo}`);
+            // 用「目前訂單號 或 歷史訂單號包含此號」比對，避免重新產生連結 / 重複繳費覆寫訂單號後找不到列
             const { data: festData, error: festError } = await supabase
               .from('festival_registrations')
               .update(updatePayload)
-              .eq('merchant_order_no', merchantOrderNo)
+              .or(`merchant_order_no.eq.${merchantOrderNo},order_no_history.cs.{${merchantOrderNo}}`)
               .select()
               .single()
 

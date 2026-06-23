@@ -225,6 +225,7 @@ const FestivalApplicationManager: React.FC = () => {
           invoice_title: app.company_name,
           tax_id: app.tax_id,
           merchant_order_no: merchantOrderNo,
+          order_no_history: [merchantOrderNo],
           payment_status: 'pending',
           application_id: app.id,
         })
