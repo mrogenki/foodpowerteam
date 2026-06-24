@@ -957,7 +957,10 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '一頭牛日式燒肉', category: '日式燒肉', logo: '/festival/brand-yitouniu.png' },
   { name: 'Char Char Steak & Bar', category: '牛排酒吧', logo: '/festival/brand-charchar.jpg' },
   { name: '燒肉smile', category: '日式燒肉', logo: '/festival/brand-smile.jpeg' },
-  { name: '大河屋', category: '日式燒肉', logo: '/festival/brand-dahewu.png' }
+  { name: '大河屋', category: '日式燒肉', logo: '/festival/brand-dahewu.png' },
+  { name: '八色烤肉mini', category: '韓式烤肉', logo: '/festival/brand-basei.png' },
+  { name: '精誠壹山燒肉', category: '燒肉名店', logo: '/festival/brand-yishan.jpeg' },
+  { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
@@ -986,7 +989,12 @@ const hotpotBrands: BrandEntry[] = [
   { name: '潮肉壽喜燒', category: '壽喜燒', logo: '/festival/brand-chaorou-sukiyaki.jpeg' },
   { name: '尚石苑', category: '精緻鍋物', logo: '/festival/brand-shangshiyuan.jpg' },
   { name: '徐泰山汕頭火鍋', category: '汕頭鍋物', logo: '/festival/brand-xutaishan.png' },
-  { name: '今之旬', category: '鍋物', logo: '/festival/brand-jinzhixun.png' }
+  { name: '今之旬', category: '鍋物', logo: '/festival/brand-jinzhixun.png' },
+  { name: '小膳香成都麻辣火鍋', category: '麻辣鍋', logo: '/festival/brand-xiaoshanxiang.jpeg' },
+  { name: '極禾鍋物職人', category: '精緻鍋物', logo: '/festival/brand-jihe.png' },
+  { name: '滇發哥', category: '雲南鍋物', logo: '/festival/brand-dianfage.png' },
+  { name: '百年土種蔘雞湯', category: '雞湯鍋', logo: '/festival/brand-bainian.png' },
+  { name: '鍋泰暖', category: '鍋物', logo: '/festival/brand-guotainan.png' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
