@@ -344,7 +344,7 @@ const LaunchEvent: React.FC = () => (
                 <ul className="space-y-2">
                   {[
                     { brand: '一鷺炭火燒鳥工房', name: '劉士綱' },
-                    { brand: '千葉火鍋', name: '呂秀春' },
+                    { brand: '千葉集團', name: '呂秀春' },
                     { brand: '桂冠食品', name: '陳玉翎' },
                     { brand: '天帷企管', name: '林剛羽' },
                   ].map((s) => (
