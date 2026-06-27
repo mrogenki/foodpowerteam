@@ -11,6 +11,10 @@ const PaymentResult: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'paid' | 'pending' | 'failed' | 'not_found'>('loading');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [checkCount, setCheckCount] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
+
+  // 觸發重新查詢（含主動向藍新確認）
+  const retry = () => { setErrorMsg(null); setCheckCount(0); setStatus('loading'); setRetryKey(k => k + 1); };
 
   useEffect(() => {
     const url = sessionStorage.getItem('last_activity_url');
@@ -19,58 +23,87 @@ const PaymentResult: React.FC = () => {
 
   useEffect(() => {
     if (!orderNo) {
-      setStatus('paid'); 
+      setStatus('paid');
       return;
     }
 
-    const checkStatus = async () => {
+    let cancelled = false;
+    let interval: any;
+
+    // 快速讀取 DB 目前狀態（NotifyURL 已寫入時會立即反映）
+    const readDbStatus = async (): Promise<string | null> => {
+      const { data, error } = await supabase.rpc('check_payment_status', { order_no: orderNo });
+      if (error) throw error;
+      if (!data || data.length === 0) return 'not_found';
+      return data[0].res_status || data[0].out_status || data[0].status || 'pending';
+    };
+
+    // 主動向藍新查詢真實交易狀態，並在已付款時補寫 DB（後備機制，防 NotifyURL 漏接）
+    const activeConfirm = async (): Promise<string | null> => {
       try {
-        const { data, error } = await supabase.rpc('check_payment_status', { order_no: orderNo });
-        
+        const { data, error } = await supabase.functions.invoke('newebpay-query', {
+          body: { order_no: orderNo },
+        });
         if (error) {
-          console.error('Check status RPC error:', error);
-          setErrorMsg(error.message);
-          setStatus('failed');
-          return;
+          console.debug('newebpay-query unavailable, fallback to DB read:', error.message);
+          return null;
+        }
+        return (data as any)?.status || null;
+      } catch (err: any) {
+        console.debug('newebpay-query exception, fallback to DB read:', err?.message);
+        return null;
+      }
+    };
+
+    const applyStatus = (s: string | null) => {
+      if (cancelled || !s) return false;
+      if (s === 'paid') { setStatus('paid'); return true; }
+      if (s === 'failed') { setStatus('failed'); return true; }
+      if (s === 'not_found') { setStatus('not_found'); return true; }
+      setStatus('pending');
+      return false;
+    };
+
+    const run = async () => {
+      try {
+        // 1. 先快速讀 DB；已付款就結束
+        const dbStatus = await readDbStatus();
+        if (applyStatus(dbStatus === 'paid' ? 'paid' : 'pending') && dbStatus === 'paid') return;
+        if (dbStatus === 'not_found') { applyStatus('not_found'); /* 仍嘗試藍新查詢 */ }
+
+        // 2. 主動向藍新確認（會在已付款時補寫 DB）
+        const confirmed = await activeConfirm();
+        if (confirmed && applyStatus(confirmed)) {
+          if (confirmed === 'paid' || confirmed === 'failed') return;
         }
 
-        if (data && data.length > 0) {
-          // 支援新版 res_status 與舊版欄位名稱
-          const paymentStatus = data[0].res_status || data[0].out_status || data[0].status;
-          if (paymentStatus === 'paid') {
-            setStatus('paid');
-          } else {
-            setStatus('pending');
-          }
-        } else {
-          setStatus('not_found');
-        }
+        // 3. 仍未確定 → 每 3 秒讀一次 DB，最多 10 次（等 NotifyURL 補到）
+        interval = setInterval(async () => {
+          if (cancelled) return clearInterval(interval);
+          setCheckCount(prev => {
+            if (prev >= 10) { clearInterval(interval); return prev; }
+            return prev + 1;
+          });
+          try {
+            const s = await readDbStatus();
+            if (s === 'paid' || s === 'failed') {
+              clearInterval(interval);
+              applyStatus(s);
+            }
+          } catch { /* 忽略單次輪詢錯誤 */ }
+        }, 3000);
       } catch (err: any) {
-        console.error('Check status exception:', err);
+        if (cancelled) return;
+        console.error('Payment status check exception:', err);
         setErrorMsg(err.message || '未知錯誤');
         setStatus('failed');
       }
     };
 
-    checkStatus();
+    run();
 
-    // 輪詢機制：如果是 pending，每 3 秒檢查一次，最多檢查 10 次 (30秒)
-    let interval: any;
-    if (status === 'pending' || status === 'loading') {
-       interval = setInterval(() => {
-         setCheckCount(prev => {
-           if (prev >= 10) {
-             clearInterval(interval);
-             return prev;
-           }
-           checkStatus();
-           return prev + 1;
-         });
-       }, 3000);
-    }
-
-    return () => clearInterval(interval);
-  }, [orderNo, status]);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [orderNo, retryKey]);
 
   const renderContent = () => {
     if (status === 'loading') {
@@ -94,8 +127,8 @@ const PaymentResult: React.FC = () => {
             系統在查詢訂單時遇到問題：<br/>
             <span className="text-red-500 font-mono text-sm">{errorMsg}</span>
           </p>
-          <button 
-            onClick={() => { setStatus('loading'); setCheckCount(0); }} 
+          <button
+            onClick={retry}
             className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors mb-6"
           >
             重試查詢
@@ -115,8 +148,8 @@ const PaymentResult: React.FC = () => {
             無法查詢到此訂單編號 ({orderNo}) 的付款資訊。<br/>
             請確認您是否已完成付款，或聯繫客服人員協助。
           </p>
-          <button 
-            onClick={() => { setStatus('loading'); setCheckCount(0); }} 
+          <button
+            onClick={retry}
             className="bg-gray-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-700 transition-colors mb-6"
           >
             重新查詢
@@ -137,8 +170,8 @@ const PaymentResult: React.FC = () => {
             若您剛剛已完成付款，請稍候片刻並點擊下方按鈕重新整理。<br/>
             若您尚未付款或付款失敗，請返回重新操作。
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={retry}
             className="bg-yellow-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-yellow-600 transition-colors mb-6"
           >
             重新整理狀態

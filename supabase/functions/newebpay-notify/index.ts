@@ -194,17 +194,19 @@ serve(async (req) => {
 
           // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
           if (merchantOrderNo.startsWith('FEST_')) {
-            console.log(`[Notify] Attempting to update festival_registrations for ${merchantOrderNo}`);
-            // 用「目前訂單號 或 歷史訂單號包含此號」比對，避免重新產生連結 / 重複繳費覆寫訂單號後找不到列
-            const { data: festData, error: festError } = await supabase
-              .from('festival_registrations')
-              .update(updatePayload)
-              .or(`merchant_order_no.eq.${merchantOrderNo},order_no_history.cs.{${merchantOrderNo}}`)
-              .select()
-              .single()
+            console.log(`[Notify] Attempting to update festival_registrations via RPC for ${merchantOrderNo}`);
 
-            if (festError && festError.code !== 'PGRST116') {
-              console.error(`[Notify] festival_registrations update error:`, festError);
+            // 用 RPC (SECURITY DEFINER) 處理，繞過 PostgREST/RLS 邊際問題
+            // RPC 內同時比對 merchant_order_no 與 order_no_history，確保歷史訂單號也能命中
+            const { data: festData, error: festError } = await supabase.rpc('handle_festival_payment', {
+              p_order_no: merchantOrderNo,
+              p_amount: amount,
+              p_pay_time: paidAtISO,
+              p_pay_method: paymentMethod
+            })
+
+            if (festError) {
+              console.error(`[Notify] handle_festival_payment RPC error:`, festError);
             }
 
             if (festData) {

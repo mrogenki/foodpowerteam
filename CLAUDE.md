@@ -44,8 +44,21 @@ npm run build
 git push origin main
 
 # Edge Function 部署（需 Supabase CLI）
-supabase functions deploy newebpay-notify --no-verify-jwt
+# ⚠️ 一定要在「專案根目錄」執行，且務必加 --project-ref，避免 CLI 往上層找到
+#    /Users/jackhsu/supabase（舊 linked 副本）而部署到過時程式碼。
+# 專案 supabase/config.toml 已建立，確保 CLI 以本專案為 workdir。
+supabase functions deploy newebpay-notify --no-verify-jwt --project-ref kpltydyspvzozgxfiwra
 ```
+
+### Edge Functions（部署目標：kpltydyspvzozgxfiwra）
+| Function | 用途 |
+|----------|------|
+| `newebpay-notify` | 藍新背景通知（NotifyURL）→ 更新付款狀態、發 Telegram/Email、點數核銷 |
+| `newebpay-query` | 後備：付款返回頁主動向藍新 QueryTradeInfo 確認，補寫漏接的付款（需帶 User-Agent 過 Akamai WAF）|
+| `festival-apply` | 燒肉/火鍋祭合作報名寫入 + Telegram 通知 |
+| `create-admin` | 總管理員新增後台帳號（verify_jwt=true）|
+
+付款相關 RPC（SECURITY DEFINER）：`handle_festival_payment`、`handle_renewal_payment`（含自動延長會籍、冪等）、`confirm_payment_paid`（後備跨表補寫）、`points_commit`/`points_refund`、`check_payment_status`。
 
 ---
 
