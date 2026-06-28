@@ -167,31 +167,30 @@ const ReceiptView: React.FC = () => {
             </tr>
             <tr>
               <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap">訂單編號</td>
-              <td className="border border-black py-3 px-4 text-left font-mono" colSpan={5}>{receipt.order_no || '—'}</td>
+              <td className="border border-black py-3 px-4 text-left font-mono" colSpan={3}>{receipt.order_no || '—'}</td>
+              <td className="border border-black bg-gray-100 font-bold py-3" colSpan={2}>協會簽章</td>
             </tr>
             <tr>
-              <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap">備註</td>
-              <td className="border border-black py-3 px-4 text-left" colSpan={5}>{receipt.note || '—'}</td>
+              <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap align-top">備註</td>
+              <td className="border border-black py-3 px-4 text-left align-top" colSpan={3}>{receipt.note || ''}</td>
+              <td className="border border-black p-2 align-middle h-32" colSpan={2}>
+                {stampUrl && stampOk && (
+                  <img
+                    src={stampUrl}
+                    alt="協會印章"
+                    onError={() => setStampOk(false)}
+                    className="mx-auto h-24 sm:h-28 object-contain pointer-events-none select-none"
+                    style={{ mixBlendMode: 'multiply' }}
+                  />
+                )}
+              </td>
             </tr>
           </tbody>
         </table>
 
         {/* 下方 */}
-        <div className="mt-6 flex justify-between items-end text-base sm:text-lg gap-4">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-500">本收據由系統自動開立，電子文件具同等效力。</p>
-          </div>
-          <div className="text-right shrink-0">
-            {stampUrl && stampOk && (
-              <img
-                src={stampUrl}
-                alt="協會印章"
-                onError={() => setStampOk(false)}
-                className="ml-auto h-24 sm:h-28 object-contain pointer-events-none select-none"
-                style={{ mixBlendMode: 'multiply' }}
-              />
-            )}
-          </div>
+        <div className="mt-4">
+          <p className="text-sm text-gray-500">本收據由系統自動開立，電子文件具同等效力。</p>
         </div>
       </div>
     </div>
