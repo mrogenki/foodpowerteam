@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
 import html2pdf from 'html2pdf.js';
 import { supabase } from '../utils/supabaseClient';
+import { requestRefund, RefundSource } from '../utils/newebpay';
 import MemberRenewalManager from './MemberRenewalManager';
 import FestivalApplicationManager from './FestivalApplicationManager';
 import MemberBirthdayManager from './MemberBirthdayManager';
@@ -14,6 +15,47 @@ import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 import BatchReceiptGenerator from '../components/BatchReceiptGenerator';
 import BlockEditor from '../components/BlockEditor';
 import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry } from '../types';
+
+// ==========================================
+// 共用：對「已付款」訂單執行退費
+// 總管理員 + 信用卡 + 有金流單號 → 呼叫 newebpay-refund 真實向藍新刷退
+// 其餘情況 → 僅手動標記為已退費（不影響藍新實際款項）
+// ==========================================
+async function runRefundOnPaid(
+  reg: any,
+  source: RefundSource,
+  isSuperAdmin: boolean | undefined,
+  onUpdateReg: (r: any) => void,
+): Promise<void> {
+  const orderNo = reg.merchant_order_no;
+  const payMethod = String(reg.payment_method || '').toUpperCase();
+  const isCredit = payMethod.includes('CREDIT');
+  const canApiRefund = !!isSuperAdmin && !!orderNo && isCredit;
+
+  if (canApiRefund) {
+    const amt = Number(reg.paid_amount ?? reg.amount ?? 0);
+    if (!confirm(`⚠️ 即將向藍新發動「真實刷退」，款項會實際退回對方且無法復原。\n\n訂單：${orderNo}\n金額：NT$ ${amt.toLocaleString()}\n\n確定執行？`)) return;
+    const res = await requestRefund(orderNo, source);
+    if (res.ok) {
+      onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED, refunded_at: new Date().toISOString(), refund_amount: res.amount });
+      alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}`);
+    } else {
+      if (confirm(`❌ 藍新刷退失敗：\n${res.message || res.error}\n\n是否仍要「僅手動標記為已退費」？（不會實際退錢）`)) {
+        onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED });
+      }
+    }
+    return;
+  }
+
+  // 無法 API 刷退 → 僅手動標記
+  let warn = '';
+  if (!isSuperAdmin) warn = '\n（你非總管理員，僅能手動標記，不會實際向藍新刷退）';
+  else if (!isCredit) warn = `\n（付款方式 ${reg.payment_method || '未知'} 無法 API 刷退，請至銀行人工匯款）`;
+  else if (!orderNo) warn = '\n（此筆無金流單號，無法 API 刷退）';
+  if (confirm(`僅將狀態標記為【已退費】（不會實際退錢給對方）${warn}\n\n確定？`)) {
+    onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED });
+  }
+}
 import { EMAIL_CONFIG } from '../constants';
 
 interface AdminDashboardProps {
@@ -632,10 +674,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ currentUser, members, act
 };
 
 const MemberApplicationManager: React.FC<{
-  applications: MemberApplication[]; 
+  applications: MemberApplication[];
   onApprove: (app: MemberApplication) => void;
-  onDelete: (id: string | number) => void; 
-}> = ({ applications, onApprove, onDelete }) => {
+  onDelete: (id: string | number) => void;
+  isSuperAdmin?: boolean;
+}> = ({ applications, onApprove, onDelete, isSuperAdmin }) => {
   const [selectedApp, setSelectedApp] = useState<MemberApplication | null>(null);
   const [sendingEmailId, setSendingEmailId] = useState<string | number | null>(null);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -682,6 +725,23 @@ const MemberApplicationManager: React.FC<{
     } catch (err: any) {
       console.error(err);
       alert('更新失敗: ' + (err.message || '未知錯誤'));
+    }
+  };
+
+  const handleRefundApp = async (app: MemberApplication) => {
+    const orderNo = (app as any).merchant_order_no;
+    if (!confirm(`即將處理 ${app.name} 入會費的退款。\n\n按「確定」繼續。`)) return;
+    const res = await requestRefund(orderNo, 'application');
+    if (res.ok) {
+      alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}`);
+      window.location.reload();
+    } else {
+      if (confirm(`❌ 藍新刷退失敗：\n${res.message || res.error}\n\n是否仍要「僅手動標記為已退費」？（不會實際退錢）`)) {
+        try {
+          await supabase.from('member_applications').update({ payment_status: 'refunded', refunded_at: new Date().toISOString() }).eq('id', app.id);
+          window.location.reload();
+        } catch (err: any) { alert('標記失敗：' + (err.message || '未知錯誤')); }
+      }
     }
   };
 
@@ -995,7 +1055,24 @@ const MemberApplicationManager: React.FC<{
                      <div><span className="text-gray-500 block">繳費金額</span><p>NT$ {selectedApp.paid_amount?.toLocaleString() || 0}</p></div>
                      <div><span className="text-gray-500 block">繳費時間</span><p>{selectedApp.paid_at ? new Date(selectedApp.paid_at).toLocaleString() : '-'}</p></div>
                      <div className="md:col-span-2"><span className="text-gray-500 block">訂單編號</span><p className="font-mono text-xs">{selectedApp.merchant_order_no || '-'}</p></div>
+                     {isSuperAdmin && (
+                       <div className="md:col-span-2 mt-2">
+                         <button
+                           onClick={() => handleRefundApp(selectedApp)}
+                           className="text-sm bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1.5 font-bold"
+                         >
+                           <RefreshCcw size={14} /> 刷退入會費（藍新真實退款）
+                         </button>
+                         <p className="text-[11px] text-gray-400 mt-1">僅信用卡可 API 刷退；ATM 需人工匯款。</p>
+                       </div>
+                     )}
                    </>
+                 )}
+                 {selectedApp.payment_status === 'refunded' && (
+                   <div className="col-span-2 border-t pt-4 mt-2">
+                     <span className="inline-block bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded font-bold">已退費</span>
+                     {(selectedApp as any).refunded_at && <span className="text-xs text-gray-400 ml-2">{new Date((selectedApp as any).refunded_at).toLocaleString('zh-TW')}</span>}
+                   </div>
                  )}
                </div>
              </div>
@@ -1046,7 +1123,8 @@ const ActivityManager: React.FC<{
   onAddRegs?: (regs: any[]) => void;
   onUploadImage: (file: File) => Promise<string>;
   members?: Member[];
-}> = ({ type, activities, registrations, onAdd, onUpdate, onDelete, onUpdateReg, onDeleteReg, onAddRegs, onUploadImage, members }) => {
+  isSuperAdmin?: boolean;
+}> = ({ type, activities, registrations, onAdd, onUpdate, onDelete, onUpdateReg, onDeleteReg, onAddRegs, onUploadImage, members, isSuperAdmin }) => {
   // unified 模式：當活動的 audience 為 member_only 時，視為「會員活動」行為
   const isMemberMode = (act?: any) => {
     if (type === 'member') return true;
@@ -1195,9 +1273,16 @@ const ActivityManager: React.FC<{
     XLSX.writeFile(wb, `${currentActivity?.title}_報名名單.xlsx`);
   };
   
-  const handlePaymentStatusToggle = (reg: any) => {
+  const handlePaymentStatusToggle = async (reg: any) => {
      if (reg.payment_status === PaymentStatus.PENDING || !reg.payment_status) { onUpdateReg({ ...reg, payment_status: PaymentStatus.PAID }); return; }
-     if (reg.payment_status === PaymentStatus.PAID) { if (confirm("【已付款】訂單操作：\n\n按「確定」將狀態標記為【已退費】\n按「取消」詢問是否回復為【待付款】")) { onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED }); } else { if (confirm("是否要將此訂單回復為【待付款】？")) { onUpdateReg({ ...reg, payment_status: PaymentStatus.PENDING }); } } return; }
+     if (reg.payment_status === PaymentStatus.PAID) {
+       if (confirm("【已付款】訂單操作：\n\n按「確定」進行退費\n按「取消」詢問是否回復為【待付款】")) {
+         await runRefundOnPaid(reg, 'registration', isSuperAdmin, onUpdateReg);
+       } else {
+         if (confirm("是否要將此訂單回復為【待付款】？")) { onUpdateReg({ ...reg, payment_status: PaymentStatus.PENDING }); }
+       }
+       return;
+     }
      if (reg.payment_status === PaymentStatus.REFUNDED) { if (confirm("是否將此【已退費】訂單重新開啟為【待付款】？")) { onUpdateReg({ ...reg, payment_status: PaymentStatus.PENDING }); } return; }
   };
 
@@ -1809,7 +1894,8 @@ const ActivityCheckInManager: React.FC<{
   registrations: (Registration | MemberRegistration)[];
   onUpdateReg: (reg: any) => void;
   members?: Member[];
-}> = ({ type, activities, registrations, onUpdateReg, members }) => {
+  isSuperAdmin?: boolean;
+}> = ({ type, activities, registrations, onUpdateReg, members, isSuperAdmin }) => {
   const [selectedActivityId, setSelectedActivityId] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sendingEmail, setSendingEmail] = useState<string[]>([]);
@@ -1901,14 +1987,14 @@ const ActivityCheckInManager: React.FC<{
     return name.toLowerCase().includes(term) || (r.phone && r.phone.includes(term)) || (r.merchant_order_no && r.merchant_order_no.includes(term));
   });
 
-  const handlePaymentStatusToggle = (reg: any) => {
+  const handlePaymentStatusToggle = async (reg: any) => {
     if (reg.payment_status === PaymentStatus.PENDING || !reg.payment_status) {
       onUpdateReg({ ...reg, payment_status: PaymentStatus.PAID });
       return;
     }
     if (reg.payment_status === PaymentStatus.PAID) {
-      if (confirm("【已付款】訂單操作：\n\n按「確定」將狀態標記為【已退費】\n按「取消」詢問是否回復為【待付款】")) {
-        onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED });
+      if (confirm("【已付款】訂單操作：\n\n按「確定」進行退費\n按「取消」詢問是否回復為【待付款】")) {
+        await runRefundOnPaid(reg, 'registration', isSuperAdmin, onUpdateReg);
       } else {
         if (confirm("是否要將此訂單回復為【待付款】？")) {
           onUpdateReg({ ...reg, payment_status: PaymentStatus.PENDING });
@@ -3574,11 +3660,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <Routes>
           <Route path="/" element={<DashboardHome {...props} />} />
           
-          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} />} />
+          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           {/* 向下相容：舊連結 /member-check-in 重導至統一入口 */}
           <Route path="/member-check-in" element={<Navigate to="/admin/check-in" replace />} />
 
-          <Route path="/activities" element={<ActivityManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} onDeleteReg={(id: any) => props.onDeleteRegistration(id)} onAddRegs={(regs: any[]) => regs.every(r => r.audience === 'member_only') ? props.onAddMemberRegistrations?.(regs) : props.onAddRegistrations?.(regs)} onUploadImage={props.onUploadImage} members={props.members} />} />
+          <Route path="/activities" element={<ActivityManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} onDeleteReg={(id: any) => props.onDeleteRegistration(id)} onAddRegs={(regs: any[]) => regs.every(r => r.audience === 'member_only') ? props.onAddMemberRegistrations?.(regs) : props.onAddRegistrations?.(regs)} onUploadImage={props.onUploadImage} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           {/* 向下相容：舊連結 /member-activities 重導 */}
           <Route path="/member-activities" element={<Navigate to="/admin/activities" replace />} />
           
@@ -3586,8 +3672,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/club" element={<ClubManager activities={props.clubActivities} onUpdate={props.onUpdateClubActivity} onAdd={props.onAddClubActivity} onDelete={props.onDeleteClubActivity} onUploadImage={props.onUploadImage} />} />
           <Route path="/milestones" element={<MilestoneManager milestones={props.milestones} onAdd={props.onAddMilestone} onUpdate={props.onUpdateMilestone} onDelete={props.onDeleteMilestone} onUploadImage={props.onUploadImage} />} />
           <Route path="/finances" element={<FinancialManager records={props.financialRecords} onAdd={props.onAddFinancialRecord} onUpdate={props.onUpdateFinancialRecord} onDelete={props.onDeleteFinancialRecord} onUploadImage={props.onUploadImage} />} />
-          <Route path="/member-applications" element={<MemberApplicationManager applications={props.memberApplications} onApprove={props.onApproveMemberApplication} onDelete={props.onDeleteMemberApplication} />} />
-          <Route path="/member-renewals" element={<MemberRenewalManager />} />
+          <Route path="/member-applications" element={<MemberApplicationManager applications={props.memberApplications} onApprove={props.onApproveMemberApplication} onDelete={props.onDeleteMemberApplication} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
+          <Route path="/member-renewals" element={<MemberRenewalManager isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           <Route path="/festival-applications" element={<FestivalApplicationManager />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />

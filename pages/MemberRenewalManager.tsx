@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { Member, PaymentStatus } from '../types';
+import { requestRefund } from '../utils/newebpay';
 import { Loader2, Search, CheckCircle, XCircle, Send, RefreshCcw, Ban, CreditCard } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { EMAIL_CONFIG } from '../constants';
@@ -38,7 +39,7 @@ const translatePaymentMethod = (method?: string) => {
   return map[method] || method;
 };
 
-const MemberRenewalManager: React.FC = () => {
+const MemberRenewalManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSuperAdmin }) => {
   const [renewals, setRenewals] = useState<MemberRenewal[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingEmail, setSendingEmail] = useState<string[]>([]);
@@ -121,6 +122,24 @@ const MemberRenewalManager: React.FC = () => {
     } catch (err: any) {
       console.error('Error updating status:', err);
       alert('更新失敗: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefund = async (renewal: MemberRenewal) => {
+    if (!confirm(`即將處理 ${renewal.member_name} 續費的退款（成功後會自動縮回會籍 1 年）。\n\n按「確定」繼續。`)) return;
+    try {
+      setLoading(true);
+      const res = await requestRefund(renewal.merchant_order_no, 'renewal');
+      if (res.ok) {
+        alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n已自動縮回會籍 1 年，請確認會員到期日。\n藍新交易序號：${res.tradeNo || '—'}`);
+        fetchRenewals();
+      } else {
+        alert(`❌ 藍新刷退失敗：\n${res.message || res.error}`);
+      }
+    } catch (err: any) {
+      alert('刷退失敗：' + (err.message || '未知錯誤'));
     } finally {
       setLoading(false);
     }
@@ -270,12 +289,14 @@ const MemberRenewalManager: React.FC = () => {
                 <td className="p-4 font-mono">NT$ {renewal.amount.toLocaleString()}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    renewal.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 
+                    renewal.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
                     renewal.payment_status === 'processed' ? 'bg-gray-100 text-gray-700' :
+                    renewal.payment_status === 'refunded' ? 'bg-gray-200 text-gray-500' :
                     renewal.payment_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {renewal.payment_status === 'paid' ? '已付款' : 
+                    {renewal.payment_status === 'paid' ? '已付款' :
                      renewal.payment_status === 'processed' ? '已處理' :
+                     renewal.payment_status === 'refunded' ? '已退費' :
                      renewal.payment_status === 'failed' ? '失敗' : '待付款'}
                   </span>
                 </td>
@@ -307,9 +328,18 @@ const MemberRenewalManager: React.FC = () => {
                       {renewal.receipt_status === 'sent' ? '已開立' : '開立收據'}
                     </button>
                   )}
+                  {isSuperAdmin && renewal.payment_status === 'paid' && (
+                    <button
+                      onClick={() => handleRefund(renewal)}
+                      className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 font-bold flex items-center gap-1"
+                      title="向藍新真實刷退（成功後自動縮回會籍 1 年）"
+                    >
+                      <RefreshCcw size={10} /> 刷退
+                    </button>
+                  )}
                   {!isProcessed && renewal.payment_status !== 'paid' && renewal.receipt_status !== 'sent' && (
                     <>
-                      <button 
+                      <button
                         onClick={() => handleMarkAsPaid(renewal)}
                         className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold"
                       >
@@ -371,10 +401,12 @@ const MemberRenewalManager: React.FC = () => {
               <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${
                 renewal.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
                 renewal.payment_status === 'processed' ? 'bg-gray-100 text-gray-700' :
+                renewal.payment_status === 'refunded' ? 'bg-gray-200 text-gray-500' :
                 renewal.payment_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
               }`}>
                 {renewal.payment_status === 'paid' ? '已付款' :
                  renewal.payment_status === 'processed' ? '已處理' :
+                 renewal.payment_status === 'refunded' ? '已退費' :
                  renewal.payment_status === 'failed' ? '失敗' : '待付款'}
               </span>
             </div>
@@ -391,6 +423,9 @@ const MemberRenewalManager: React.FC = () => {
                 >
                   {renewal.receipt_status === 'sent' ? '已開立' : '開立收據'}
                 </button>
+              )}
+              {isSuperAdmin && renewal.payment_status === 'paid' && (
+                <button onClick={() => handleRefund(renewal)} className="text-xs bg-red-50 text-red-600 px-2 py-1.5 rounded hover:bg-red-100 font-bold flex items-center gap-1" title="向藍新真實刷退（成功後自動縮回會籍 1 年）"><RefreshCcw size={10} /> 刷退</button>
               )}
               {!isProcessed && renewal.payment_status !== 'paid' && renewal.receipt_status !== 'sent' && (
                 <>

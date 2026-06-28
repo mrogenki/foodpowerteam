@@ -1,3 +1,7 @@
 # foodpowerteam Supabase 專案設定
 # project_id 僅作為本機區分用途；部署目標一律用 --project-ref 明確指定，避免誤部署。
 project_id = "foodpowerteam"
+
+# 退款 function：閘道層強制驗證 JWT（函式內再驗 SUPER_ADMIN 角色，雙重防護）
+[functions.newebpay-refund]
+verify_jwt = true
