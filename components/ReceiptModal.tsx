@@ -3,7 +3,7 @@ import { X, Printer, Save, Loader2, Send, Mail } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 import html2pdf from 'html2pdf.js';
 import emailjs from '@emailjs/browser';
-import { EMAIL_CONFIG } from '../constants';
+import { EMAIL_CONFIG, RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
 
 export interface ReceiptData {
   receiptNo?: string;
@@ -101,18 +101,51 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
     return () => clearTimeout(timer);
   }, [isOpen, orderNo, initialData.receiptNo, receiptNo, initialData.orderNo]);
 
-  const handleSealUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 上傳印章 → 同步到 Storage（線上收據與所有收據共用同一顆），並轉 dataURL 即時預覽
+  const handleSealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setSealImage(base64String);
-        localStorage.setItem('receipt_seal_image', base64String);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setSealImage(base64String);
+      localStorage.setItem('receipt_seal_image', base64String);
+    };
+    reader.readAsDataURL(file);
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.storage
+        .from(RECEIPT_STAMP_BUCKET)
+        .upload(RECEIPT_STAMP_PATH, file, { contentType: file.type, cacheControl: '300', upsert: true });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('upload seal error:', err);
+      alert('印章已套用於此收據，但上傳雲端失敗（線上收據可能無法同步）：' + (err.message || ''));
     }
   };
+
+  // 開啟收據時，從 Storage 載入「統一印章」（轉 dataURL 以利 PDF 產生），沒設定就沿用 localStorage
+  useEffect(() => {
+    if (!isOpen || !supabase) return;
+    const loadStamp = async () => {
+      try {
+        const baseUrl = supabase.storage.from(RECEIPT_STAMP_BUCKET).getPublicUrl(RECEIPT_STAMP_PATH).data.publicUrl;
+        const resp = await fetch(`${baseUrl}?t=${Date.now()}`);
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const d = reader.result as string;
+          setSealImage(d);
+          localStorage.setItem('receipt_seal_image', d);
+        };
+        reader.readAsDataURL(blob);
+      } catch (_) {
+        /* 保留 localStorage 備援 */
+      }
+    };
+    loadStamp();
+  }, [isOpen]);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -535,25 +568,6 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
               </tr>
             </tbody>
           </table>
-
-          {/* Footer Info */}
-          <div className="flex justify-between items-center mt-4 text-xl font-bold">
-            <div>理事長：<span className="ml-2">許淳凱</span></div>
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-1">
-              <span>經手人：</span>
-              <select value={handler} onChange={e => setHandler(e.target.value)} className="bg-transparent border-none outline-none print:appearance-none font-bold">
-                <option value="許暐脡">許暐脡</option>
-                <option value="許淳凱">許淳凱</option>
-              </select>
-              <span className="pdf-text font-bold">{handler}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 text-red-600 font-bold text-xl flex gap-6">
-            <span>台北富邦-古亭分行</span>
-            <span>戶名：食在力量美食產業交流協會</span>
-            <span>帳號：82120000168305</span>
-          </div>
 
         </div>
         </div>
