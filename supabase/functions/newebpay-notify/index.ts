@@ -216,6 +216,16 @@ serve(async (req) => {
             }
           };
 
+          // Helper: 各來源付款成功 → 新增收入到收支管理（RPC 冪等）
+          const addIncome = async (src: 'registration' | 'application' | 'renewal' | 'festival', orderNo: string) => {
+            try {
+              const { error: finErr } = await supabase.rpc('add_income_for_order', { p_order_no: orderNo, p_source: src });
+              if (finErr) console.error(`[Notify] add_income_for_order(${src}) error:`, finErr);
+            } catch (e) {
+              console.error(`[Notify] add_income_for_order(${src}) exception:`, e);
+            }
+          };
+
           // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
           if (merchantOrderNo.startsWith('FEST_')) {
             console.log(`[Notify] Attempting to update festival_registrations via RPC for ${merchantOrderNo}`);
@@ -252,6 +262,9 @@ serve(async (req) => {
               } catch (emailErr) {
                 console.error(`[Notify] Festival email process error:`, emailErr);
               }
+
+              // 燒肉/火鍋祭收入自動連動「收支管理」（冪等）
+              await addIncome('festival', merchantOrderNo);
             } else {
               console.warn(`[Notify] Warning: Festival order not found: ${merchantOrderNo}`)
             }
@@ -341,13 +354,8 @@ serve(async (req) => {
             // 自動開立並寄送線上收據
             await issueAndEmailReceipt('registration', merchantOrderNo);
 
-            // 活動收入自動連動「收支管理」（冪等）
-            try {
-              const { error: finErr } = await supabase.rpc('add_activity_income', { p_order_no: merchantOrderNo });
-              if (finErr) console.error('[Notify] add_activity_income error:', finErr);
-            } catch (e) {
-              console.error('[Notify] add_activity_income exception:', e);
-            }
+            // 收入自動連動「收支管理」（冪等）
+            await addIncome('registration', merchantOrderNo);
           }
 
           if (!regData) {
@@ -390,6 +398,8 @@ serve(async (req) => {
 
                 // 自動開立並寄送線上收據（入會費）
                 await issueAndEmailReceipt('application', merchantOrderNo);
+                // 入會費收入自動連動「收支管理」
+                await addIncome('application', merchantOrderNo);
               }
 
                 if (!appData) {
@@ -461,6 +471,8 @@ serve(async (req) => {
 
                     // 自動開立並寄送線上收據（年費）
                     await issueAndEmailReceipt('renewal', merchantOrderNo);
+                    // 年費收入自動連動「收支管理」
+                    await addIncome('renewal', merchantOrderNo);
                   } else {
                     console.warn(`[Notify] Warning: Order not found in any table: ${merchantOrderNo}`)
                   }

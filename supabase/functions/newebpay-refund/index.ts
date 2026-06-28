@@ -196,9 +196,9 @@ serve(async (req) => {
       }
     }
 
-    // ── 4a2. 活動退款 → 刪除連動的「活動收入」財務記錄 ──
+    // ── 4a2. 退款 → 刪除連動的收入財務記錄（活動/入會/續費）──
     let incomeDeleted = false
-    if (source === 'registration') {
+    {
       const { data: finRows, error: finErr } = await supabase
         .from('financial_records')
         .delete()
