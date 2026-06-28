@@ -176,19 +176,19 @@ const ReceiptView: React.FC = () => {
         </table>
 
         {/* 下方 */}
-        <div className="mt-6 flex justify-between items-end text-base sm:text-lg">
+        <div className="mt-6 flex justify-between items-end text-base sm:text-lg gap-4">
           <div className="space-y-1">
             <p>項目：<span className="font-bold">{feeLabel}</span></p>
             <p className="text-sm text-gray-500">本收據由系統自動開立，電子文件具同等效力。</p>
           </div>
-          <div className="text-right relative">
+          <div className="text-right shrink-0">
             <p>經手人：<span className="font-bold">{receipt.handler_name}</span></p>
             {stampUrl && stampOk && (
               <img
                 src={stampUrl}
                 alt="協會印章"
                 onError={() => setStampOk(false)}
-                className="absolute right-0 -top-4 sm:-top-6 h-24 sm:h-28 object-contain pointer-events-none select-none"
+                className="mt-2 ml-auto h-24 sm:h-28 object-contain pointer-events-none select-none"
                 style={{ mixBlendMode: 'multiply' }}
               />
             )}
