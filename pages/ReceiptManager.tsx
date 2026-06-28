@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { Receipt } from '../types';
-import { Loader2, Search, Printer, Trash2, RefreshCcw, FileText, Plus, Download } from 'lucide-react';
+import { Loader2, Search, Printer, Trash2, RefreshCcw, FileText, Plus, Download, Stamp, UploadCloud } from 'lucide-react';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
+import { RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
 import * as XLSX from 'xlsx';
 
 const translateFeeType = (type: string) => {
@@ -20,6 +21,35 @@ const ReceiptManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
+  const [stampVer, setStampVer] = useState(0); // 上傳後用來破快取
+  const [stampExists, setStampExists] = useState(false);
+  const [uploadingStamp, setUploadingStamp] = useState(false);
+
+  const stampUrl = supabase
+    ? `${supabase.storage.from(RECEIPT_STAMP_BUCKET).getPublicUrl(RECEIPT_STAMP_PATH).data.publicUrl}?v=${stampVer}`
+    : '';
+
+  const handleUploadStamp = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !supabase) return;
+    if (!file.type.startsWith('image/')) { alert('請上傳圖片檔（建議去背 PNG）'); return; }
+    setUploadingStamp(true);
+    try {
+      const { error } = await supabase.storage
+        .from(RECEIPT_STAMP_BUCKET)
+        .upload(RECEIPT_STAMP_PATH, file, { contentType: file.type, cacheControl: '300', upsert: true });
+      if (error) throw error;
+      setStampExists(true);
+      setStampVer(Date.now());
+      alert('收據印章已更新！線上收據將自動蓋上此印章。');
+    } catch (err: any) {
+      console.error('upload stamp error:', err);
+      alert('上傳失敗：' + (err.message || '未知錯誤'));
+    } finally {
+      setUploadingStamp(false);
+      e.target.value = '';
+    }
+  };
 
   const fetchReceipts = async () => {
     setLoading(true);
@@ -148,6 +178,11 @@ const ReceiptManager: React.FC = () => {
           <p className="text-gray-500 text-sm mt-1">檢視與管理所有已開立的收據紀錄。</p>
         </div>
         <div className="flex items-center gap-4">
+          <label className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold shadow-lg cursor-pointer ${uploadingStamp ? 'bg-gray-300 text-gray-500' : 'bg-gray-700 text-white hover:bg-gray-800 shadow-gray-100'}`}>
+            {uploadingStamp ? <Loader2 size={18} className="animate-spin" /> : <Stamp size={18} />}
+            {stampExists ? '更換收據印章' : '上傳收據印章'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleUploadStamp} disabled={uploadingStamp} />
+          </label>
           <button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-100">
             <Download size={18} /> 匯出 Excel
           </button>
@@ -157,6 +192,25 @@ const ReceiptManager: React.FC = () => {
           <button onClick={fetchReceipts} className="flex items-center gap-2 text-gray-500 hover:text-gray-900">
             <RefreshCcw size={18} /> 重新整理
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500 font-bold whitespace-nowrap">線上收據印章</span>
+          <div className="h-16 w-28 border border-dashed border-gray-200 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+            {/* 始終嘗試載入：成功→顯示並標記存在；失敗→顯示提示 */}
+            <img
+              src={stampUrl}
+              alt="收據印章"
+              onLoad={() => setStampExists(true)}
+              onError={() => setStampExists(false)}
+              className={`max-h-14 max-w-full object-contain ${stampExists ? '' : 'hidden'}`}
+              style={{ mixBlendMode: 'multiply' }}
+            />
+            {!stampExists && <span className="text-[11px] text-gray-400 flex items-center gap-1"><UploadCloud size={14} />尚未設定</span>}
+          </div>
+          <span className="text-[11px] text-gray-400 max-w-[180px] hidden lg:block">建議上傳去背 PNG；會自動蓋在「繳費自動開立」的線上收據右下角。</span>
         </div>
       </div>
 

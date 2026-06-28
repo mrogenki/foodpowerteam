@@ -21,6 +21,12 @@ export const EMAIL_CONFIG = {
   PUBLIC_KEY: 'ajJknYqtnk3p1_WmI'
 };
 
+// ==========================================
+// 收據印章（存 Supabase Storage 公開路徑，線上收據頁與後台共用）
+// ==========================================
+export const RECEIPT_STAMP_BUCKET = 'receipts';
+export const RECEIPT_STAMP_PATH = '_assets/receipt-stamp.png';
+
 export const INITIAL_ACTIVITIES: Activity[] = [
   {
     id: '1',

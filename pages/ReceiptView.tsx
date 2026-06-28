@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
+import { RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 
 interface ReceiptRow {
@@ -37,6 +38,11 @@ const ReceiptView: React.FC = () => {
   const [receipt, setReceipt] = useState<ReceiptRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stampOk, setStampOk] = useState(true);
+
+  const stampUrl = supabase
+    ? supabase.storage.from(RECEIPT_STAMP_BUCKET).getPublicUrl(RECEIPT_STAMP_PATH).data.publicUrl
+    : '';
 
   useEffect(() => {
     const fetchReceipt = async () => {
@@ -175,8 +181,17 @@ const ReceiptView: React.FC = () => {
             <p>項目：<span className="font-bold">{feeLabel}</span></p>
             <p className="text-sm text-gray-500">本收據由系統自動開立，電子文件具同等效力。</p>
           </div>
-          <div className="text-right">
+          <div className="text-right relative">
             <p>經手人：<span className="font-bold">{receipt.handler_name}</span></p>
+            {stampUrl && stampOk && (
+              <img
+                src={stampUrl}
+                alt="協會印章"
+                onError={() => setStampOk(false)}
+                className="absolute right-0 -top-4 sm:-top-6 h-24 sm:h-28 object-contain pointer-events-none select-none"
+                style={{ mixBlendMode: 'multiply' }}
+              />
+            )}
           </div>
         </div>
       </div>
