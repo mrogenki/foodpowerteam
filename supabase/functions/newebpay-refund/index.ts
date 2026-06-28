@@ -166,6 +166,7 @@ serve(async (req) => {
     // ── 4. 藍新成功 → 更新 DB（標記已退費）──
     const tradeNo = api?.Result?.TradeNo || null
     const refundedAtISO = new Date().toISOString()
+    let pointsReturned = 0
 
     if (source === 'renewal') {
       // 續費：用 RPC 標記退費並縮回會籍（−1 年）
@@ -186,6 +187,13 @@ serve(async (req) => {
         })
         .eq('merchant_order_no', order_no)
       if (updErr) console.error(`[Refund] ${table} update error:`, updErr)
+
+      // 活動報名：若有用點數折抵（已核銷 redeemed），回補點數（RPC 冪等）
+      if (source === 'registration') {
+        const { data: ptData, error: ptErr } = await supabase.rpc('points_refund_redeemed', { p_order_no: order_no })
+        if (ptErr) console.error('[Refund] points_refund_redeemed error:', ptErr)
+        else if (ptData?.points) pointsReturned = Number(ptData.points) || 0
+      }
     }
 
     // ── 5. Telegram 通知 ──
@@ -196,7 +204,8 @@ serve(async (req) => {
         const sourceLabel = source === 'registration' ? '活動報名' : source === 'application' ? '入會申請' : '會員續費'
         const modeLabel = mode === 'refund' ? '退款（已請款交易）' : '取消授權（未請款交易）'
         const who = rec.name || rec.member_name || rec.contact_name || rec.email || ''
-        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
+        const pointsNote = pointsReturned > 0 ? `\n已回補點數：${pointsReturned} 點` : ''
+        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}${pointsNote}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -207,7 +216,7 @@ serve(async (req) => {
       console.error('[Refund] telegram error:', e)
     }
 
-    return json({ status: 'success', mode, amount, trade_no: tradeNo, message: api?.Message })
+    return json({ status: 'success', mode, amount, trade_no: tradeNo, points_returned: pointsReturned, message: api?.Message })
   } catch (e) {
     console.error('[Refund] error:', e)
     return json({ status: 'error', error: (e as Error).message }, 500)

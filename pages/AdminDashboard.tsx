@@ -38,7 +38,8 @@ async function runRefundOnPaid(
     const res = await requestRefund(orderNo, source);
     if (res.ok) {
       onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED, refunded_at: new Date().toISOString(), refund_amount: res.amount });
-      alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}`);
+      const ptNote = res.pointsReturned && res.pointsReturned > 0 ? `\n已回補折抵點數：${res.pointsReturned} 點` : '';
+      alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}${ptNote}`);
     } else {
       if (confirm(`❌ 藍新刷退失敗：\n${res.message || res.error}\n\n是否仍要「僅手動標記為已退費」？（不會實際退錢）`)) {
         onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED });
