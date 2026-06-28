@@ -194,7 +194,7 @@ serve(async (req) => {
 
           // Helper: 自動開立線上收據並寄出連結（活動/入會/續費）。RPC 冪等，重複回呼安全。
           const SITE_URL = Deno.env.get('SITE_URL') || 'https://www.foodpowerteam.com';
-          const issueAndEmailReceipt = async (src: 'registration' | 'application' | 'renewal', orderNo: string) => {
+          const issueAndEmailReceipt = async (src: 'registration' | 'application' | 'renewal' | 'festival', orderNo: string) => {
             try {
               const { data: rcpt, error: rErr } = await supabase.rpc('issue_receipt_for_order', { p_order_no: orderNo, p_source: src });
               if (rErr) { console.error('[Notify] issue_receipt_for_order error:', rErr); return; }
@@ -263,6 +263,8 @@ serve(async (req) => {
                 console.error(`[Notify] Festival email process error:`, emailErr);
               }
 
+              // 自動開立並寄送線上收據（款項項目：捐款）
+              await issueAndEmailReceipt('festival', merchantOrderNo);
               // 燒肉/火鍋祭收入自動連動「收支管理」（冪等）
               await addIncome('festival', merchantOrderNo);
             } else {

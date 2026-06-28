@@ -1,0 +1,9 @@
+-- 收據開立 RPC 增加 festival 來源（燒肉/火鍋祭，款項項目歸捐款 donation）
+-- 已透過 MCP apply_migration 套用，這裡留底。完整函式定義見 20260629_receipt_auto_issue.sql，
+-- 此版於 issue_receipt_for_order 增加下列 festival 分支：
+--   ELSIF p_source = 'festival' THEN
+--     SELECT * FROM festival_registrations WHERE merchant_order_no = p_order_no
+--       OR (order_no_history ILIKE '%'||p_order_no||'%')
+--     payer = invoice_title / brand_name / contact_name；tax_id；amount = paid_amount；
+--     email = contact_email；fee_type = 'donation'；note = 場次標籤 + 合作報名（品牌）
+-- （函式為 CREATE OR REPLACE，實際完整內容已部署於資料庫）
