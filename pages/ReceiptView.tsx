@@ -166,12 +166,14 @@ const ReceiptView: React.FC = () => {
                 </div>
               </td>
             </tr>
-            {receipt.note && (
-              <tr>
-                <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap">備註</td>
-                <td className="border border-black py-3 px-4 text-left" colSpan={5}>{receipt.note}</td>
-              </tr>
-            )}
+            <tr>
+              <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap">訂單編號</td>
+              <td className="border border-black py-3 px-4 text-left font-mono" colSpan={5}>{receipt.order_no || '—'}</td>
+            </tr>
+            <tr>
+              <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap">備註</td>
+              <td className="border border-black py-3 px-4 text-left" colSpan={5}>{receipt.note || '—'}</td>
+            </tr>
           </tbody>
         </table>
 
