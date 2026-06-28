@@ -30,11 +30,12 @@ const encrypt = (data: string, hashKey: string, hashIV: string): string => {
 }
 
 // 對應前端送單的來源表
-type Source = 'registration' | 'application' | 'renewal'
+type Source = 'registration' | 'application' | 'renewal' | 'festival'
 const TABLE_BY_SOURCE: Record<Source, string> = {
   registration: 'registrations',
   application: 'member_applications',
   renewal: 'member_renewals',
+  festival: 'festival_registrations',
 }
 
 const SYSTEM_OWNERS = ['mr.ogenki@gmail.com']
@@ -226,9 +227,9 @@ serve(async (req) => {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
       const chatId = Deno.env.get('TELEGRAM_CHAT_ID')
       if (token && chatId) {
-        const sourceLabel = source === 'registration' ? '活動報名' : source === 'application' ? '入會申請' : '會員續費'
+        const sourceLabel = source === 'registration' ? '活動報名' : source === 'application' ? '入會申請' : source === 'festival' ? '燒肉/火鍋祭' : '會員續費'
         const modeLabel = mode === 'refund' ? '退款（已請款交易）' : '取消授權（未請款交易）'
-        const who = rec.name || rec.member_name || rec.contact_name || rec.email || ''
+        const who = rec.name || rec.member_name || rec.brand_name || rec.contact_name || rec.email || ''
         const pointsNote = pointsReturned > 0 ? `\n已回補點數：${pointsReturned} 點` : ''
         const receiptNote = receiptCancelled ? '\n收據：已自動作廢' : ''
         const incomeNote = incomeDeleted ? '\n收支管理：已刪除活動收入' : ''

@@ -3676,7 +3676,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/finances" element={<FinancialManager records={props.financialRecords} onAdd={props.onAddFinancialRecord} onUpdate={props.onUpdateFinancialRecord} onDelete={props.onDeleteFinancialRecord} onUploadImage={props.onUploadImage} />} />
           <Route path="/member-applications" element={<MemberApplicationManager applications={props.memberApplications} onApprove={props.onApproveMemberApplication} onDelete={props.onDeleteMemberApplication} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           <Route path="/member-renewals" element={<MemberRenewalManager isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
-          <Route path="/festival-applications" element={<FestivalApplicationManager />} />
+          <Route path="/festival-applications" element={<FestivalApplicationManager isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />
           <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} onUpdateNote={props.onUpdateCouponNote} />} />

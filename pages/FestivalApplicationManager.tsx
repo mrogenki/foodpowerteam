@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { requestRefund } from '../utils/newebpay';
 import { Loader2, RefreshCcw, CheckCircle, XCircle, Link2, Eye, X, Flame, Receipt, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
@@ -103,7 +104,7 @@ const brandsOf = (app: FestivalApplication): BrandDetail[] => {
 
 const suggestAmount = (app: FestivalApplication) => brandsOf(app).reduce((s, b) => s + brandAmount(b, listingOf(app)), 0);
 
-const FestivalApplicationManager: React.FC = () => {
+const FestivalApplicationManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSuperAdmin }) => {
   const [apps, setApps] = useState<FestivalApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<FestivalApplication | null>(null);
@@ -315,10 +316,11 @@ const FestivalApplicationManager: React.FC = () => {
     const reg = regOf(app);
     if (!reg) return <span className="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-500">尚未產生連結</span>;
     const paid = reg.payment_status === 'paid';
+    const refunded = reg.payment_status === 'refunded';
     return (
       <div>
-        <span className={`px-2 py-1 rounded text-xs font-bold ${paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-          {paid ? '已付款' : '待付款'}
+        <span className={`px-2 py-1 rounded text-xs font-bold ${refunded ? 'bg-gray-200 text-gray-500' : paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          {refunded ? '已退費' : paid ? '已付款' : '待付款'}
         </span>
         <div className="text-xs text-gray-400 mt-1">NT$ {(reg.paid_amount || reg.amount || 0).toLocaleString()}</div>
         {paid && reg.paid_at && <div className="text-[10px] text-gray-400">{new Date(reg.paid_at).toLocaleString('zh-TW')}</div>}
@@ -359,15 +361,39 @@ const FestivalApplicationManager: React.FC = () => {
 
   const paymentBadgeReg = (reg: FestivalRegistration) => {
     const paid = reg.payment_status === 'paid';
+    const refunded = reg.payment_status === 'refunded';
     return (
       <div>
-        <span className={`px-2 py-1 rounded text-xs font-bold ${paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-          {paid ? '已付款' : '待付款'}
+        <span className={`px-2 py-1 rounded text-xs font-bold ${refunded ? 'bg-gray-200 text-gray-500' : paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          {refunded ? '已退費' : paid ? '已付款' : '待付款'}
         </span>
         <div className="text-xs text-gray-400 mt-1">NT$ {(reg.paid_amount || reg.amount || 0).toLocaleString()}</div>
         {paid && reg.paid_at && <div className="text-[10px] text-gray-400">{new Date(reg.paid_at).toLocaleString('zh-TW')}</div>}
       </div>
     );
+  };
+
+  // 燒肉/火鍋祭刷退（總管理員）：呼叫藍新真實退款 → 自動刪收入、作廢收據
+  const handleRefundReg = async (reg: FestivalRegistration) => {
+    const orderNo = reg.merchant_order_no || '';
+    if (!orderNo) { alert('此筆無金流單號，無法 API 刷退'); return; }
+    if (!confirm(`⚠️ 即將向藍新發動「真實刷退」，款項會實際退回對方且無法復原。\n\n品牌：${reg.brand_name || reg.contact_name || ''}\n金額：NT$ ${(reg.paid_amount || reg.amount || 0).toLocaleString()}\n\n確定執行？`)) return;
+    setBusyId(reg.id);
+    try {
+      const res = await requestRefund(orderNo, 'festival');
+      if (res.ok) {
+        const extra = `${res.receiptCancelled ? '\n對應收據已作廢' : ''}${res.incomeDeleted ? '\n收支管理已刪除收入' : ''}`;
+        alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}${extra}`);
+        fetchRegistrations();
+        fetchReceipts();
+      } else {
+        alert(`❌ 藍新刷退失敗：\n${res.message || res.error}`);
+      }
+    } catch (err: any) {
+      alert('刷退失敗：' + (err.message || '未知錯誤'));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const renderSelfServiceTable = () => (
@@ -434,6 +460,9 @@ const FestivalApplicationManager: React.FC = () => {
                         <Receipt size={12} /> {receiptIssued(reg) ? '已開立' : '開立收據'}
                       </button>
                     )}
+                    {isSuperAdmin && reg.payment_status === 'paid' && (
+                      <button onClick={() => handleRefundReg(reg)} disabled={busyId === reg.id} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-bold flex items-center gap-1 hover:bg-red-100 disabled:opacity-50" title="向藍新真實刷退（自動刪收入、作廢收據）"><RefreshCcw size={12} /> 刷退</button>
+                    )}
                     <button onClick={() => handleDeleteReg(reg)} disabled={busyId === reg.id} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50">
                       <XCircle size={14} /> 刪除
                     </button>
@@ -477,6 +506,9 @@ const FestivalApplicationManager: React.FC = () => {
                 <button onClick={() => openReceiptReg(reg)} disabled={receiptIssued(reg)} className={`text-xs px-2 py-1.5 rounded font-bold flex items-center gap-1 border ${receiptIssued(reg) ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}>
                   <Receipt size={12} /> {receiptIssued(reg) ? '已開立' : '開立收據'}
                 </button>
+              )}
+              {isSuperAdmin && reg.payment_status === 'paid' && (
+                <button onClick={() => handleRefundReg(reg)} disabled={busyId === reg.id} className="text-xs bg-red-50 text-red-600 px-2 py-1.5 rounded font-bold flex items-center gap-1 hover:bg-red-100 disabled:opacity-50"><RefreshCcw size={12} /> 刷退</button>
               )}
               <button onClick={() => handleDeleteReg(reg)} disabled={busyId === reg.id} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded flex items-center gap-1 disabled:opacity-50 ml-auto"><XCircle size={14} /> 刪除</button>
             </div>
@@ -569,6 +601,9 @@ const FestivalApplicationManager: React.FC = () => {
                           <Receipt size={12} /> {receiptIssued(regOf(app)) ? '已開立' : '開立收據'}
                         </button>
                       )}
+                      {isSuperAdmin && isPaidOf(app) && regOf(app) && (
+                        <button onClick={() => handleRefundReg(regOf(app)!)} disabled={busyId === regOf(app)!.id} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-bold flex items-center gap-1 hover:bg-red-100 disabled:opacity-50" title="向藍新真實刷退（自動刪收入、作廢收據）"><RefreshCcw size={12} /> 刷退</button>
+                      )}
                       {!isProcessed && (
                         <>
                           <button onClick={() => setStatus(app, 'approved')} disabled={busyId === app.id} className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold disabled:opacity-50">核准</button>
@@ -633,6 +668,9 @@ const FestivalApplicationManager: React.FC = () => {
                   <button onClick={() => openReceipt(app)} disabled={receiptIssued(regOf(app))} className={`text-xs px-2 py-1.5 rounded font-bold flex items-center gap-1 border ${receiptIssued(regOf(app)) ? 'bg-green-50 text-green-700 border-green-200 cursor-default' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}>
                     <Receipt size={12} /> {receiptIssued(regOf(app)) ? '已開立' : '開立收據'}
                   </button>
+                )}
+                {isSuperAdmin && isPaidOf(app) && regOf(app) && (
+                  <button onClick={() => handleRefundReg(regOf(app)!)} disabled={busyId === regOf(app)!.id} className="text-xs bg-red-50 text-red-600 px-2 py-1.5 rounded font-bold flex items-center gap-1 hover:bg-red-100 disabled:opacity-50"><RefreshCcw size={12} /> 刷退</button>
                 )}
                 {!isProcessed && (
                   <>

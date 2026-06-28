@@ -113,7 +113,7 @@ export const generateNewebPayForm = (data: NewebPayData) => {
 // 藍新刷退（呼叫 newebpay-refund Edge Function）
 // 由 Edge Function 伺服端強制驗證 SUPER_ADMIN 並實際呼叫藍新 Close API
 // ==========================================
-export type RefundSource = 'registration' | 'application' | 'renewal';
+export type RefundSource = 'registration' | 'application' | 'renewal' | 'festival';
 
 export interface RefundResult {
   ok: boolean;
@@ -122,6 +122,7 @@ export interface RefundResult {
   tradeNo?: string | null;
   pointsReturned?: number; // 活動報名退費時回補的折抵點數
   receiptCancelled?: boolean; // 對應收據是否已作廢
+  incomeDeleted?: boolean; // 連動收入是否已刪除
   error?: string;
   message?: string;
 }
@@ -145,7 +146,7 @@ export const requestRefund = async (orderNo: string, source: RefundSource): Prom
   }
 
   if (data?.status === 'success') {
-    return { ok: true, mode: data.mode, amount: data.amount, tradeNo: data.trade_no, pointsReturned: data.points_returned, receiptCancelled: data.receipt_cancelled, message: data.message };
+    return { ok: true, mode: data.mode, amount: data.amount, tradeNo: data.trade_no, pointsReturned: data.points_returned, receiptCancelled: data.receipt_cancelled, incomeDeleted: data.income_deleted, message: data.message };
   }
   return { ok: false, error: data?.error || 'unknown', message: data?.message || '刷退失敗' };
 };
