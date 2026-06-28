@@ -340,6 +340,14 @@ serve(async (req) => {
 
             // 自動開立並寄送線上收據
             await issueAndEmailReceipt('registration', merchantOrderNo);
+
+            // 活動收入自動連動「收支管理」（冪等）
+            try {
+              const { error: finErr } = await supabase.rpc('add_activity_income', { p_order_no: merchantOrderNo });
+              if (finErr) console.error('[Notify] add_activity_income error:', finErr);
+            } catch (e) {
+              console.error('[Notify] add_activity_income exception:', e);
+            }
           }
 
           if (!regData) {

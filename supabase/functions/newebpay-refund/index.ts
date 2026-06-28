@@ -196,6 +196,18 @@ serve(async (req) => {
       }
     }
 
+    // ── 4a2. 活動退款 → 刪除連動的「活動收入」財務記錄 ──
+    let incomeDeleted = false
+    if (source === 'registration') {
+      const { data: finRows, error: finErr } = await supabase
+        .from('financial_records')
+        .delete()
+        .eq('order_no', order_no)
+        .select('id')
+      if (finErr) console.error('[Refund] delete financial_records error:', finErr)
+      else if (finRows && finRows.length > 0) incomeDeleted = true
+    }
+
     // ── 4b. 作廢對應收據（若有開立）──
     let receiptCancelled = false
     {
@@ -219,7 +231,8 @@ serve(async (req) => {
         const who = rec.name || rec.member_name || rec.contact_name || rec.email || ''
         const pointsNote = pointsReturned > 0 ? `\n已回補點數：${pointsReturned} 點` : ''
         const receiptNote = receiptCancelled ? '\n收據：已自動作廢' : ''
-        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}${pointsNote}${receiptNote}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
+        const incomeNote = incomeDeleted ? '\n收支管理：已刪除活動收入' : ''
+        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}${pointsNote}${receiptNote}${incomeNote}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -230,7 +243,7 @@ serve(async (req) => {
       console.error('[Refund] telegram error:', e)
     }
 
-    return json({ status: 'success', mode, amount, trade_no: tradeNo, points_returned: pointsReturned, receipt_cancelled: receiptCancelled, message: api?.Message })
+    return json({ status: 'success', mode, amount, trade_no: tradeNo, points_returned: pointsReturned, receipt_cancelled: receiptCancelled, income_deleted: incomeDeleted, message: api?.Message })
   } catch (e) {
     console.error('[Refund] error:', e)
     return json({ status: 'error', error: (e as Error).message }, 500)
