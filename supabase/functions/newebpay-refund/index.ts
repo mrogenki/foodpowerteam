@@ -196,6 +196,19 @@ serve(async (req) => {
       }
     }
 
+    // ── 4b. 作廢對應收據（若有開立）──
+    let receiptCancelled = false
+    {
+      const { data: rcRows, error: rcErr } = await supabase
+        .from('receipts')
+        .update({ status: 'cancelled', cancelled_at: refundedAtISO })
+        .eq('order_no', order_no)
+        .neq('status', 'cancelled')
+        .select('receipt_no')
+      if (rcErr) console.error('[Refund] cancel receipt error:', rcErr)
+      else if (rcRows && rcRows.length > 0) receiptCancelled = true
+    }
+
     // ── 5. Telegram 通知 ──
     try {
       const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
@@ -205,7 +218,8 @@ serve(async (req) => {
         const modeLabel = mode === 'refund' ? '退款（已請款交易）' : '取消授權（未請款交易）'
         const who = rec.name || rec.member_name || rec.contact_name || rec.email || ''
         const pointsNote = pointsReturned > 0 ? `\n已回補點數：${pointsReturned} 點` : ''
-        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}${pointsNote}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
+        const receiptNote = receiptCancelled ? '\n收據：已自動作廢' : ''
+        const text = `💸 <b>新通知：藍新刷退成功（${sourceLabel}）</b>\n\n對象：${who}\n訂單：${order_no}\n金額：NT$ ${amount.toLocaleString()}\n方式：${modeLabel}\n藍新交易序號：${tradeNo || '—'}${pointsNote}${receiptNote}\n操作者：${email}${source === 'renewal' ? '\n\n※ 已自動縮回會籍 1 年，請確認會員到期日。' : ''}`
         await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,7 +230,7 @@ serve(async (req) => {
       console.error('[Refund] telegram error:', e)
     }
 
-    return json({ status: 'success', mode, amount, trade_no: tradeNo, points_returned: pointsReturned, message: api?.Message })
+    return json({ status: 'success', mode, amount, trade_no: tradeNo, points_returned: pointsReturned, receipt_cancelled: receiptCancelled, message: api?.Message })
   } catch (e) {
     console.error('[Refund] error:', e)
     return json({ status: 'error', error: (e as Error).message }, 500)

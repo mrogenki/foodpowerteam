@@ -28,6 +28,7 @@ const DesignDemoJP = lazy(() => import('./pages/DesignDemoJP'));
 const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
 const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
 const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
+const ReceiptView = lazy(() => import('./pages/ReceiptView'));
 
 import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
@@ -1038,6 +1039,7 @@ const App: React.FC = () => {
               <Route path="/design/eu" element={<DesignDemoEU />} />
               <Route path="/design/cn" element={<DesignDemoCN />} />
               <Route path="/checkin/:activityId" element={<ActivityCheckIn />} />
+              <Route path="/receipt/:token" element={<ReceiptView />} />
 
               <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <LoginPage />} />
               

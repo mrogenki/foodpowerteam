@@ -121,6 +121,7 @@ export interface RefundResult {
   amount?: number;
   tradeNo?: string | null;
   pointsReturned?: number; // 活動報名退費時回補的折抵點數
+  receiptCancelled?: boolean; // 對應收據是否已作廢
   error?: string;
   message?: string;
 }
@@ -144,7 +145,7 @@ export const requestRefund = async (orderNo: string, source: RefundSource): Prom
   }
 
   if (data?.status === 'success') {
-    return { ok: true, mode: data.mode, amount: data.amount, tradeNo: data.trade_no, pointsReturned: data.points_returned, message: data.message };
+    return { ok: true, mode: data.mode, amount: data.amount, tradeNo: data.trade_no, pointsReturned: data.points_returned, receiptCancelled: data.receipt_cancelled, message: data.message };
   }
   return { ok: false, error: data?.error || 'unknown', message: data?.message || '刷退失敗' };
 };

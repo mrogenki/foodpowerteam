@@ -192,6 +192,30 @@ serve(async (req) => {
             }
           };
 
+          // Helper: 自動開立線上收據並寄出連結（活動/入會/續費）。RPC 冪等，重複回呼安全。
+          const SITE_URL = Deno.env.get('SITE_URL') || 'https://www.foodpowerteam.com';
+          const issueAndEmailReceipt = async (src: 'registration' | 'application' | 'renewal', orderNo: string) => {
+            try {
+              const { data: rcpt, error: rErr } = await supabase.rpc('issue_receipt_for_order', { p_order_no: orderNo, p_source: src });
+              if (rErr) { console.error('[Notify] issue_receipt_for_order error:', rErr); return; }
+              if (!rcpt?.ok) { console.warn('[Notify] issue_receipt skip:', rcpt?.reason); return; }
+              if (rcpt.already) { console.log(`[Notify] receipt already exists for ${orderNo}`); return; }
+              if (!rcpt.email) { console.warn(`[Notify] receipt has no email, skip send: ${orderNo}`); return; }
+              const link = `${SITE_URL}/#/receipt/${rcpt.token}`;
+              await sendEmail(Deno.env.get('EMAILJS_RECEIPT_TEMPLATE_ID') || 'template_4eq02vf', {
+                email: rcpt.email,
+                to_name: rcpt.payer_name,
+                order_id: rcpt.receipt_no,
+                amount: rcpt.amount,
+                receipt_link: link,
+              });
+              await supabase.from('receipts').update({ status: 'sent' }).eq('receipt_no', rcpt.receipt_no);
+              console.log(`[Notify] receipt issued & sent: ${rcpt.receipt_no} -> ${rcpt.email}`);
+            } catch (e) {
+              console.error('[Notify] issueAndEmailReceipt exception:', e);
+            }
+          };
+
           // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
           if (merchantOrderNo.startsWith('FEST_')) {
             console.log(`[Notify] Attempting to update festival_registrations via RPC for ${merchantOrderNo}`);
@@ -313,6 +337,9 @@ serve(async (req) => {
             } catch (emailErr) {
               console.error(`[Notify] Email process error:`, emailErr);
             }
+
+            // 自動開立並寄送線上收據
+            await issueAndEmailReceipt('registration', merchantOrderNo);
           }
 
           if (!regData) {
@@ -352,6 +379,9 @@ serve(async (req) => {
                 } catch (emailErr) {
                   console.error(`[Notify] Email process error:`, emailErr);
                 }
+
+                // 自動開立並寄送線上收據（入會費）
+                await issueAndEmailReceipt('application', merchantOrderNo);
               }
 
                 if (!appData) {
@@ -420,6 +450,9 @@ serve(async (req) => {
                     } catch (emailErr) {
                       console.error(`[Notify] Email process error:`, emailErr);
                     }
+
+                    // 自動開立並寄送線上收據（年費）
+                    await issueAndEmailReceipt('renewal', merchantOrderNo);
                   } else {
                     console.warn(`[Notify] Warning: Order not found in any table: ${merchantOrderNo}`)
                   }
