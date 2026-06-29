@@ -1,0 +1,14 @@
+-- 修正：活動名稱應取自 activities 表，而非 registrations.title（該欄實為報名者職稱）
+-- 影響 add_income_for_order 與 issue_receipt_for_order 的 registration 分支：
+--   activity title = (SELECT title FROM activities WHERE id = registrations."activityId")
+-- 並回頭修正已建立的活動收入描述與收據備註。
+-- 已透過 MCP apply_migration 套用（完整函式定義見資料庫；此檔為紀錄）。
+-- 回填語句：
+-- UPDATE financial_records f
+--   SET description = '活動：' || COALESCE(a.title,'') || '（' || COALESCE(NULLIF(r.name,''), r.member_name,'') || '）'
+--   FROM registrations r LEFT JOIN activities a ON a.id = r."activityId"
+--   WHERE f.order_no = r.merchant_order_no AND f.category = '活動收入';
+-- UPDATE receipts rc
+--   SET note = '活動：' || COALESCE(a.title,'')
+--   FROM registrations r LEFT JOIN activities a ON a.id = r."activityId"
+--   WHERE rc.order_no = r.merchant_order_no AND rc.note LIKE '活動：%';
