@@ -160,12 +160,19 @@ VITE_SUPABASE_FUNCTION_URL=
 - `ScrollToTop` component 已加入，解決換頁不回頂的問題
 - 活動圖片若存為 base64，系統管理員登入後會自動遷移至 Storage
 
+### 時區處理（重要）
+- Edge Function 跑在 **UTC** 環境。凡是要儲存「外部來源的台灣時間」（如藍新 `PayTime`，格式 `YYYY-MM-DD HH:mm:ss` 無時區），**必須明確補 `+08:00` 再轉 UTC**，否則會被當成 UTC 存入，前端用 `toLocaleString('zh-TW')` 再 +8，導致時間晚 8 小時。
+  - 正解：`new Date(payTime.replace(' ','T') + '+08:00').toISOString()`
+- DB 內若要「當下台灣日期/時間」，用 `now() AT TIME ZONE 'Asia/Taipei'`（收據 issue_date、財務 date 已採用）。
+- 前端顯示一律用 `toLocaleString('zh-TW')`，DB 一律存 UTC `timestamptz`。
+
 ### 常見 Bug 與解法
 | Bug | 原因 | 解法 |
 |-----|------|------|
 | 換頁出現大量空白 | SPA 不自動 reset scroll | `ScrollToTop` 已修復 |
 | 圖片閃白 | Supabase Storage 冷啟動 | 加 `loading="eager"` |
 | 後台無法登入 | session token 過期 | 清除 localStorage 重整 |
+| 繳費時間晚 8 小時 | 藍新 PayTime(台灣時間) 在 UTC 環境被當 UTC 存 | notify 解析補 `+08:00`（已修） |
 
 ---
 
