@@ -97,9 +97,14 @@ serve(async (req) => {
           const supabase = createClient(SupabaseUrl, SupabaseKey)
 
           // Defensive Date Parsing (防止日期格式錯誤導致寫入失敗)
+          // 藍新 PayTime 為台灣時間且無時區標記；在 UTC 環境(Deno)若直接解析會被當成 UTC，
+          // 導致前端再 +8 顯示（晚 8 小時）。故補上 +08:00 解讀成正確 UTC instant。
           let paidAtISO = new Date().toISOString();
           if (payTime) {
-              const parsedDate = new Date(payTime);
+              const normalized = String(payTime).trim().replace(' ', 'T');
+              const hasTz = /([+-]\d{2}:?\d{2}|Z)$/.test(normalized);
+              let parsedDate = new Date(hasTz ? normalized : normalized + '+08:00');
+              if (isNaN(parsedDate.getTime())) parsedDate = new Date(payTime); // 退回原始解析
               if (!isNaN(parsedDate.getTime())) {
                   paidAtISO = parsedDate.toISOString();
               }
