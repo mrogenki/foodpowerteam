@@ -84,12 +84,13 @@ const ReceiptView: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <style>{`
+        @page { size: A5 landscape; margin: 8mm; }
         @media print {
           body { background: white !important; }
           /* 列印時只保留收據本體，隱藏全站 Header/Footer 與工具列 */
           body * { visibility: hidden !important; }
           .receipt-paper, .receipt-paper * { visibility: visible !important; }
-          .receipt-paper { position: absolute !important; left: 0; top: 0; margin: 0 !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; }
+          .receipt-paper { position: absolute !important; left: 0; top: 0; margin: 0 !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
           .no-print { display: none !important; }
         }
       `}</style>

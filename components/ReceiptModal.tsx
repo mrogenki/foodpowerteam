@@ -294,7 +294,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         filename:     `收據_${receiptNo}.pdf`,
         image:        { type: 'jpeg' as const, quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, windowWidth: 1200, scrollX: 0, scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' as const }
+        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'landscape' as const }
       };
       
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
@@ -754,8 +754,8 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
           }
           /* Ensure the print area takes up the full width of the page */
           @page {
-            size: A4 landscape;
-            margin: 10mm;
+            size: A5 landscape;
+            margin: 8mm;
           }
         }
       `}} />
