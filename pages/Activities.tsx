@@ -107,10 +107,6 @@ const ActivityCard: React.FC<{ activity: Activity | MemberActivity, isMemberActi
 const ActivitiesPage: React.FC<ActivitiesProps> = ({ activities, memberActivities, loading = false }) => {
   const now = new Date();
 
-  useEffect(() => {
-    document.title = '協會活動 | 食在力量 - 連結產業，創造共好';
-  }, []);
-
   const isUpcoming = (a: Activity | MemberActivity) => {
     const activityFullDate = new Date(`${a.date.replace(/-/g, '/')} ${a.time}`);
     return activityFullDate > now;

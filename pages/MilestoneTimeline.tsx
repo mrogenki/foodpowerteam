@@ -10,10 +10,6 @@ const MilestoneTimeline: React.FC = () => {
   const [openYears, setOpenYears] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    document.title = '大事記 | 食在力量 - 連結產業，創造共好';
-  }, []);
-
-  useEffect(() => {
     const fetchMilestones = async () => {
       try {
         const { data, error } = await supabase

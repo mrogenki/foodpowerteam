@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { History, Users, Briefcase, Award, Globe, Heart, Target, Calendar, Building2, ShieldCheck, Sparkles, Handshake, TrendingUp, Newspaper, X, ZoomIn } from 'lucide-react';
 
@@ -7,10 +7,6 @@ const CERT_IMAGE = '/license-certificate.jpg';
 const AboutUs: React.FC = () => {
   const [certOpen, setCertOpen] = useState(false);
   const [certAvailable, setCertAvailable] = useState(true);
-
-  useEffect(() => {
-    document.title = '關於我們 | 食在力量 - 連結產業，創造共好';
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

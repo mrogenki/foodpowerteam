@@ -62,19 +62,7 @@ const Home: React.FC<HomeProps> = ({ activities, memberActivities }) => {
     }
   };
 
-  useEffect(() => {
-    document.title = `食在力量 - 連結產業，創造共好`;
-    
-    const updateMeta = (prop: string, content: string) => {
-      let el = document.querySelector(`meta[property="${prop}"]`);
-      if (el) el.setAttribute('content', content);
-    };
-    
-    updateMeta('og:title', '食在力量');
-    updateMeta('og:description', '食在力量 - 連結產業，創造共好。匯聚各產業菁英，提供講座論壇、企業參訪、專業課程等活動報名與會員管理服務。');
-    updateMeta('og:image', 'https://www.foodpowerteam.com/og-brand.jpg');
-    updateMeta('og:url', 'https://www.foodpowerteam.com/');
-  }, []);
+  // 頁面 title / description / OG 由 App 路由層的 <Seo> 統一提供
 
   // JSON-LD for Organization
   const orgJsonLd = {

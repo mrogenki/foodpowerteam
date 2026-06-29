@@ -206,7 +206,7 @@ serve(async (req) => {
               if (!rcpt?.ok) { console.warn('[Notify] issue_receipt skip:', rcpt?.reason); return; }
               if (rcpt.already) { console.log(`[Notify] receipt already exists for ${orderNo}`); return; }
               if (!rcpt.email) { console.warn(`[Notify] receipt has no email, skip send: ${orderNo}`); return; }
-              const link = `${SITE_URL}/#/receipt/${rcpt.token}`;
+              const link = `${SITE_URL}/receipt/${rcpt.token}`;
               await sendEmail(Deno.env.get('EMAILJS_RECEIPT_TEMPLATE_ID') || 'template_4eq02vf', {
                 email: rcpt.email,
                 to_name: rcpt.payer_name,

@@ -1,2 +1,12 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /pay-application
+Disallow: /pay-renewal
+Disallow: /pay-activity
+Disallow: /pay-festival
+Disallow: /payment-result
+Disallow: /receipt
+Disallow: /checkin
+
+Sitemap: https://www.foodpowerteam.com/sitemap.xml
