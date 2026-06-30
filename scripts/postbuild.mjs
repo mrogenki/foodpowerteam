@@ -34,7 +34,20 @@ const MIME = {
 
 let browser, server;
 try {
-  const puppeteer = (await import('puppeteer')).default;
+  const puppeteer = (await import('puppeteer-core')).default;
+  // Vercel/Lambda 環境缺 chromium 系統庫，改用 @sparticuz/chromium 打包版
+  let launchArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
+  let executablePath;
+  let headless = true;
+  try {
+    const chromium = (await import('@sparticuz/chromium')).default;
+    launchArgs = chromium.args;
+    executablePath = await chromium.executablePath();
+    headless = chromium.headless ?? true;
+  } catch (e) {
+    console.warn('[postbuild] @sparticuz/chromium 載入失敗，改用系統 Chrome：', e.message);
+    executablePath = undefined; // 本機退回（若有系統 Chrome 由 channel 指定）
+  }
 
   server = http.createServer(async (req, res) => {
     try {
@@ -54,8 +67,9 @@ try {
   await new Promise((r) => server.listen(PORT, r));
 
   browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    args: launchArgs,
+    headless,
+    ...(executablePath ? { executablePath } : { channel: 'chrome' }),
   });
 
   for (const route of ROUTES) {
