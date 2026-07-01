@@ -283,44 +283,26 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         }
       }
 
-      // 1. 產生 PDF Blob
-      const element = printRef.current;
-      if (!element) throw new Error('找不到列印內容');
+      // 1. 先儲存收據（確保 DB 有此列與 public_token，可組線上收據連結）
+      const saved = await performSave(true);
+      if (!saved) throw new Error('儲存收據失敗（可能收據編號重複）');
 
-      element.classList.add('pdf-generating');
-
-      const opt = {
-        margin:       10,
-        filename:     `收據_${receiptNo}.pdf`,
-        image:        { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, windowWidth: 1200, scrollX: 0, scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'landscape' as const }
-      };
-      
-      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-      
-      element.classList.remove('pdf-generating');
-
-      // 2. 上傳到 Supabase Storage
-      const fileName = `${Date.now()}_${receiptNo}.pdf`;
-      const { error: uploadError } = await supabase.storage
+      // 2. 取得該收據的線上收據 token
+      const { data: row, error: tokErr } = await supabase
         .from('receipts')
-        .upload(fileName, pdfBlob, { contentType: 'application/pdf' });
+        .select('public_token')
+        .eq('receipt_no', receiptNo)
+        .single();
+      if (tokErr || !row?.public_token) throw new Error('取得收據連結失敗');
+      const receiptLink = `${window.location.origin}/receipt/${row.public_token}`;
 
-      if (uploadError) throw new Error(`上傳失敗: ${uploadError.message}`);
-
-      // 3. 取得公開連結
-      const { data: { publicUrl } } = supabase.storage
-        .from('receipts')
-        .getPublicUrl(fileName);
-
-      // 4. 透過 EmailJS 寄送
+      // 3. 透過 EmailJS 寄出「線上收據連結」（與系統自動寄送一致，永不跑版）
       const templateParams = {
-        email: email,        // 對應模板中的 {{email}}
-        to_name: payerName,  // 對應模板中的 {{to_name}}
-        order_id: receiptNo, // 對應模板中的 {{order_id}}
-        amount: amount,      // 對應模板中的 {{amount}}
-        receipt_link: publicUrl // 對應模板中的 {{receipt_link}}
+        email: email,        // {{email}}
+        to_name: payerName,  // {{to_name}}
+        order_id: receiptNo, // {{order_id}}
+        amount: amount,      // {{amount}}
+        receipt_link: receiptLink // {{receipt_link}} → 線上收據頁
       };
 
       const emailResponse = await emailjs.send(
@@ -334,14 +316,9 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         throw new Error(`EmailJS 寄送失敗: ${emailResponse.text}`);
       }
 
-      // 自動儲存收據到資料庫，並標記為已寄出
-      const saved = await performSave(true, 'sent');
-
-      if (saved) {
-        alert('收據已成功寄出並儲存！');
-      } else {
-        alert('收據已寄出，但儲存到資料庫時失敗 (可能是收據編號重複或網路問題)。');
-      }
+      // 4. 標記為已寄出
+      await performSave(true, 'sent');
+      alert('收據已寄出（線上收據連結）並儲存！');
     } catch (err: any) {
       console.error('Email receipt error:', err);
       let errorMsg = '';
