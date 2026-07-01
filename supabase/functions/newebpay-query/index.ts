@@ -106,6 +106,37 @@ serve(async (req) => {
       })
       if (confirmErr) console.error('[Query] confirm_payment_paid error:', confirmErr)
 
+      // 後備路徑補齊 notify 的副作用：開線上收據 + 寄連結 + 記收入（RPC 冪等，與 notify 不衝突）
+      if (confirmType) {
+        const SITE_URL = Deno.env.get('SITE_URL') || 'https://www.foodpowerteam.com'
+        const sendEmail = async (templateId: string, params: any) => {
+          const serviceId = Deno.env.get('EMAILJS_SERVICE_ID')
+          const publicKey = Deno.env.get('EMAILJS_PUBLIC_KEY')
+          const privateKey = Deno.env.get('EMAILJS_PRIVATE_KEY')
+          if (!serviceId || !publicKey) return
+          const payload: any = { service_id: serviceId, template_id: templateId, user_id: publicKey, template_params: params }
+          if (privateKey) payload.accessToken = privateKey
+          try {
+            await fetch('https://api.emailjs.com/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          } catch (e) { console.error('[Query] email error:', e) }
+        }
+        try {
+          const { data: rcpt, error: rErr } = await supabase.rpc('issue_receipt_for_order', { p_order_no: order_no, p_source: confirmType })
+          if (rErr) console.error('[Query] issue_receipt_for_order error:', rErr)
+          else if (rcpt?.ok && !rcpt.already && rcpt.email) {
+            await sendEmail(Deno.env.get('EMAILJS_RECEIPT_TEMPLATE_ID') || 'template_4eq02vf', {
+              email: rcpt.email, to_name: rcpt.payer_name, order_id: rcpt.receipt_no, amount: rcpt.amount, receipt_link: `${SITE_URL}/receipt/${rcpt.token}`,
+            })
+            await supabase.from('receipts').update({ status: 'sent' }).eq('receipt_no', rcpt.receipt_no)
+            console.log('[Query] receipt issued & sent (fallback):', rcpt.receipt_no)
+          }
+        } catch (e) { console.error('[Query] issue_receipt exception:', e) }
+        try {
+          const { error: finErr } = await supabase.rpc('add_income_for_order', { p_order_no: order_no, p_source: confirmType })
+          if (finErr) console.error('[Query] add_income_for_order error:', finErr)
+        } catch (e) { console.error('[Query] add_income exception:', e) }
+      }
+
       // 通知管理員此單為「返回頁補確認」（NotifyURL 可能漏接）
       try {
         const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
