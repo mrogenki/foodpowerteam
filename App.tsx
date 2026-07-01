@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { StaticRouter } from 'react-router';
 import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -983,7 +984,14 @@ const App: React.FC = () => {
     } catch (error: any) { alert('刪除失敗：' + error.message); } finally { setLoading(false); }
   };
 
-  if (loading) return (
+  // SSR 預渲染：伺服端（無 window）以 StaticRouter 渲染，並繞過 loading/錯誤 gate 直接出路由內容。
+  // 客戶端維持 BrowserRouter 與原本的 loading 行為。
+  const ssrUrl = typeof window === 'undefined' ? ((globalThis as any).__SSR_URL__ || '/') : null;
+  const isSSR = ssrUrl !== null;
+  const ChosenRouter: any = isSSR ? StaticRouter : Router;
+  const routerProps: any = isSSR ? { location: ssrUrl } : {};
+
+  if (loading && !isSSR) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
       <Loader2 className="animate-spin text-red-600" size={56} />
       {migrationStatus ? (
@@ -995,7 +1003,7 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (dbError && activities.length === 0) return (
+  if (!isSSR && dbError && activities.length === 0) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4 text-center">
       <XCircle className="text-red-500 mb-4" size={64} />
       <h2 className="text-2xl font-bold mb-2">系統連線錯誤</h2>
@@ -1010,7 +1018,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <Router>
+    <ChosenRouter {...routerProps}>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -1111,7 +1119,7 @@ const App: React.FC = () => {
         </main>
         <Footer />
       </div>
-    </Router>
+    </ChosenRouter>
   );
 };
 
