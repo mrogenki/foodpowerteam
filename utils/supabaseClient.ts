@@ -9,8 +9,11 @@ const getConfig = (envKey: string, storageKey: string, defaultValue: string): st
     const envVal = (import.meta as any)?.env?.[envKey];
     if (envVal) return envVal;
   } catch (e) {}
-  const storageVal = localStorage.getItem(storageKey);
-  if (storageVal) return storageVal;
+  // SSR 預渲染環境沒有 localStorage，需防護
+  if (typeof localStorage !== 'undefined') {
+    const storageVal = localStorage.getItem(storageKey);
+    if (storageVal) return storageVal;
+  }
   return defaultValue;
 };
 

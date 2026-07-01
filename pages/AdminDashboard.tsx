@@ -752,7 +752,7 @@ const MemberApplicationManager: React.FC<{
     if (!confirm(`確定要重新發送繳費連結給 ${app.name} (${app.email})？`)) return;
     
     setSendingEmailId(app.id);
-    const paymentLink = `${window.location.origin}/#/pay-application/${app.id}`;
+    const paymentLink = `${window.location.origin}/pay-application/${app.id}`;
     
     if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
       alert('EmailJS 尚未設定，無法發送郵件');
@@ -1785,7 +1785,7 @@ const ActivityManager: React.FC<{
 };
 
 const CheckInQrModal: React.FC<{ activity: Activity | MemberActivity; onClose: () => void }> = ({ activity, onClose }) => {
-  const checkInUrl = `${window.location.origin}/#/checkin/${activity.id}`;
+  const checkInUrl = `${window.location.origin}/checkin/${activity.id}`;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -1950,7 +1950,7 @@ const ActivityCheckInManager: React.FC<{
         return;
     }
 
-    const paymentLink = `${window.location.origin}/#/pay-activity/${reg.id}`;
+    const paymentLink = `${window.location.origin}/pay-activity/${reg.id}`;
     
     setSendingEmail(prev => [...prev, String(reg.id)]);
 
@@ -3034,7 +3034,7 @@ const CouponManager: React.FC<{
 
   const allActs = [...activities, ...memberActivities].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const vipLink = (c: Coupon) => `${window.location.origin}/#/activity/${c.activity_id}?c=${c.code}`;
+  const vipLink = (c: Coupon) => `${window.location.origin}/activity/${c.activity_id}?c=${c.code}`;
   const copyLink = async (c: Coupon) => {
     try { await navigator.clipboard.writeText(vipLink(c)); setCopiedCode(c.code); setTimeout(() => setCopiedCode(''), 2000); }
     catch { alert('複製失敗，請手動複製：' + vipLink(c)); }

@@ -81,7 +81,7 @@ export const generateNewebPayForm = (data: NewebPayData) => {
   const baseUrl = window.location.origin;
 
   // [前端返回] 讓使用者付款後點擊按鈕返回網站 (GET)
-  params.append('ClientBackURL', `${baseUrl}/#/payment-result?order_no=${data.MerchantOrderNo}`); 
+  params.append('ClientBackURL', `${baseUrl}/payment-result?order_no=${data.MerchantOrderNo}`);
   
   // [後端通知] 讓藍新在背景通知 Supabase Edge Function (POST)
   const SUPABASE_PROJECT_ID = 'kpltydyspvzozgxfiwra';

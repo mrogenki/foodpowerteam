@@ -155,7 +155,7 @@ const MemberRenewalManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSuperAdm
 
     setSendingEmail(prev => [...prev, renewal.id]);
     
-    const renewalPaymentLink = `${window.location.origin}/#/pay-renewal/${renewal.id}`;
+    const renewalPaymentLink = `${window.location.origin}/pay-renewal/${renewal.id}`;
 
     try {
       await emailjs.send(

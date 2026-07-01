@@ -156,7 +156,8 @@ VITE_SUPABASE_FUNCTION_URL=
 - 修改 RLS 前先在 Supabase Studio 測試，避免前台讀取異常
 
 ### 已知架構決策
-- 使用 `HashRouter`（`/#/`）而非 BrowserRouter，部署在 Vercel 無需額外 rewrite 設定
+- 使用 `BrowserRouter`（乾淨路徑 `/join`）。Vercel 已設 `vercel.json` catch-all rewrite (`/(.*) → /index.html`) 處理 SPA 深連結；`index.tsx` 有 `#/path → /path` 相容轉址保住舊 HashRouter 連結。（SEO/AI 友善，2026/06 由 HashRouter 遷移）
+- 每頁 SEO meta 由 `components/Seo.tsx` 提供（React 19 head hoisting；title 走 `document.title` 避免與 index.html 靜態 `<title>` 重複）。付款/收據/報到/後台頁設 `noindex`。`public/sitemap.xml`、`robots.txt` 已配置。
 - `ScrollToTop` component 已加入，解決換頁不回頂的問題
 - 活動圖片若存為 base64，系統管理員登入後會自動遷移至 Storage
 

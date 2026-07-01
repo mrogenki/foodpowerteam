@@ -234,7 +234,7 @@ const FestivalApplicationManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSu
         .single();
       if (regErr) throw regErr;
 
-      const link = `${window.location.origin}/#/pay-festival/${reg.id}`;
+      const link = `${window.location.origin}/pay-festival/${reg.id}`;
 
       const { error: upErr } = await supabase
         .from('festival_applications')
@@ -403,7 +403,7 @@ const FestivalApplicationManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSu
           自助繳費
           <span className="text-sm font-normal text-gray-500 ml-2">共 {selfServiceRegs.length} 筆</span>
         </h2>
-        <p className="text-xs text-gray-400 mt-1">品牌自行從付款頁（/#/festival/pay）填寫並繳費，無申請表。</p>
+        <p className="text-xs text-gray-400 mt-1">品牌自行從付款頁（/festival/pay）填寫並繳費，無申請表。</p>
       </div>
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">

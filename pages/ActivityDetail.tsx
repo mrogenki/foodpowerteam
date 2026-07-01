@@ -211,9 +211,10 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     }
   };
 
-  // 自動套用 URL 帶入的邀請碼（VIP 免費連結 / 折扣連結）：/#/activity/:id?c=CODE
+  // 自動套用 URL 帶入的邀請碼（VIP 免費連結 / 折扣連結）：/activity/:id?c=CODE
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.split('?')[1] || window.location.search);
+    // BrowserRouter：query 在 search；保留 hash 解析以相容舊的 /#/ 連結
+    const params = new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '');
     const urlCode = params.get('c') || params.get('coupon');
     if (urlCode && activity && couponStatus === 'idle' && !couponCode) {
       checkCoupon(urlCode);

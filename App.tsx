@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { StaticRouter } from 'react-router';
 import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -29,6 +30,8 @@ const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
 const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
 const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
 const ReceiptView = lazy(() => import('./pages/ReceiptView'));
+
+import Seo from './components/Seo';
 
 import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
@@ -981,7 +984,14 @@ const App: React.FC = () => {
     } catch (error: any) { alert('刪除失敗：' + error.message); } finally { setLoading(false); }
   };
 
-  if (loading) return (
+  // SSR 預渲染：伺服端（無 window）以 StaticRouter 渲染，並繞過 loading/錯誤 gate 直接出路由內容。
+  // 客戶端維持 BrowserRouter 與原本的 loading 行為。
+  const ssrUrl = typeof window === 'undefined' ? ((globalThis as any).__SSR_URL__ || '/') : null;
+  const isSSR = ssrUrl !== null;
+  const ChosenRouter: any = isSSR ? StaticRouter : Router;
+  const routerProps: any = isSSR ? { location: ssrUrl } : {};
+
+  if (loading && !isSSR) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
       <Loader2 className="animate-spin text-red-600" size={56} />
       {migrationStatus ? (
@@ -993,7 +1003,7 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (dbError && activities.length === 0) return (
+  if (!isSSR && dbError && activities.length === 0) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4 text-center">
       <XCircle className="text-red-500 mb-4" size={64} />
       <h2 className="text-2xl font-bold mb-2">系統連線錯誤</h2>
@@ -1008,28 +1018,28 @@ const App: React.FC = () => {
   );
 
   return (
-    <Router>
+    <ChosenRouter {...routerProps}>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-grow bg-gray-50/30">
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Home activities={activities} memberActivities={memberActivities} />} />
-              <Route path="/activities" element={<ActivitiesPage activities={activities} memberActivities={memberActivities} loading={loading} />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/members" element={<MemberList members={members} />} />
-              <Route path="/join" element={<MemberJoin />} />
-              <Route path="/renew" element={<MemberRenewal />} />
+              <Route path="/" element={<><Seo title="食在力量 - 連結產業，創造共好" path="" /><Home activities={activities} memberActivities={memberActivities} /></>} />
+              <Route path="/activities" element={<><Seo title="協會活動" path="/activities" description="食在力量協會活動：講座論壇、企業參訪、美食小聚等，立即線上報名。" /><ActivitiesPage activities={activities} memberActivities={memberActivities} loading={loading} /></>} />
+              <Route path="/about" element={<><Seo title="關於我們" path="/about" description="認識食在力量美食產業交流協會的理念、組織與服務，連結餐飲與美食產業菁英。" /><AboutUs /></>} />
+              <Route path="/members" element={<><Seo title="會員名單" path="/members" description="食在力量會員名單，匯聚餐飲服務、美食產品、通路行銷等各領域產業夥伴。" /><MemberList members={members} /></>} />
+              <Route path="/join" element={<><Seo title="加入會員" path="/join" description="加入食在力量會員，共享產業資源、活動優惠與商務連結。年費 NT$ 5,000。" /><MemberJoin /></>} />
+              <Route path="/renew" element={<><Seo title="會員續費" path="/renew" description="食在力量會員續費，延續會籍與產業夥伴連結。" /><MemberRenewal /></>} />
               <Route path="/activity/:id" element={<ActivityDetail type="general" activities={activities} members={members} onRegister={handleRegister} registrations={registrations} validateCoupon={validateCoupon} />} />
               <Route path="/member-activity/:id" element={<ActivityDetail type="member" activities={memberActivities} members={members} onMemberRegister={handleMemberRegister} memberRegistrations={memberRegistrations} validateCoupon={validateCoupon} />} />
-              <Route path="/pay-application/:id" element={<ApplicationPayment />} />
-              <Route path="/pay-renewal/:id" element={<RenewalPayment />} />
-              <Route path="/pay-activity/:id" element={<ActivityPayment />} />
-              <Route path="/pay-festival/:id" element={<FestivalRegistrationPayment />} />
-              <Route path="/payment-result" element={<PaymentResult />} />
-              <Route path="/milestones" element={<MilestoneTimeline />} />
-              <Route path="/festival" element={<Festival />} />
+              <Route path="/pay-application/:id" element={<><Seo title="入會繳費" path="/join" noindex /><ApplicationPayment /></>} />
+              <Route path="/pay-renewal/:id" element={<><Seo title="續費繳費" noindex /><RenewalPayment /></>} />
+              <Route path="/pay-activity/:id" element={<><Seo title="活動繳費" noindex /><ActivityPayment /></>} />
+              <Route path="/pay-festival/:id" element={<><Seo title="燒肉/火鍋祭繳費" noindex /><FestivalRegistrationPayment /></>} />
+              <Route path="/payment-result" element={<><Seo title="付款結果" noindex /><PaymentResult /></>} />
+              <Route path="/milestones" element={<><Seo title="協會大事記" path="/milestones" description="食在力量發展歷程與重要里程碑回顧。" /><MilestoneTimeline /></>} />
+              <Route path="/festival" element={<><Seo title="燒肉祭・火鍋祭" path="/festival" description="食在力量燒肉祭・火鍋祭，匯聚美食品牌的產業合作盛會。" image="https://www.foodpowerteam.com/og-brand.jpg" /><Festival /></>} />
               <Route path="/festival/pay" element={<FestivalPayment />} />
               <Route path="/festival/apply" element={<FestivalApply />} />
               {/* 隱藏連結：免上架費專案版（不從站內任何地方連出，僅私下提供給特殊品牌） */}
@@ -1038,10 +1048,10 @@ const App: React.FC = () => {
               <Route path="/design/jp" element={<DesignDemoJP />} />
               <Route path="/design/eu" element={<DesignDemoEU />} />
               <Route path="/design/cn" element={<DesignDemoCN />} />
-              <Route path="/checkin/:activityId" element={<ActivityCheckIn />} />
-              <Route path="/receipt/:token" element={<ReceiptView />} />
+              <Route path="/checkin/:activityId" element={<><Seo title="活動報到" noindex /><ActivityCheckIn /></>} />
+              <Route path="/receipt/:token" element={<><Seo title="電子收據" noindex /><ReceiptView /></>} />
 
-              <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <LoginPage />} />
+              <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <><Seo title="後台登入" noindex /><LoginPage /></>} />
               
               <Route path="/admin/*" element={
                 !authResolved ? (
@@ -1109,7 +1119,7 @@ const App: React.FC = () => {
         </main>
         <Footer />
       </div>
-    </Router>
+    </ChosenRouter>
   );
 };
 

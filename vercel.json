@@ -1,5 +1,6 @@
 
 {
+  "buildCommand": "npm run build",
   "headers": [
     {
       "source": "/(.*)",
@@ -18,7 +19,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
     }
   ]
 }
