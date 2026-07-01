@@ -82,16 +82,29 @@ const ReceiptView: React.FC = () => {
   const cancelled = receipt.status === 'cancelled';
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <div className="receipt-page-bg min-h-screen bg-gray-100 py-8 px-4">
       <style>{`
-        @page { size: A5 landscape; margin: 8mm; }
+        @page { size: A5 landscape; margin: 6mm; }
         @media print {
-          body { background: white !important; }
-          /* 列印時只保留收據本體，隱藏全站 Header/Footer 與工具列 */
-          body * { visibility: hidden !important; }
-          .receipt-paper, .receipt-paper * { visibility: visible !important; }
-          .receipt-paper { position: absolute !important; left: 0; top: 0; margin: 0 !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+          html, body { background: #fff !important; }
           .no-print { display: none !important; }
+          .receipt-page-bg { background: #fff !important; padding: 0 !important; min-height: 0 !important; }
+          .receipt-paper {
+            box-shadow: none !important;
+            margin: 0 auto !important;
+            width: 100% !important; max-width: 100% !important;
+            padding: 2mm 3mm !important;
+            page-break-inside: avoid;
+          }
+          .receipt-paper h1 { font-size: 17pt !important; margin-bottom: 2px !important; }
+          .receipt-paper h2 { font-size: 13pt !important; }
+          .receipt-topinfo { font-size: 9.5pt !important; margin-bottom: 3px !important; }
+          .receipt-title { margin-bottom: 6px !important; }
+          .receipt-paper table { font-size: 9.5pt !important; }
+          .receipt-paper td { padding-top: 2px !important; padding-bottom: 2px !important; }
+          .stamp-cell { height: auto !important; }
+          .stamp-cell img { height: 58px !important; }
+          .receipt-foot { margin-top: 4px !important; font-size: 8pt !important; }
         }
       `}</style>
 
@@ -115,13 +128,13 @@ const ReceiptView: React.FC = () => {
         )}
 
         {/* 抬頭 */}
-        <div className="text-center mb-6">
+        <div className="receipt-title text-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-widest mb-2">食在力量美食產業交流協會</h1>
           <h2 className="text-xl sm:text-2xl font-bold tracking-[0.8em] ml-[0.8em]">收據</h2>
         </div>
 
         {/* 上方資訊 */}
-        <div className="mb-3 text-base sm:text-lg space-y-1">
+        <div className="receipt-topinfo mb-3 text-base sm:text-lg space-y-1">
           <div className="flex justify-between items-center flex-wrap gap-2">
             <p>立案字號：台內團字第1130012253號</p>
             <p>日期：<span className="font-bold">{formatDate(receipt.issue_date)}</span></p>
@@ -174,7 +187,7 @@ const ReceiptView: React.FC = () => {
             <tr>
               <td className="border border-black bg-gray-100 font-bold py-3 whitespace-nowrap align-top">備註</td>
               <td className="border border-black py-3 px-4 text-left align-top" colSpan={3}>{receipt.note || ''}</td>
-              <td className="border border-black p-2 align-middle h-32" colSpan={2}>
+              <td className="stamp-cell border border-black p-2 align-middle h-32" colSpan={2}>
                 {stampUrl && stampOk && (
                   <img
                     src={stampUrl}
@@ -190,7 +203,7 @@ const ReceiptView: React.FC = () => {
         </table>
 
         {/* 下方 */}
-        <div className="mt-4">
+        <div className="receipt-foot mt-4">
           <p className="text-sm text-gray-500">本收據由系統自動開立，電子文件具同等效力。</p>
         </div>
       </div>

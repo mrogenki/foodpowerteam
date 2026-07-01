@@ -49,7 +49,7 @@ const ScrollToTop: React.FC = () => {
 
 // Landing page (例：燒肉祭/火鍋祭、設計風格 demo) 使用自帶 Header/Footer，不顯示全站導覽
 const isStandaloneLandingPath = (pathname: string) =>
-  pathname.startsWith('/festival') || pathname.startsWith('/design') || pathname.startsWith('/checkin');
+  pathname.startsWith('/festival') || pathname.startsWith('/design') || pathname.startsWith('/checkin') || pathname.startsWith('/receipt');
 
 // 載入中元件
 const PageLoader = () => (
