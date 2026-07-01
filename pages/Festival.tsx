@@ -1159,7 +1159,9 @@ const credits = {
   coOrganizer: [
     { name: '托可生活誌', role: '媒體深度報導', icon: BookOpen, color: 'from-purple-500 to-pink-500', logo: '/festival/logo-talkace.jpg' },
     { name: '呼叫KOL', role: '網紅媒合平台', icon: Camera, color: 'from-pink-500 to-rose-500', logo: '/festival/logo-callkol.png' },
-    { name: 'Mobile.Cards', role: 'APP 技術夥伴', icon: Smartphone, color: 'from-emerald-500 to-teal-500', logo: '/festival/logo-mobilecards.png' }
+    { name: 'Mobile.Cards', role: 'APP 技術夥伴', icon: Smartphone, color: 'from-emerald-500 to-teal-500', logo: '/festival/logo-mobilecards.png' },
+    { name: 'Oddle', role: '餐廳營收成長系統', icon: Store, color: 'from-orange-500 to-amber-500', logo: '/festival/協辦單位-oddle.png' },
+    { name: '可可食集', role: '餐飲訂供貨平台', icon: Utensils, color: 'from-teal-500 to-cyan-500', logo: '/festival/協辦單位-可可食集logo.jpg' }
   ],
   sponsor: [
     { name: '桂冠食品', role: '食材贊助', icon: Gift, color: 'from-amber-500 to-orange-500', logo: '/festival/logo-laurel.png' },
