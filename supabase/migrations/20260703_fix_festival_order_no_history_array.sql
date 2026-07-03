@@ -1,0 +1,16 @@
+-- 修正 festival 自動開收據/記收入靜默失敗（已透過 MCP 套用，留底）
+-- 原因：festival_registrations.order_no_history 是 text[] 陣列，
+--   issue_receipt_for_order 與 add_income_for_order 的 festival 分支誤用
+--   `order_no_history ILIKE '%'||p_order_no||'%'`（字串運算子）→ 型別錯誤
+--   (operator does not exist: text[] ~~* text)，整個 RPC 拋錯被 edge function
+--   的 try/catch 吞掉，導致 festival 從未成功自動開立收據/記收入。
+-- 修法：改用陣列成員判斷 `p_order_no = ANY(order_no_history)`。
+--
+-- 兩支函式的 festival 分支 WHERE 由：
+--   WHERE merchant_order_no = p_order_no
+--      OR (order_no_history IS NOT NULL AND order_no_history ILIKE '%' || p_order_no || '%')
+-- 改為：
+--   WHERE merchant_order_no = p_order_no
+--      OR (order_no_history IS NOT NULL AND p_order_no = ANY(order_no_history))
+--
+-- （完整 CREATE OR REPLACE 已部署於資料庫；此檔為紀錄）
