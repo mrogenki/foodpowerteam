@@ -1721,7 +1721,7 @@ const ActivityManager: React.FC<{
                </div>
                {/* 接龍報名管理：僅協會活動（activities 表，非會員專屬）且活動已建立後可設定 */}
                {editingId && !isMemberMode(formData) && (
-                 <SignupAdminPanel activityId={String(editingId)} />
+                 <SignupAdminPanel activityId={String(editingId)} isSuperAdmin={isSuperAdmin} />
                )}
                <div className="md:col-span-2 flex justify-end gap-4 pt-6 border-t">
                   <button type="button" onClick={() => setView('list')} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">取消</button>

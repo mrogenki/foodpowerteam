@@ -113,7 +113,7 @@ export const generateNewebPayForm = (data: NewebPayData) => {
 // 藍新刷退（呼叫 newebpay-refund Edge Function）
 // 由 Edge Function 伺服端強制驗證 SUPER_ADMIN 並實際呼叫藍新 Close API
 // ==========================================
-export type RefundSource = 'registration' | 'application' | 'renewal' | 'festival';
+export type RefundSource = 'registration' | 'application' | 'renewal' | 'festival' | 'signup';
 
 export interface RefundResult {
   ok: boolean;

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { SignupSettings, SignupEntry } from '../types';
-import { ListChecks, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { requestRefund } from '../utils/newebpay';
+import { ListChecks, Copy, RefreshCw, RefreshCcw, Loader2 } from 'lucide-react';
 
-// 後台：單一協會活動的接龍報名管理（開關 / 容量 / 逾時釋放 / 費用 / 名單 / 複製接龍文字）
-const SignupAdminPanel: React.FC<{ activityId: string }> = ({ activityId }) => {
+// 後台：單一協會活動的接龍報名管理（開關 / 容量 / 逾時釋放 / 費用 / 名單 / 複製接龍文字 / 刷退）
+const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }> = ({ activityId, isSuperAdmin }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [enabled, setEnabled] = useState(false); // 是否已建立接龍設定
@@ -13,6 +14,7 @@ const SignupAdminPanel: React.FC<{ activityId: string }> = ({ activityId }) => {
   const [feeAmount, setFeeAmount] = useState(0);
   const [deadlineHours, setDeadlineHours] = useState<string>(''); // 空 = 不自動釋放
   const [entries, setEntries] = useState<SignupEntry[]>([]);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase || !activityId) return;
@@ -59,7 +61,27 @@ const SignupAdminPanel: React.FC<{ activityId: string }> = ({ activityId }) => {
     }
   };
 
-  const confirmed = entries.filter(e => e.status === 'confirmed');
+  const handleRefund = async (entry: SignupEntry) => {
+    if (!entry.merchant_order_no) { alert('此筆無金流單號，無法 API 刷退'); return; }
+    if (!window.confirm(`確定要向藍新刷退「${entry.name}」的 NT$ 這筆款項嗎？\n成功後會自動釋出名額並遞補候補、作廢收據、沖銷收入。`)) return;
+    setRefundingId(entry.id);
+    try {
+      const res = await requestRefund(entry.merchant_order_no, 'signup');
+      if (res.ok) {
+        const extra = `${res.receiptCancelled ? '\n對應收據已作廢' : ''}${res.incomeDeleted ? '\n收支管理已刪除收入' : ''}`;
+        alert(`✅ 藍新刷退成功（${res.mode === 'cancel_auth' ? '取消授權／未請款交易' : '退款／已請款交易'}）\n藍新交易序號：${res.tradeNo || '—'}${extra}`);
+        await load();
+      } else {
+        alert(`刷退失敗：${res.message || '未知錯誤'}`);
+      }
+    } catch (err: any) {
+      alert(err.message || '刷退失敗');
+    } finally {
+      setRefundingId(null);
+    }
+  };
+
+  const confirmed = entries.filter(e => e.status === 'confirmed' && e.payment_status !== 'refunded');
   const waitlist = entries.filter(e => e.status === 'waitlist');
 
   const copyChainText = () => {
@@ -140,6 +162,7 @@ const SignupAdminPanel: React.FC<{ activityId: string }> = ({ activityId }) => {
                       <tr>
                         <th className="px-3 py-2">#</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">公司/品牌</th>
                         <th className="px-3 py-2">電話</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">狀態</th><th className="px-3 py-2">付款</th>
+                        {isSuperAdmin && <th className="px-3 py-2">操作</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -150,8 +173,23 @@ const SignupAdminPanel: React.FC<{ activityId: string }> = ({ activityId }) => {
                           <td className="px-3 py-2">{r.company || '—'}</td>
                           <td className="px-3 py-2">{r.phone || '—'}</td>
                           <td className="px-3 py-2">{r.email || '—'}</td>
-                          <td className="px-3 py-2">{r.status === 'confirmed' ? '正取' : '候補'}</td>
-                          <td className="px-3 py-2">{r.payment_status === 'paid' ? <span className="text-emerald-600 font-bold">已付</span> : <span className="text-gray-400">未付</span>}</td>
+                          <td className="px-3 py-2">{r.payment_status === 'refunded' ? <span className="text-gray-400">—</span> : r.status === 'confirmed' ? '正取' : '候補'}</td>
+                          <td className="px-3 py-2">
+                            {r.payment_status === 'paid' ? <span className="text-emerald-600 font-bold">已付</span>
+                              : r.payment_status === 'refunded' ? <span className="text-gray-400">已退費</span>
+                              : <span className="text-gray-400">未付</span>}
+                          </td>
+                          {isSuperAdmin && (
+                            <td className="px-3 py-2">
+                              {r.payment_status === 'paid' && (
+                                <button type="button" onClick={() => handleRefund(r)} disabled={refundingId === r.id}
+                                  className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-red-100 disabled:opacity-50"
+                                  title="向藍新真實刷退（自動釋位遞補、作廢收據、沖銷收入）">
+                                  <RefreshCcw size={12} /> {refundingId === r.id ? '刷退中…' : '刷退'}
+                                </button>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
