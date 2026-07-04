@@ -199,7 +199,7 @@ serve(async (req) => {
 
           // Helper: 自動開立線上收據並寄出連結（活動/入會/續費）。RPC 冪等，重複回呼安全。
           const SITE_URL = Deno.env.get('SITE_URL') || 'https://www.foodpowerteam.com';
-          const issueAndEmailReceipt = async (src: 'registration' | 'application' | 'renewal' | 'festival', orderNo: string) => {
+          const issueAndEmailReceipt = async (src: 'registration' | 'application' | 'renewal' | 'festival' | 'signup', orderNo: string) => {
             try {
               const { data: rcpt, error: rErr } = await supabase.rpc('issue_receipt_for_order', { p_order_no: orderNo, p_source: src });
               if (rErr) { console.error('[Notify] issue_receipt_for_order error:', rErr); return; }
@@ -222,7 +222,7 @@ serve(async (req) => {
           };
 
           // Helper: 各來源付款成功 → 新增收入到收支管理（RPC 冪等）
-          const addIncome = async (src: 'registration' | 'application' | 'renewal' | 'festival', orderNo: string) => {
+          const addIncome = async (src: 'registration' | 'application' | 'renewal' | 'festival' | 'signup', orderNo: string) => {
             try {
               const { error: finErr } = await supabase.rpc('add_income_for_order', { p_order_no: orderNo, p_source: src });
               if (finErr) console.error(`[Notify] add_income_for_order(${src}) error:`, finErr);
@@ -230,6 +230,57 @@ serve(async (req) => {
               console.error(`[Notify] add_income_for_order(${src}) exception:`, e);
             }
           };
+
+          // 6.-1 接龍報名 (獨立自助付款頁，訂單編號前綴 SIGNUP_)
+          if (merchantOrderNo.startsWith('SIGNUP_')) {
+            console.log(`[Notify] Attempting to update signup_entries via RPC for ${merchantOrderNo}`);
+            const { error: signupError } = await supabase.rpc('handle_signup_payment', {
+              p_order_no: merchantOrderNo,
+              p_amount: amount,
+              p_pay_time: paidAtISO,
+              p_pay_method: paymentMethod
+            })
+            if (signupError) console.error(`[Notify] handle_signup_payment RPC error:`, signupError);
+
+            const { data: sEntry } = await supabase
+              .from('signup_entries').select('*').eq('merchant_order_no', merchantOrderNo).maybeSingle();
+
+            if (sEntry) {
+              console.log(`[Notify] Success! Updated Signup Entry: ${merchantOrderNo}`)
+              let sTitle = '接龍報名確認', sDate = '', sTime = '', sLoc = '';
+              if (sEntry.activity_id) {
+                const { data: actData } = await supabase.from('activities').select('*').eq('id', sEntry.activity_id).single();
+                if (actData) { sTitle = actData.title || sTitle; sDate = actData.date || ''; sTime = actData.time || ''; sLoc = actData.location || ''; }
+              }
+              try {
+                await Promise.all([
+                  sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
+                    to_name: sEntry.name,
+                    email: sEntry.email,
+                    activity_title: sTitle,
+                    activity_date: sDate,
+                    activity_time: sTime,
+                    activity_location: sLoc,
+                    activity_price: sEntry.paid_amount || 0
+                  }),
+                  sendTelegram('接龍報名 (已付款)', `活動：${sTitle}\n姓名：${sEntry.name}\n電話：${sEntry.phone || ''}\nEmail：${sEntry.email}\n公司：${sEntry.company || '—'}\n金額：NT$ ${sEntry.paid_amount?.toLocaleString()}`)
+                ]);
+              } catch (emailErr) {
+                console.error(`[Notify] Signup email process error:`, emailErr);
+              }
+
+              // 自動開立並寄送線上收據 + 收入連動收支管理（皆冪等）
+              await issueAndEmailReceipt('signup', merchantOrderNo);
+              await addIncome('signup', merchantOrderNo);
+            } else {
+              console.warn(`[Notify] Warning: Signup order not found: ${merchantOrderNo}`)
+            }
+
+            return new Response('OK', {
+              headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+              status: 200
+            })
+          }
 
           // 6.0 燒肉祭/火鍋祭報名 (獨立自助付款頁，訂單編號前綴 FEST_)
           if (merchantOrderNo.startsWith('FEST_')) {

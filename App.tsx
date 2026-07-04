@@ -30,6 +30,8 @@ const DesignDemoEU = lazy(() => import('./pages/DesignDemoEU'));
 const DesignDemoCN = lazy(() => import('./pages/DesignDemoCN'));
 const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
 const ReceiptView = lazy(() => import('./pages/ReceiptView'));
+const SignupChain = lazy(() => import('./pages/SignupChain'));
+const SignupPayment = lazy(() => import('./pages/SignupPayment'));
 
 import Seo from './components/Seo';
 
@@ -49,7 +51,7 @@ const ScrollToTop: React.FC = () => {
 
 // Landing page (例：燒肉祭/火鍋祭、設計風格 demo) 使用自帶 Header/Footer，不顯示全站導覽
 const isStandaloneLandingPath = (pathname: string) =>
-  pathname.startsWith('/festival') || pathname.startsWith('/design') || pathname.startsWith('/checkin') || pathname.startsWith('/receipt');
+  pathname.startsWith('/festival') || pathname.startsWith('/design') || pathname.startsWith('/checkin') || pathname.startsWith('/receipt') || pathname.startsWith('/signup') || pathname.startsWith('/pay-signup');
 
 // 載入中元件
 const PageLoader = () => (
@@ -1049,6 +1051,8 @@ const App: React.FC = () => {
               <Route path="/design/eu" element={<DesignDemoEU />} />
               <Route path="/design/cn" element={<DesignDemoCN />} />
               <Route path="/checkin/:activityId" element={<><Seo title="活動報到" noindex /><ActivityCheckIn /></>} />
+              <Route path="/signup/:activityId" element={<><Seo title="接龍報名" noindex /><SignupChain /></>} />
+              <Route path="/pay-signup/:id" element={<><Seo title="接龍報名繳費" noindex /><SignupPayment /></>} />
               <Route path="/receipt/:token" element={<><Seo title="電子收據" noindex /><ReceiptView /></>} />
 
               <Route path="/admin/login" element={currentUser ? <Navigate to="/admin" /> : <><Seo title="後台登入" noindex /><LoginPage /></>} />

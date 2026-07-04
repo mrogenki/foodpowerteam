@@ -103,6 +103,30 @@ export type MemberRegistration = Registration & {
   member_no: string;
 };
 
+// ── 接龍報名（Signup Chain）綁協會活動 activities ──
+export interface SignupSettings {
+  activity_id: string;
+  capacity: number;
+  registration_open: boolean;
+  fee_amount: number;
+  payment_deadline_hours?: number | null;
+  created_at?: string;
+}
+
+export interface SignupEntry {
+  id: string;
+  activity_id: string;
+  name: string;
+  company?: string;
+  phone?: string;   // 敏感：僅後台（authenticated）可讀，匿名走 signup_entries_public 不含此欄
+  email?: string;   // 敏感：同上
+  status: 'confirmed' | 'waitlist';
+  payment_status: 'unpaid' | 'paid';
+  merchant_order_no?: string;
+  paid_at?: string;
+  created_at: string;
+}
+
 export interface AdminUser {
   id: string;
   name: string;
