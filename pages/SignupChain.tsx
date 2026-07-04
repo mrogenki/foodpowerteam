@@ -90,6 +90,7 @@ const SignupChain: React.FC = () => {
   const isFull = remain <= 0;
   const myIds = new Set(mySignups.map(m => m.id));
 
+  const selfCollect = settings?.payment_mode === 'self';
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -111,10 +112,14 @@ const SignupChain: React.FC = () => {
       setName(''); setPhone(''); setEmail(''); setCompany('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
-        showToast('報名成功！正在前往付款…');
-        setTimeout(() => goPay(row.id, row.cancel_token), 700);
+        if (selfCollect) {
+          showToast('報名成功！🎉');
+        } else {
+          showToast('報名成功！正在前往付款…');
+          setTimeout(() => goPay(row.id, row.cancel_token), 700);
+        }
       } else {
-        showToast('已加入候補，遞補為正取後可付款 ⏳');
+        showToast(selfCollect ? '已加入候補，有人取消會自動遞補 ⏳' : '已加入候補，遞補為正取後可付款 ⏳');
       }
     } catch (err: any) {
       showToast(err.message || '報名失敗，請稍後再試', true);
@@ -195,9 +200,20 @@ const SignupChain: React.FC = () => {
             {activity.date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 shrink-0 opacity-80" />{activity.date}</div>}
             {activity.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 shrink-0 opacity-80" />{activity.time}</div>}
             {activity.location && <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4 shrink-0 opacity-80" />{activity.location}</div>}
-            {settings.fee_amount > 0 && <div className="flex items-center gap-2 font-bold">費用 NT$ {settings.fee_amount.toLocaleString()}</div>}
+            {settings.fee_amount > 0 && (
+              <div className="flex items-center gap-2 font-bold">
+                費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* 自主收款說明 */}
+        {selfCollect && settings.collect_note && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 text-sm text-amber-800 whitespace-pre-wrap">
+            <span className="font-bold">💰 繳費方式：</span>{settings.collect_note}
+          </div>
+        )}
 
         {/* 統計列 */}
         <div className="grid grid-cols-3 gap-3 mt-6">
@@ -256,7 +272,7 @@ const SignupChain: React.FC = () => {
               )}
               <button type="submit" disabled={submitting}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-lg shadow-lg shadow-orange-200 hover:opacity-90 transition-all disabled:opacity-50">
-                {submitting ? '送出中...' : isFull ? '排候補報名 ⏳' : '送出報名並付款 🍢'}
+                {submitting ? '送出中...' : isFull ? '排候補報名 ⏳' : selfCollect ? '送出報名 🍢' : '送出報名並付款 🍢'}
               </button>
             </form>
           )}
@@ -270,7 +286,7 @@ const SignupChain: React.FC = () => {
               {mySignups.map(m => {
                 const entry = entries.find(e => e.id === m.id);
                 if (!entry) return null;
-                const needPay = entry.status === 'confirmed' && entry.payment_status !== 'paid';
+                const needPay = !selfCollect && entry.status === 'confirmed' && entry.payment_status !== 'paid';
                 return (
                   <div key={m.id} className="flex flex-wrap items-center gap-3">
                     <span className="flex-1 min-w-[120px] text-sm font-medium text-gray-700">

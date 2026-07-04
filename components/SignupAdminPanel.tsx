@@ -13,6 +13,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [capacity, setCapacity] = useState(0);
   const [feeAmount, setFeeAmount] = useState(0);
   const [deadlineHours, setDeadlineHours] = useState<string>(''); // 空 = 不自動釋放
+  const [paymentMode, setPaymentMode] = useState<'online' | 'self'>('online');
+  const [collectNote, setCollectNote] = useState('');
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
 
@@ -30,6 +32,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       setCapacity(ss.capacity);
       setFeeAmount(ss.fee_amount);
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
+      setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
+      setCollectNote(ss.collect_note || '');
     } else {
       setEnabled(false);
     }
@@ -48,8 +52,10 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
         p_activity_id: activityId,
         p_capacity: Math.max(0, capacity || 0),
         p_open: open,
-        p_deadline_hours: dh,
+        p_deadline_hours: paymentMode === 'self' ? null : dh,
         p_fee_amount: Math.max(0, feeAmount || 0),
+        p_payment_mode: paymentMode,
+        p_collect_note: paymentMode === 'self' ? collectNote : '',
       });
       if (error) throw error;
       alert(enabled ? '已更新接龍報名設定' : '已開啟接龍報名！');
@@ -106,6 +112,24 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
         <div className="flex items-center gap-2 text-gray-400 text-sm py-4"><Loader2 className="animate-spin" size={16} /> 載入中…</div>
       ) : (
         <>
+          {/* 收款方式 */}
+          <div className="mb-4">
+            <label className="block text-xs font-bold text-gray-600 mb-1">收款方式</label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setPaymentMode('online')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold border ${paymentMode === 'online' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                線上金流（藍新）
+              </button>
+              <button type="button" onClick={() => setPaymentMode('self')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold border ${paymentMode === 'self' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                發起人自主收款
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {paymentMode === 'online' ? '報名確認後導向藍新繳費；可設逾時未付款自動釋放名額。' : '不經線上金流，由主辦自行收款（現場/匯款等）；不做逾時釋放。'}
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
@@ -121,11 +145,20 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
               <input type="number" min={0} value={feeAmount} onChange={e => setFeeAmount(parseInt(e.target.value, 10) || 0)}
                 className="w-full p-2 border rounded" />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
-              <input type="number" min={1} value={deadlineHours} onChange={e => setDeadlineHours(e.target.value)} placeholder="例如 24"
-                className="w-full p-2 border rounded" />
-            </div>
+            {paymentMode === 'online' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
+                <input type="number" min={1} value={deadlineHours} onChange={e => setDeadlineHours(e.target.value)} placeholder="例如 24"
+                  className="w-full p-2 border rounded" />
+              </div>
+            )}
+            {paymentMode === 'self' && (
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-600 mb-1">繳費說明（顯示給報名者，例如匯款帳號/現場繳費）</label>
+                <textarea value={collectNote} onChange={e => setCollectNote(e.target.value)} rows={2} placeholder="例：請匯款至 玉山銀行 808 帳號 xxxx，並私訊主辦。"
+                  className="w-full p-2 border rounded" />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-4">
@@ -153,7 +186,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
               <div className="flex gap-4 mb-2 text-gray-600 font-medium">
                 <span>正取 {confirmed.length}/{capacity}</span>
                 <span>候補 {waitlist.length}</span>
-                <span>已付款 {entries.filter(e => e.payment_status === 'paid').length}</span>
+                {paymentMode === 'online' && <span>已付款 {entries.filter(e => e.payment_status === 'paid').length}</span>}
               </div>
               {entries.length > 0 && (
                 <div className="overflow-x-auto bg-white rounded-lg border">

@@ -110,6 +110,8 @@ export interface SignupSettings {
   registration_open: boolean;
   fee_amount: number;
   payment_deadline_hours?: number | null;
+  payment_mode: 'online' | 'self';   // online=藍新金流 / self=發起人自主收款
+  collect_note?: string | null;       // 自主收款說明（匯款帳號/現場繳費等）
   created_at?: string;
 }
 
