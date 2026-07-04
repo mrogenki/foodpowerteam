@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { SignupSettings, SignupEntry } from '../types';
 import { requestRefund } from '../utils/newebpay';
-import { ListChecks, Copy, RefreshCw, RefreshCcw, Loader2 } from 'lucide-react';
+import { ListChecks, Copy, RefreshCw, RefreshCcw, Trash2, Loader2 } from 'lucide-react';
 
 // 後台：單一協會活動的接龍報名管理（開關 / 容量 / 逾時釋放 / 費用 / 名單 / 複製接龍文字 / 刷退）
 const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }> = ({ activityId, isSuperAdmin }) => {
@@ -17,6 +17,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [collectNote, setCollectNote] = useState('');
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase || !activityId) return;
@@ -84,6 +85,25 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       alert(err.message || '刷退失敗');
     } finally {
       setRefundingId(null);
+    }
+  };
+
+  const handleDelete = async (entry: SignupEntry) => {
+    if (!supabase) return;
+    const paidOnline = entry.payment_status === 'paid';
+    const msg = paidOnline
+      ? `⚠️「${entry.name}」已完成線上付款。\n直接刪除「不會退款」！若要退款，請改用「刷退」。\n\n仍要刪除這筆名單嗎？`
+      : `確定要刪除「${entry.name}」這筆報名嗎？此動作無法復原。`;
+    if (!window.confirm(msg)) return;
+    setDeletingId(entry.id);
+    try {
+      const { error } = await supabase.rpc('signup_admin_delete', { p_id: entry.id });
+      if (error) throw error;
+      await load();
+    } catch (err: any) {
+      alert(err.message || '刪除失敗');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -195,7 +215,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                       <tr>
                         <th className="px-3 py-2">#</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">公司/品牌</th>
                         <th className="px-3 py-2">電話</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">狀態</th><th className="px-3 py-2">付款</th>
-                        {isSuperAdmin && <th className="px-3 py-2">操作</th>}
+                        <th className="px-3 py-2">操作</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -212,17 +232,22 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                               : r.payment_status === 'refunded' ? <span className="text-gray-400">已退費</span>
                               : <span className="text-gray-400">未付</span>}
                           </td>
-                          {isSuperAdmin && (
-                            <td className="px-3 py-2">
-                              {r.payment_status === 'paid' && (
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              {isSuperAdmin && r.payment_status === 'paid' && (
                                 <button type="button" onClick={() => handleRefund(r)} disabled={refundingId === r.id}
                                   className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-red-100 disabled:opacity-50"
                                   title="向藍新真實刷退（自動釋位遞補、作廢收據、沖銷收入）">
                                   <RefreshCcw size={12} /> {refundingId === r.id ? '刷退中…' : '刷退'}
                                 </button>
                               )}
-                            </td>
-                          )}
+                              <button type="button" onClick={() => handleDelete(r)} disabled={deletingId === r.id}
+                                className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-gray-200 disabled:opacity-50"
+                                title="從名單刪除此報名（正取刪除後自動遞補候補）">
+                                <Trash2 size={12} /> {deletingId === r.id ? '刪除中…' : '刪除'}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
