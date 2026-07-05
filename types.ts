@@ -128,9 +128,11 @@ export interface SignupEntry {
   phone?: string;   // 敏感：僅後台（authenticated）可讀，匿名走 signup_entries_public 不含此欄
   email?: string;   // 敏感：同上
   status: 'confirmed' | 'waitlist';
-  payment_status: 'unpaid' | 'paid';
+  payment_status: 'unpaid' | 'paid' | 'refunded';
+  paid_amount?: number;
   merchant_order_no?: string;
   paid_at?: string;
+  check_in_status?: boolean;
   created_at: string;
 }
 

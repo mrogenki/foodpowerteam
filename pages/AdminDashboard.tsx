@@ -69,6 +69,7 @@ interface AdminDashboardProps {
   registrations: Registration[];
   signupEntries?: SignupEntry[];
   onRefreshSignupEntries?: () => void;
+  onToggleSignupCheckin?: (id: string, value: boolean) => void;
   memberRegistrations: MemberRegistration[];
   users: AdminUser[];
   members: Member[];
@@ -1957,7 +1958,9 @@ const ActivityCheckInManager: React.FC<{
   onUpdateReg: (reg: any) => void;
   members?: Member[];
   isSuperAdmin?: boolean;
-}> = ({ type, activities, registrations, onUpdateReg, members, isSuperAdmin }) => {
+  signupEntries?: SignupEntry[];
+  onToggleSignupCheckin?: (id: string, value: boolean) => void;
+}> = ({ type, activities, registrations, onUpdateReg, members, isSuperAdmin, signupEntries, onToggleSignupCheckin }) => {
   const [selectedActivityId, setSelectedActivityId] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sendingEmail, setSendingEmail] = useState<string[]>([]);
@@ -2047,6 +2050,12 @@ const ActivityCheckInManager: React.FC<{
     const term = searchTerm.toLowerCase();
     const name = r.name || r.member_name || '';
     return name.toLowerCase().includes(term) || (r.phone && r.phone.includes(term)) || (r.merchant_order_no && r.merchant_order_no.includes(term));
+  });
+  // 接龍報名報到：只列正取、未退款者；搜尋同步
+  const currentSignups = (signupEntries || []).filter(s => String(s.activity_id) === String(selectedActivityId) && s.status === 'confirmed' && s.payment_status !== 'refunded');
+  const filteredSignups = currentSignups.filter((s) => {
+    const term = searchTerm.toLowerCase();
+    return (s.name || '').toLowerCase().includes(term) || (s.phone || '').includes(term) || (s.merchant_order_no || '').includes(term);
   });
 
   const handlePaymentStatusToggle = async (reg: any) => {
@@ -2170,8 +2179,9 @@ const ActivityCheckInManager: React.FC<{
         <p className="text-gray-500">請選擇要進行報到的活動：</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedActivities.map(act => {
-            const regCount = registrations.filter(r => String(r.activityId) === String(act.id)).length;
-            const checkedInCount = registrations.filter(r => String(r.activityId) === String(act.id) && r.check_in_status).length;
+            const actSignups = (signupEntries || []).filter(s => String(s.activity_id) === String(act.id) && s.status === 'confirmed' && s.payment_status !== 'refunded');
+            const regCount = registrations.filter(r => String(r.activityId) === String(act.id)).length + actSignups.length;
+            const checkedInCount = registrations.filter(r => String(r.activityId) === String(act.id) && r.check_in_status).length + actSignups.filter(s => s.check_in_status).length;
             return (
               <button 
                 key={act.id} 
@@ -2251,9 +2261,9 @@ const ActivityCheckInManager: React.FC<{
                </button>
              )}
              <div className="flex gap-4 text-sm font-bold text-gray-500 bg-gray-50 px-4 py-2 rounded-lg">
-               <span>總計: {currentRegistrations.length}</span>
-               <span className="text-green-600">已到: {currentRegistrations.filter(r => r.check_in_status).length}</span>
-               <span className="text-gray-400">未到: {currentRegistrations.length - currentRegistrations.filter(r => r.check_in_status).length}</span>
+               <span>總計: {currentRegistrations.length + currentSignups.length}</span>
+               <span className="text-green-600">已到: {currentRegistrations.filter(r => r.check_in_status).length + currentSignups.filter(s => s.check_in_status).length}</span>
+               <span className="text-gray-400">未到: {(currentRegistrations.length + currentSignups.length) - (currentRegistrations.filter(r => r.check_in_status).length + currentSignups.filter(s => s.check_in_status).length)}</span>
              </div>
            </div>
          </div>
@@ -2444,6 +2454,39 @@ const ActivityCheckInManager: React.FC<{
            })}
            {filteredRegs.length === 0 && <div className="p-8 text-center text-gray-400">查無資料，請嘗試其他關鍵字</div>}
          </div>
+
+         {/* 接龍報名報到（正取）*/}
+         {currentSignups.length > 0 && (
+           <div className="mt-8 border-t pt-6">
+             <div className="flex items-center gap-2 mb-3">
+               <ListChecks size={18} className="text-amber-600" />
+               <h3 className="font-bold text-gray-900">接龍報名報到</h3>
+               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{currentSignups.filter(s => s.check_in_status).length}/{currentSignups.length} 已到</span>
+             </div>
+             <div className="space-y-3">
+               {filteredSignups.map((s) => {
+                 const comp = s.company_title || s.company || '';
+                 return (
+                   <div key={s.id} className={`border rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 ${s.check_in_status ? 'bg-green-50/40 border-green-100' : 'border-gray-100'}`}>
+                     <div className="min-w-0">
+                       <div className="font-bold text-lg text-gray-900 flex items-center gap-2 flex-wrap">
+                         {s.name}
+                         <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold">接龍</span>
+                         <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${s.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{s.payment_status === 'paid' ? '已付款' : '未付款'}</span>
+                       </div>
+                       <div className="text-sm text-gray-500">{s.phone || ''}</div>
+                       {(comp || s.title) && <div className="text-xs text-gray-500">{comp}{comp && s.title ? ' / ' : ''}{s.title || ''}</div>}
+                     </div>
+                     <button onClick={() => onToggleSignupCheckin?.(s.id, !s.check_in_status)} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm active:scale-95 ${s.check_in_status ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
+                       {s.check_in_status ? <CheckCircle size={20}/> : <XCircle size={20}/>} {s.check_in_status ? '已報到' : '未報到'}
+                     </button>
+                   </div>
+                 );
+               })}
+               {filteredSignups.length === 0 && <div className="p-6 text-center text-gray-400 text-sm">接龍名單查無符合關鍵字</div>}
+             </div>
+           </div>
+         )}
        </div>
 
        {receiptData && (
@@ -3722,7 +3765,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <Routes>
           <Route path="/" element={<DashboardHome {...props} />} />
           
-          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
+          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} signupEntries={props.signupEntries} onToggleSignupCheckin={props.onToggleSignupCheckin} />} />
           {/* 向下相容：舊連結 /member-check-in 重導至統一入口 */}
           <Route path="/member-check-in" element={<Navigate to="/admin/check-in" replace />} />
 

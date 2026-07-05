@@ -628,6 +628,13 @@ const App: React.FC = () => {
     if (data) setSignupEntries(data as SignupEntry[]);
   };
 
+  const handleToggleSignupCheckin = async (id: string, value: boolean) => {
+    if (!supabase) return;
+    setSignupEntries(prev => prev.map(s => s.id === id ? { ...s, check_in_status: value } : s));  // 樂觀更新
+    const { error } = await supabase.rpc('signup_set_checkin', { p_id: id, p_value: value });
+    if (error) { console.error(error); refreshSignupEntries(); alert('報到更新失敗'); }
+  };
+
   // 活動 CRUD — 全部走統一的 activities 表，audience 在傳入物件中決定
   const writeActivity = async (act: Activity, mode: 'insert' | 'update') => {
     if (!supabase) return { error: null as any };
@@ -1082,6 +1089,7 @@ const App: React.FC = () => {
                     registrations={registrations}
                     signupEntries={signupEntries}
                     onRefreshSignupEntries={refreshSignupEntries}
+                    onToggleSignupCheckin={handleToggleSignupCheckin}
                     memberRegistrations={memberRegistrations}
                     users={users}
                     members={members}
