@@ -190,8 +190,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
               <RefreshCw size={14} /> 重新整理
             </button>
             {enabled && (
-              <button type="button" onClick={copyChainText} className="inline-flex items-center gap-1 text-sm font-bold text-amber-700 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100">
-                <Copy size={14} /> 複製接龍文字
+              <button type="button" onClick={copyChainText} title="複製成 LINE 接龍格式（1.姓名/公司，含候補），可直接貼到群組" className="inline-flex items-center gap-1 text-sm font-bold text-amber-700 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100">
+                <Copy size={14} /> 複製接龍文字（LINE 格式）
               </button>
             )}
           </div>
