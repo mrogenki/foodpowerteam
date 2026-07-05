@@ -11,6 +11,7 @@ interface SignupPayInfo {
   email: string;
   amount: number;
   activity_title: string;
+  activity_picture?: string | null;
   payment_status: 'unpaid' | 'paid';
   status: 'confirmed' | 'waitlist';
 }
@@ -97,6 +98,10 @@ const SignupPayment: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border border-gray-100">
         <div className="text-center mb-8">
+          {info.activity_picture && (
+            <img src={info.activity_picture} alt={info.activity_title}
+              className="w-full h-36 object-cover rounded-2xl mb-5 shadow-sm" loading="eager" />
+          )}
           <h1 className="text-2xl font-bold text-gray-900 mb-2">接龍報名費繳納</h1>
           <p className="text-gray-500">請確認以下資訊並完成繳費</p>
         </div>
