@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu, ListChecks } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
@@ -15,7 +15,7 @@ import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 import BatchReceiptGenerator from '../components/BatchReceiptGenerator';
 import BlockEditor from '../components/BlockEditor';
 import SignupAdminPanel from '../components/SignupAdminPanel';
-import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry } from '../types';
+import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry, SignupEntry } from '../types';
 
 // ==========================================
 // 共用：對「已付款」訂單執行退費
@@ -67,6 +67,8 @@ interface AdminDashboardProps {
   activities: Activity[];
   memberActivities: MemberActivity[];
   registrations: Registration[];
+  signupEntries?: SignupEntry[];
+  onRefreshSignupEntries?: () => void;
   memberRegistrations: MemberRegistration[];
   users: AdminUser[];
   members: Member[];
@@ -1127,7 +1129,8 @@ const ActivityManager: React.FC<{
   onUploadImage: (file: File) => Promise<string>;
   members?: Member[];
   isSuperAdmin?: boolean;
-}> = ({ type, activities, registrations, onAdd, onUpdate, onDelete, onUpdateReg, onDeleteReg, onAddRegs, onUploadImage, members, isSuperAdmin }) => {
+  signupEntries?: SignupEntry[];
+}> = ({ type, activities, registrations, onAdd, onUpdate, onDelete, onUpdateReg, onDeleteReg, onAddRegs, onUploadImage, members, isSuperAdmin, signupEntries }) => {
   // unified 模式：當活動的 audience 為 member_only 時，視為「會員活動」行為
   const isMemberMode = (act?: any) => {
     if (type === 'member') return true;
@@ -1170,6 +1173,9 @@ const ActivityManager: React.FC<{
 
   const currentActivity = activities.find(a => a.id === editingId);
   const currentRegistrations = registrations.filter(r => String(r.activityId) === String(editingId));
+  // 接龍報名（同一活動）：併入計數與名單；退款者不計入「總報名」
+  const currentSignups = (signupEntries || []).filter(s => String(s.activity_id) === String(editingId));
+  const activeSignups = currentSignups.filter(s => s.payment_status !== 'refunded');
   
   const filteredRegs = currentRegistrations.filter((r: any) => {
     const term = regSearch.toLowerCase();
@@ -1477,7 +1483,7 @@ const ActivityManager: React.FC<{
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
           <h2 className="text-2xl font-bold mb-2">{currentActivity.title}</h2>
-          <div className="flex gap-4 text-sm text-gray-500 mb-6"><span>總報名: {currentRegistrations.length} 人</span><span>已付款: {currentRegistrations.filter(r => r.payment_status === PaymentStatus.PAID).length} 人</span><span>已退費: {currentRegistrations.filter(r => r.payment_status === 'refunded').length} 人</span><span>已報到: {currentRegistrations.filter(r => r.check_in_status).length} 人</span></div>
+          <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-6"><span>總報名: {currentRegistrations.length + activeSignups.length} 人{currentSignups.length > 0 && <span className="text-amber-600">（含接龍 {activeSignups.length}）</span>}</span><span>已付款: {currentRegistrations.filter(r => r.payment_status === PaymentStatus.PAID).length + currentSignups.filter(s => s.payment_status === 'paid').length} 人</span><span>已退費: {currentRegistrations.filter(r => r.payment_status === 'refunded').length + currentSignups.filter(s => s.payment_status === 'refunded').length} 人</span><span>已報到: {currentRegistrations.filter(r => r.check_in_status).length} 人</span></div>
           <div className="flex gap-2 mb-4">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -1656,6 +1662,55 @@ const ActivityManager: React.FC<{
               );
             })}
           </div>
+
+          {/* 接龍報名（唯讀併入；互動管理請至活動編輯頁的「接龍報名管理」面板）*/}
+          {currentSignups.length > 0 && (
+            <div className="mt-8 border-t pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks size={18} className="text-amber-600" />
+                <h3 className="font-bold text-gray-900">接龍報名</h3>
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{currentSignups.length} 筆</span>
+                <span className="text-xs text-gray-400">此區為唯讀，管理（刷退／刪除）請至活動編輯頁的接龍面板</span>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-amber-100">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-amber-50 text-gray-500 text-xs">
+                    <tr>
+                      <th className="p-3">姓名/資訊</th><th className="p-3">引薦人</th><th className="p-3">備註</th>
+                      <th className="p-3">名額</th><th className="p-3">付款狀態</th><th className="p-3">金額</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-50">
+                    {currentSignups.map((s) => {
+                      const comp = s.company_title || s.company || '';
+                      return (
+                        <tr key={s.id} className={s.payment_status === 'refunded' ? 'bg-gray-50' : ''}>
+                          <td className="p-3">
+                            <div className={`font-bold flex items-center gap-2 ${s.payment_status === 'refunded' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                              {s.name}
+                              <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold no-underline">接龍</span>
+                            </div>
+                            <div className="text-xs text-gray-400">{s.phone || ''}</div>
+                            {(comp || s.title) && <div className="text-xs text-gray-500 mt-0.5">{comp}{comp && s.title ? ' / ' : ''}{s.title || ''}</div>}
+                            {s.merchant_order_no && <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{s.merchant_order_no}</div>}
+                          </td>
+                          <td className="p-3 text-xs text-gray-500">{s.referrer || '-'}</td>
+                          <td className="p-3 text-xs text-gray-500 max-w-[160px] truncate">{s.notes || '-'}</td>
+                          <td className="p-3 text-xs">{s.payment_status === 'refunded' ? '—' : s.status === 'confirmed' ? '正取' : '候補'}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${s.payment_status === 'paid' ? 'bg-green-100 text-green-700' : s.payment_status === 'refunded' ? 'bg-gray-200 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {s.payment_status === 'paid' ? '已付款' : s.payment_status === 'refunded' ? '已退費' : '未付款'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-700">{s.paid_amount != null ? `NT$ ${s.paid_amount.toLocaleString()}` : '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
         {receiptData && (
           <ReceiptModal
@@ -1761,7 +1816,7 @@ const ActivityManager: React.FC<{
                 <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar size={16} /> {act.date} {act.time}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><MapPin size={16} /> {act.location}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><DollarSign size={16} /> NT$ {(act.price ?? 0).toLocaleString()}{(act as any).member_price != null && <span className="text-red-600 font-bold ml-1">/ 會員 NT$ {(act as any).member_price.toLocaleString()}</span>}</div>
-                <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={16} /> {registrations.filter(r => String(r.activityId) === String(act.id)).length} 人已報名</div>
+                <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={16} /> {registrations.filter(r => String(r.activityId) === String(act.id)).length + (signupEntries || []).filter(s => String(s.activity_id) === String(act.id) && s.payment_status !== 'refunded').length} 人已報名</div>
               </div>
               <button onClick={() => { setEditingId(act.id); setView('registrations'); }} className="w-full py-3 bg-gray-50 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">管理報名名單 <ChevronRight size={18} /></button>
             </div>
@@ -3671,7 +3726,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           {/* 向下相容：舊連結 /member-check-in 重導至統一入口 */}
           <Route path="/member-check-in" element={<Navigate to="/admin/check-in" replace />} />
 
-          <Route path="/activities" element={<ActivityManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} onDeleteReg={(id: any) => props.onDeleteRegistration(id)} onAddRegs={(regs: any[]) => regs.every(r => r.audience === 'member_only') ? props.onAddMemberRegistrations?.(regs) : props.onAddRegistrations?.(regs)} onUploadImage={props.onUploadImage} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
+          <Route path="/activities" element={<ActivityManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onAdd={props.onAddActivity} onUpdate={props.onUpdateActivity} onDelete={props.onDeleteActivity} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} onDeleteReg={(id: any) => props.onDeleteRegistration(id)} onAddRegs={(regs: any[]) => regs.every(r => r.audience === 'member_only') ? props.onAddMemberRegistrations?.(regs) : props.onAddRegistrations?.(regs)} onUploadImage={props.onUploadImage} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} signupEntries={props.signupEntries} />} />
           {/* 向下相容：舊連結 /member-activities 重導 */}
           <Route path="/member-activities" element={<Navigate to="/admin/activities" replace />} />
           

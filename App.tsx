@@ -35,7 +35,7 @@ const SignupPayment = lazy(() => import('./pages/SignupPayment'));
 
 import Seo from './components/Seo';
 
-import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry } from './types';
+import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry, SignupEntry } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
 import { notifyAdmin } from './utils/notification';
 import { supabase } from './utils/supabaseClient';
@@ -200,6 +200,7 @@ const App: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [memberActivities, setMemberActivities] = useState<MemberActivity[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [signupEntries, setSignupEntries] = useState<SignupEntry[]>([]);
   const [memberRegistrations, setMemberRegistrations] = useState<MemberRegistration[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -323,6 +324,7 @@ const App: React.FC = () => {
         supabase.from('members').select('*'),
         supabase.from('financial_records').select('*').order('date', { ascending: false }),
         supabase.from('milestones').select('*').order('date', { ascending: false }),
+        supabase.from('signup_entries').select('*').order('created_at', { ascending: true }),
       ] : [];
 
       const results = await Promise.all([...publicQueries, ...adminQueries]);
@@ -359,6 +361,8 @@ const App: React.FC = () => {
         const memberData = results[5]?.data;
         const financialData = results[6]?.data;
         const milestoneData = results[7]?.data;
+        const signupData = results[8]?.data;
+        if (signupData) setSignupEntries(signupData as SignupEntry[]);
 
         // 統一報名表，依 audience 切回兩組
         if (allRegData) {
@@ -616,6 +620,12 @@ const App: React.FC = () => {
       setRegistrations(data.filter((r: any) => r.audience !== 'member_only'));
       setMemberRegistrations(data.filter((r: any) => r.audience === 'member_only'));
     }
+  };
+
+  const refreshSignupEntries = async () => {
+    if (!supabase || !currentUser) return;
+    const { data } = await supabase.from('signup_entries').select('*').order('created_at', { ascending: true });
+    if (data) setSignupEntries(data as SignupEntry[]);
   };
 
   // 活動 CRUD — 全部走統一的 activities 表，audience 在傳入物件中決定
@@ -1070,6 +1080,8 @@ const App: React.FC = () => {
                     memberActivities={memberActivities}
                     clubActivities={clubActivities}
                     registrations={registrations}
+                    signupEntries={signupEntries}
+                    onRefreshSignupEntries={refreshSignupEntries}
                     memberRegistrations={memberRegistrations}
                     users={users}
                     members={members}
