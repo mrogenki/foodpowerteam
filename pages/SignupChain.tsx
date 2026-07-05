@@ -200,20 +200,29 @@ const SignupChain: React.FC = () => {
           <ChevronLeft className="w-4 h-4" /> 返回活動頁
         </Link>
 
-        {/* 活動資訊卡 */}
+        {/* 活動資訊卡（有封面圖則鋪底 + 深色遮罩，否則用漸層）*/}
         <div className="bg-gradient-to-br from-red-600 via-orange-500 to-amber-500 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden">
-          <div className="absolute -right-2 -top-4 text-7xl opacity-15 rotate-[-8deg] select-none">🍢🍻</div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-1">{activity.title}</h1>
-          <p className="text-orange-100 text-sm mb-6">接龍報名・名單即時公開</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-            {activity.date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 shrink-0 opacity-80" />{activity.date}</div>}
-            {activity.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 shrink-0 opacity-80" />{activity.time}</div>}
-            {activity.location && <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4 shrink-0 opacity-80" />{activity.location}</div>}
-            {settings.fee_amount > 0 && (
-              <div className="flex items-center gap-2 font-bold">
-                費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
-              </div>
-            )}
+          {activity.picture ? (
+            <>
+              <img src={activity.picture} alt={activity.title} className="absolute inset-0 w-full h-full object-cover" loading="eager" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/55 to-black/65" />
+            </>
+          ) : (
+            <div className="absolute -right-2 -top-4 text-7xl opacity-15 rotate-[-8deg] select-none">🍢🍻</div>
+          )}
+          <div className="relative z-10">
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">{activity.title}</h1>
+            <p className="text-orange-100 text-sm mb-6">接龍報名・名單即時公開</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {activity.date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 shrink-0 opacity-80" />{activity.date}</div>}
+              {activity.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 shrink-0 opacity-80" />{activity.time}</div>}
+              {activity.location && <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4 shrink-0 opacity-80" />{activity.location}</div>}
+              {settings.fee_amount > 0 && (
+                <div className="flex items-center gap-2 font-bold">
+                  費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
