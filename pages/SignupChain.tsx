@@ -29,6 +29,11 @@ const SignupChain: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+  const [companyTitle, setCompanyTitle] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [referrer, setReferrer] = useState('');
+  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,10 +104,13 @@ const SignupChain: React.FC = () => {
     if (!name.trim())  { showToast('請填寫姓名', true); return; }
     if (!phone.trim()) { showToast('請填寫聯絡電話', true); return; }
     if (!email.trim()) { showToast('請填寫 Email', true); return; }
+    if (!company.trim())  { showToast('請填寫公司/品牌名稱', true); return; }
+    if (!jobTitle.trim()) { showToast('請填寫職務', true); return; }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.rpc('signup_register', {
         p_activity_id: activityId, p_name: name, p_phone: phone, p_email: email, p_company: company,
+        p_company_title: companyTitle, p_tax_id: taxId, p_title: jobTitle, p_referrer: referrer, p_notes: notes,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -110,6 +118,7 @@ const SignupChain: React.FC = () => {
       saveMine(activityId, next);
       setMySignups(next);
       setName(''); setPhone(''); setEmail(''); setCompany('');
+      setCompanyTitle(''); setTaxId(''); setJobTitle(''); setReferrer(''); setNotes('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
         if (selfCollect) {
@@ -260,8 +269,35 @@ const SignupChain: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">公司 / 品牌</label>
-                <input value={company} onChange={e => setCompany(e.target.value)} maxLength={60} placeholder="會顯示在公開名單上（選填）"
+                <label className="block text-sm font-medium text-gray-700 mb-2">公司 / 品牌名稱 <span className="text-red-600">*</span></label>
+                <input value={company} onChange={e => setCompany(e.target.value)} maxLength={60} placeholder="您的公司/品牌（會顯示在公開名單上）" required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">職務 <span className="text-red-600">*</span></label>
+                <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} maxLength={40} placeholder="您目前的職位" required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">公司抬頭（收據用，選填）</label>
+                  <input value={companyTitle} onChange={e => setCompanyTitle(e.target.value)} maxLength={60} placeholder="若需開立收據抬頭請填寫"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">統一編號（選填）</label>
+                  <input value={taxId} onChange={e => setTaxId(e.target.value)} maxLength={8} inputMode="numeric" placeholder="8 位數字"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">引薦人（選填）</label>
+                <input value={referrer} onChange={e => setReferrer(e.target.value)} maxLength={40} placeholder="引薦您的夥伴姓名"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">備註（選填）</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={300} rows={2} placeholder="若有特殊需求請在此說明"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
               </div>
               <p className="text-xs text-gray-400">🔒 電話與 Email 不會公開，只有主辦看得到。名單僅顯示姓名與公司/品牌。</p>

@@ -120,6 +120,11 @@ export interface SignupEntry {
   activity_id: string;
   name: string;
   company?: string;
+  company_title?: string;  // 公司抬頭（收據用）
+  tax_id?: string;         // 統一編號
+  title?: string;          // 職務
+  referrer?: string;       // 引薦人
+  notes?: string;          // 備註
   phone?: string;   // 敏感：僅後台（authenticated）可讀，匿名走 signup_entries_public 不含此欄
   email?: string;   // 敏感：同上
   status: 'confirmed' | 'waitlist';

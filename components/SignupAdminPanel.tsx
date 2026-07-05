@@ -218,7 +218,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                   <table className="w-full text-left">
                     <thead className="bg-gray-50 text-gray-500">
                       <tr>
-                        <th className="px-3 py-2">#</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">公司/品牌</th>
+                        <th className="px-3 py-2">#</th><th className="px-3 py-2">姓名</th><th className="px-3 py-2">公司/品牌</th><th className="px-3 py-2">職務</th>
                         <th className="px-3 py-2">電話</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">狀態</th><th className="px-3 py-2">付款</th>
                         <th className="px-3 py-2">操作</th>
                       </tr>
@@ -229,6 +229,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                           <td className="px-3 py-2 text-gray-400">{i + 1}</td>
                           <td className="px-3 py-2 font-medium">{r.name}</td>
                           <td className="px-3 py-2">{r.company || '—'}</td>
+                          <td className="px-3 py-2">{r.title || '—'}</td>
                           <td className="px-3 py-2">{r.phone || '—'}</td>
                           <td className="px-3 py-2">{r.email || '—'}</td>
                           <td className="px-3 py-2">{r.payment_status === 'refunded' ? <span className="text-gray-400">—</span> : r.status === 'confirmed' ? '正取' : '候補'}</td>
