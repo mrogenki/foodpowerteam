@@ -208,6 +208,11 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                 <span>候補 {waitlist.length}</span>
                 {paymentMode === 'online' && <span>已付款 {entries.filter(e => e.payment_status === 'paid').length}</span>}
               </div>
+              <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">
+                <span className="font-bold text-gray-500">刪除</span>：從名單移除（未繳費／自主收款線下已處理適用）。
+                {isSuperAdmin && <> <span className="font-bold text-gray-500">刷退</span>：線上已繳費要退錢用此，會向藍新真實退款並自動作廢收據、沖銷收入、釋位遞補。</>}
+                　正取被刪除或刷退後，候補會自動遞補。
+              </p>
               {entries.length > 0 && (
                 <div className="overflow-x-auto bg-white rounded-lg border">
                   <table className="w-full text-left">
