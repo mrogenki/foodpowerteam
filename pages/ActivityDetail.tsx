@@ -6,6 +6,7 @@ import emailjs from '@emailjs/browser';
 import { Activity, MemberActivity, Registration, MemberRegistration, Member, PaymentStatus } from '../types';
 import { EMAIL_CONFIG, POINT_TO_TWD } from '../constants';
 import { submitNewebPayForm, NEWEB_CONFIG } from '../utils/newebpay';
+import { supabase } from '../utils/supabaseClient';
 import BlockRenderer from '../components/BlockRenderer';
 
 interface ActivityDetailProps {
@@ -30,8 +31,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const [showCopyTooltip, setShowCopyTooltip] = useState(false);
   const [payNow, setPayNow] = useState(true); // 預設勾選立即付款
   
-  const [memberSearchTerm, setMemberSearchTerm] = useState('');
-  const [showMemberResults, setShowMemberResults] = useState(false);
+  // 會員價：改為「輸入完整手機 → 後端精準驗證」，不再瀏覽/下載他人資料
+  const [memberPhoneInput, setMemberPhoneInput] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [verifiedMember, setVerifiedMember] = useState<{ id: string; member_no: string; name: string; points_balance: number } | null>(null);
   
   // 折扣券相關
   const [couponCode, setCouponCode] = useState('');
@@ -121,8 +125,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const isUsingMemberPrice = !!formData.memberId && hasMemberPrice;
   const basePrice = isUsingMemberPrice ? activity.member_price! : (activity.price || 0);
 
-  // 點數抵扣：須先選取會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
-  const selectedMember = props.members?.find(m => String(m.id) === String(formData.memberId));
+  // 點數抵扣：須先驗證會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
+  const selectedMember = verifiedMember;
   const memberPoints = selectedMember?.points_balance ?? 0;
   const priceAfterCoupon = couponFree ? 0 : Math.max(0, basePrice - discountAmount);
   // VIP 免費券時不需點數抵扣
@@ -135,35 +139,38 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     setPointsApplied(prev => Math.min(prev, maxPoints));
   }, [maxPoints]);
 
-  // 搜尋會員邏輯
-  const filteredMembers = (props.members && memberSearchTerm.length >= 1)
-    ? props.members.filter(m => 
-        m.name.includes(memberSearchTerm) || 
-        (m.phone && m.phone.includes(memberSearchTerm)) ||
-        (m.member_no && m.member_no.includes(memberSearchTerm))
-      ).slice(0, 5)
-    : [];
-
-  const handleSelectMember = (member: Member) => {
-    if (!isMemberActive(member)) {
-      alert('您的會籍已到期，請聯繫管理員續約後再報名。');
-      return;
+  // 會員價驗證：輸入完整手機 → 後端 verify-member 精準比對，只回最小資訊
+  const handleVerifyMember = async () => {
+    const phone = memberPhoneInput.trim();
+    if (!phone || !supabase) return;
+    setVerifying(true);
+    setVerifyMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-member', { body: { phone } });
+      if (error || !data) {
+        setVerifyMsg({ ok: false, text: '驗證失敗，請稍後再試' });
+        return;
+      }
+      if (!data.is_member) {
+        setVerifiedMember(null);
+        setFormData(prev => ({ ...prev, memberId: '' }));
+        setVerifyMsg({ ok: false, text: '查無此手機號碼的會員資料' });
+        return;
+      }
+      if (!data.active) {
+        setVerifiedMember(null);
+        setFormData(prev => ({ ...prev, memberId: '' }));
+        setVerifyMsg({ ok: false, text: '您的會籍已到期，請聯繫管理員續約後再報名' });
+        return;
+      }
+      setVerifiedMember({ id: String(data.id), member_no: data.member_no, name: data.name, points_balance: data.points_balance ?? 0 });
+      setFormData(prev => ({ ...prev, name: data.name, phone, memberId: String(data.id) }));
+      setVerifyMsg({ ok: true, text: `✓ 已驗證：${data.name}（會員 #${data.member_no}），已套用會員價` });
+    } catch {
+      setVerifyMsg({ ok: false, text: '驗證失敗，請稍後再試' });
+    } finally {
+      setVerifying(false);
     }
-
-    setFormData({
-      name: member.name,
-      phone: member.phone || '',
-      email: member.email || '',
-      company: member.brand_name || member.company || '',
-      company_title: member.company_title || '',
-      tax_id: member.tax_id || '',
-      title: member.job_title || '',
-      referrer: member.referrer || '',
-      notes: '',
-      memberId: String(member.id)
-    });
-    setMemberSearchTerm(member.name);
-    setShowMemberResults(false);
   };
 
   const handleShare = async () => {
@@ -463,59 +470,53 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                    </div>
                 )}
 
-                {/* 會員搜尋區塊 - 會員活動必填、公開活動有會員價時選填 */}
+                {/* 會員價驗證 - 輸入完整手機精準驗證，不再瀏覽/下載他人資料 */}
                 {(props.type === 'member' || (props.type === 'general' && hasMemberPrice)) && (
-                  <div className="mb-6 relative">
-                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
-                        <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><UserCheck size={14} /> {props.type === 'member' ? '請先查詢您的會員資料' : '會員可搜尋資料以套用會員價（選填）'}</p>
-                        <div className="relative">
-                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                           <input type="text" value={memberSearchTerm} onChange={(e) => { setMemberSearchTerm(e.target.value); setShowMemberResults(true); }} placeholder="輸入姓名或電話搜尋..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
-                           {showMemberResults && filteredMembers.length > 0 && (
-                             <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
-                               {filteredMembers.map(m => {
-                                 const active = isMemberActive(m);
-                                 return (
-                                   <button 
-                                     key={m.id} 
-                                     type="button" 
-                                     onClick={() => handleSelectMember(m)} 
-                                     disabled={!active}
-                                     className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 flex justify-between items-center group transition-colors ${active ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50 opacity-60 cursor-not-allowed'}`}
-                                   >
-                                     <div>
-                                        <div className="font-bold text-gray-800 group-hover:text-red-600 flex items-center gap-2">
-                                          {m.name}
-                                          {!active && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><AlertCircle size={10} /> 會籍已過期</span>}
-                                        </div>
-                                        <div className="text-xs text-gray-400">{m.member_no} | {m.company_title || m.company || m.brand_name}</div>
-                                     </div>
-                                     {active && <ChevronDown size={14} className="text-gray-300 -rotate-90" />}
-                                   </button>
-                                 );
-                               })}
-                             </div>
-                           )}
-                           {showMemberResults && memberSearchTerm.length > 0 && filteredMembers.length === 0 && <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 p-3 text-center text-xs text-gray-400">無相符會員資料</div>}
+                  <div className="mb-6">
+                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                        <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><UserCheck size={14} /> {props.type === 'member' ? '請輸入您的手機號碼驗證會員身分' : '會員請輸入手機號碼套用會員價（選填）'}</p>
+                        <div className="flex gap-2">
+                           <div className="relative flex-1">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                              <input
+                                type="tel"
+                                value={memberPhoneInput}
+                                onChange={(e) => setMemberPhoneInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyMember(); } }}
+                                placeholder="輸入完整手機號碼"
+                                className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                              />
+                           </div>
+                           <button
+                             type="button"
+                             onClick={handleVerifyMember}
+                             disabled={verifying || !memberPhoneInput.trim()}
+                             className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
+                           >
+                             {verifying ? '驗證中…' : '驗證'}
+                           </button>
                         </div>
+                        {verifyMsg && (
+                          <p className={`mt-2 text-xs font-bold ${verifyMsg.ok ? 'text-green-600' : 'text-red-500'}`}>{verifyMsg.text}</p>
+                        )}
                      </div>
                   </div>
                 )}
                 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">姓名</label><input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="請輸入真實姓名" readOnly={props.type === 'member'} /></div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">手機號碼</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="09xx-xxx-xxx" readOnly={props.type === 'member'} /></div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">電子郵件</label><input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="example@email.com" readOnly={props.type === 'member'} /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">姓名</label><input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="請輸入真實姓名" /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">手機號碼</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="09xx-xxx-xxx" /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">電子郵件</label><input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="example@email.com" /></div>
                   
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">公司/品牌名稱</label><input required type="text" value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="您的公司名稱" readOnly={props.type === 'member'} /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">公司/品牌名稱</label><input required type="text" value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="您的公司名稱" /></div>
                   
                   {/* 收據相關欄位 */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-bold text-gray-700 mb-2">公司抬頭 (收據用)</label><input type="text" value={formData.company_title} onChange={e => setFormData({...formData, company_title: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="若需開立收據請填寫" readOnly={props.type === 'member'} /></div>
-                    <div><label className="block text-sm font-bold text-gray-700 mb-2">統一編號 (選填)</label><input type="text" value={formData.tax_id} onChange={e => setFormData({...formData, tax_id: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="8位數字" readOnly={props.type === 'member'} /></div>
+                    <div><label className="block text-sm font-bold text-gray-700 mb-2">公司抬頭 (收據用)</label><input type="text" value={formData.company_title} onChange={e => setFormData({...formData, company_title: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="若需開立收據請填寫" /></div>
+                    <div><label className="block text-sm font-bold text-gray-700 mb-2">統一編號 (選填)</label><input type="text" value={formData.tax_id} onChange={e => setFormData({...formData, tax_id: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="8位數字" /></div>
                   </div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">職務</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="您的目前職位" readOnly={props.type === 'member'} /></div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">引薦人 (選填)</label><input type="text" value={formData.referrer} onChange={e => setFormData({...formData, referrer: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none ${props.type === 'member' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white border-gray-200 focus:ring-2 focus:ring-red-500'}`} placeholder="引薦您的夥伴姓名" readOnly={props.type === 'member'} /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">職務</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="您的目前職位" /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">引薦人 (選填)</label><input type="text" value={formData.referrer} onChange={e => setFormData({...formData, referrer: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="引薦您的夥伴姓名" /></div>
                   
                   <div><label className="block text-sm font-bold text-gray-700 mb-2">備註 (選填)</label><textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 outline-none transition-all" placeholder="若有特殊需求請在此說明" rows={2} /></div>
 

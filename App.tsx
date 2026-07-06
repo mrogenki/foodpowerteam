@@ -388,11 +388,12 @@ const App: React.FC = () => {
         }
       }
 
-      // 非管理員時，背景載入會員名單 (用於會員頁面)
+      // 非管理員時，公開會員名冊只取「非敏感」商務欄位（走 members-directory edge function，
+      // 不含手機/信箱/身分證）。會員價改由 verify-member 於報名頁精準驗證，不再整表下載。
       if (!currentUser) {
-        supabase.from('members').select('*').then(({ data }) => {
-          if (data && data.length > 0) {
-            const sortedMembers = data.sort((a: any, b: any) => {
+        supabase.functions.invoke('members-directory').then(({ data }) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const sortedMembers = [...data].sort((a: any, b: any) => {
               const valA = String(a.member_no || '');
               const valB = String(b.member_no || '');
               if (!valA && !valB) return 0;
@@ -400,7 +401,7 @@ const App: React.FC = () => {
               if (!valB) return -1;
               return valA.localeCompare(valB, undefined, { numeric: true });
             });
-            setMembers(sortedMembers);
+            setMembers(sortedMembers as Member[]);
           }
         });
       }
