@@ -55,7 +55,7 @@ const RenewalPayment: React.FC = () => {
         return;
       }
 
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: amount,
         ItemDesc: `食在力量會員續約 (${renewal.member_name})`,

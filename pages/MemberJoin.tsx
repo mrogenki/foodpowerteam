@@ -180,7 +180,7 @@ ${memberData.notes || '(無)'}
       // 注意：原本在此發送的 "申請已收到" 信件已移除，改為付款成功後由後端發送，避免使用者誤會
       alert(`申請資料已送出！\n\n即將轉導至付款頁面，請完成繳費以完成入會程序。`);
       
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: ANNUAL_FEE,
         ItemDesc: `食在力量會員年費 (${newApplication.name})`,

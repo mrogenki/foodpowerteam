@@ -56,7 +56,7 @@ const SignupPayment: React.FC = () => {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row || !row.amount) { alert('系統錯誤，無法建立訂單編號，請稍後再試'); setPaying(false); return; }
       try { sessionStorage.setItem('last_signup_url', window.location.pathname + window.location.search); } catch {}
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: row.amount,
         ItemDesc: row.item_desc,

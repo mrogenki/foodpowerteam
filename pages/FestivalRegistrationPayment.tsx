@@ -56,7 +56,7 @@ const FestivalRegistrationPayment: React.FC = () => {
         alert('系統錯誤，無法建立訂單編號，請稍後再試');
         return;
       }
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: reg.amount,
         ItemDesc: `${FESTIVAL_LABEL[reg.festival_type] || '燒肉/火鍋祭'}報名-${reg.brand_name}`.slice(0, 50),

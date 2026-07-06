@@ -59,7 +59,7 @@ const ActivityPayment: React.FC = () => {
         return;
       }
 
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: amount,
         ItemDesc: `${registration.activity_title} - 報名費`,

@@ -323,8 +323,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
           sessionStorage.setItem('last_activity_url', window.location.pathname);
 
           // 這裡不設定 setIsSuccess(true) 因為頁面會跳轉
-          setTimeout(() => {
-            submitNewebPayForm({
+          setTimeout(async () => {
+            await submitNewebPayForm({
               MerchantOrderNo: merchantOrderNo,
               Amt: finalPrice,
               ItemDesc: activity.title,

@@ -66,7 +66,7 @@ const MemberRenewal: React.FC = () => {
       if (error) throw error;
 
       // 2. 送出金流表單
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: amount,
         ItemDesc: `食在力量會員續約 (${selectedMember.name})`,

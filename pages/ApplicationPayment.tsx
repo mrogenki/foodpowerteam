@@ -69,7 +69,7 @@ const ApplicationPayment: React.FC = () => {
         return;
       }
 
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: amount,
         ItemDesc: `食在力量會員年費 (${application.name})`,

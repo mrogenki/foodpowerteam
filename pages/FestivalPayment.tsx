@@ -130,7 +130,7 @@ const FestivalPayment: React.FC = () => {
         return;
       }
 
-      submitNewebPayForm({
+      await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
         Amt: total,
         ItemDesc: `${FESTIVAL_LABEL[festivalType]}報名-${brandName.trim()}`.slice(0, 50),
