@@ -1202,14 +1202,6 @@ const ActivityManager: React.FC<{
     
     setIsSendingTelegram(true);
     try {
-      const botToken = (import.meta as any).env.TELEGRAM_BOT_TOKEN || (import.meta as any).env.VITE_TELEGRAM_BOT_TOKEN;
-      const chatId = (import.meta as any).env.TELEGRAM_CHAT_ID || (import.meta as any).env.VITE_TELEGRAM_CHAT_ID;
-      
-      if (!botToken || !chatId) {
-        alert('請先在環境變數設定 TELEGRAM_BOT_TOKEN 與 TELEGRAM_CHAT_ID');
-        return;
-      }
-
       let message = `【${currentActivity.title}】\n`;
       
       // 依據報名時間排序 (越早報名排在越上面)
@@ -1227,18 +1219,11 @@ const ActivityManager: React.FC<{
         message += `${index + 1}. ${name} / ${company}${company ? ' ' : ''}${statusText}\n`;
       });
 
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-        }),
-      });
+      // 改由後端 notify-admin 送出（Telegram token 只存後端 secret，前端不再持有）
+      if (!supabase) { alert('系統未連線'); return; }
+      const { error } = await supabase.functions.invoke('notify-admin', { body: { message } });
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('傳送失敗');
       }
 

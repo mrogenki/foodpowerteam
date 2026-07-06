@@ -1,10 +1,9 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig(({ mode, isSsrBuild }) => {
-    const env = loadEnv(mode, '.', '');
+export default defineConfig(({ isSsrBuild }) => {
     return {
       server: {
         port: 3004,
@@ -14,11 +13,8 @@ export default defineConfig(({ mode, isSsrBuild }) => {
         react(),
         tailwindcss(),
       ],
-      envPrefix: ['VITE_', 'TELEGRAM_'],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
+      // 只暴露 VITE_ 前綴變數到前端；TELEGRAM_/GEMINI 等機密一律留後端
+      envPrefix: ['VITE_'],
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
