@@ -960,7 +960,8 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '大河屋', category: '日式燒肉', logo: '/festival/brand-dahewu.png' },
   { name: '八色烤肉mini', category: '韓式烤肉', logo: '/festival/brand-basei.png' },
   { name: '精誠壹山燒肉', category: '燒肉名店', logo: '/festival/brand-yishan.jpeg' },
-  { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' }
+  { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' },
+  { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
@@ -994,7 +995,10 @@ const hotpotBrands: BrandEntry[] = [
   { name: '極禾鍋物職人', category: '精緻鍋物', logo: '/festival/brand-jihe.png' },
   { name: '滇發哥', category: '雲南鍋物', logo: '/festival/brand-dianfage.png' },
   { name: '百年土種蔘雞湯', category: '雞湯鍋', logo: '/festival/brand-bainian.png' },
-  { name: '鍋泰暖', category: '鍋物', logo: '/festival/brand-guotainan.png' }
+  { name: '鍋泰暖', category: '鍋物', logo: '/festival/brand-guotainan.png' },
+  { name: '聰明鍋', category: '鍋物', logo: '/festival/火鍋logo/聰明鍋logo.jpeg' },
+  { name: '李鐵柱', category: '麻辣燙', logo: '/festival/火鍋logo/李鐵柱logo.jpeg' },
+  { name: '蘇記嘀兜雞', category: '雞煲', logo: '/festival/火鍋logo/蘇記嘀兜雞logo.jpeg' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
@@ -1171,7 +1175,7 @@ const credits = {
     { name: '大苑子', role: '飲品贊助', icon: Gift, color: 'from-lime-500 to-green-500', logo: '/festival/logo-dayuanzi.jpg' },
     { name: '春一枝', role: '冰品贊助', icon: Gift, color: 'from-rose-500 to-pink-500', logo: '/festival/logo-chunyizhi.png' },
     { name: '福德生活', role: '食材贊助', icon: Gift, color: 'from-yellow-500 to-amber-500', logo: '/festival/logo-fude.jpg' },
-    { name: '究好豬', role: '食材贊助', icon: Gift, color: 'from-pink-500 to-rose-500', logo: '/festival/logo-jiuhaozhu.png' }
+    { name: '金色三麥', role: '飲品贊助', icon: Gift, color: 'from-amber-500 to-yellow-500', logo: '/festival/贊助商-金色三麥logo.jpg' }
   ]
 };
 
