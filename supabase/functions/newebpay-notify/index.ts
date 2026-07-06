@@ -15,6 +15,91 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// 藍新查詢交易 API（正式環境）
+const QUERY_URL = 'https://core.newebpay.com/API/QueryTradeInfo'
+// 藍新 API 前置 Akamai WAF 會擋掉無 User-Agent 的請求
+const QUERY_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+
+// 不信任 callback：向藍新官方反查該訂單是否真的已付款（TradeStatus=1），確認後才認定已付。
+// HashKey/HashIV 由平台商控管無法輪換，此為阻擋「以外洩金鑰偽造付款成功通知」的核心防線。
+// 回傳 { ok, amount, payMethod, reason }。
+async function verifyPaidWithNewebPay(
+  orderNo: string,
+  HashKey: string,
+  HashIV: string,
+  supabase: any
+): Promise<{ ok: boolean; amount?: number; payMethod?: string | null; reason?: string }> {
+  try {
+    const MERCHANT_ID = Deno.env.get('NEWEB_MERCHANT_ID') || 'BVS00509918'
+    const { data: statusRows, error } = await supabase.rpc('check_payment_status', { order_no: orderNo })
+    if (error) return { ok: false, reason: 'db_error:' + error.message }
+    if (!statusRows || statusRows.length === 0) return { ok: false, reason: 'order_not_found' }
+
+    const row = statusRows[0]
+    // 已是已付款（藍新重送通知或先前已確認）→ 冪等放行
+    if (row.res_status === 'paid') return { ok: true, amount: Number(row.res_amount) || 0, payMethod: null }
+
+    const amount = Number(row.res_amount)
+    if (!amount || amount <= 0) return { ok: false, reason: 'no_amount' }
+
+    // CheckValue = SHA256(IV=..&Amt=..&MerchantID=..&MerchantOrderNo=..&Key=..) 大寫
+    const checkStr = `IV=${HashIV}&Amt=${amount}&MerchantID=${MERCHANT_ID}&MerchantOrderNo=${orderNo}&Key=${HashKey}`
+    const checkValue = CryptoJS.SHA256(checkStr).toString(CryptoJS.enc.Hex).toUpperCase()
+
+    const form = new URLSearchParams()
+    form.append('MerchantID', MERCHANT_ID)
+    form.append('Version', '1.3')
+    form.append('RespondType', 'JSON')
+    form.append('CheckValue', checkValue)
+    form.append('MerchantOrderNo', orderNo)
+    form.append('Amt', String(amount))
+    form.append('TimeStamp', Math.floor(Date.now() / 1000).toString())
+
+    const resp = await fetch(QUERY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': QUERY_UA,
+        'Accept': 'application/json, text/plain, */*',
+      },
+      body: form.toString(),
+    })
+    const rawText = await resp.text()
+    let q: any
+    try {
+      q = JSON.parse(rawText)
+    } catch {
+      console.error(`[Notify] 反查回應非 JSON (${orderNo}):`, rawText.slice(0, 300))
+      return { ok: false, reason: 'newebpay_non_json' }
+    }
+    const r = q?.Result
+    if (q?.Status !== 'SUCCESS' || !r) return { ok: false, reason: 'query_status_' + (q?.Status || 'none') }
+    // TradeStatus: '1'=已付款
+    if (r.TradeStatus === '1') return { ok: true, amount: Number(r.Amt) || amount, payMethod: r.PaymentType }
+    return { ok: false, reason: 'trade_status_' + r.TradeStatus }
+  } catch (e) {
+    return { ok: false, reason: 'exception:' + ((e as Error)?.message || e) }
+  }
+}
+
+// 反查未通過時通知管理員（可能為藍新延遲或偽造通知），請人工核對，不自動放行。
+async function alertAdminUnverified(orderNo: string, reason: string) {
+  try {
+    const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+    const chatId = Deno.env.get('TELEGRAM_CHAT_ID')
+    if (!token || !chatId) return
+    const text = `⚠️ <b>付款通知未通過反查，未標記已付</b>\n\n訂單：${orderNo}\n原因：${reason}\n\n※ 收到「付款成功」通知，但向藍新官方反查未獲「已付款」確認。可能為藍新延遲或偽造通知；請人工至藍新後台核對後再處理，切勿直接放行。`
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    })
+  } catch (_) {
+    /* 靜默 */
+  }
+}
+
 // --- Main Handler ---
 serve(async (req) => {
   // Handle CORS preflight
@@ -89,12 +174,22 @@ serve(async (req) => {
         if (paymentData.Status === 'SUCCESS') {
           const result = paymentData.Result
           const merchantOrderNo = result.MerchantOrderNo
-          const amount = result.Amt
-          const payTime = result.PayTime 
-          const paymentMethod = result.PaymentType 
+          const payTime = result.PayTime
 
           // Init Supabase
           const supabase = createClient(SupabaseUrl, SupabaseKey)
+
+          // === 安全防線：不信任 callback，向藍新官方反查真實付款狀態，確認後才認定已付 ===
+          // 阻擋以外洩金鑰偽造的假「付款成功」通知（金鑰由平台商控管無法輪換）
+          const verified = await verifyPaidWithNewebPay(merchantOrderNo, HashKey, HashIV, supabase)
+          if (!verified.ok) {
+            console.warn(`[Notify] 反查未確認，拒絕標記已付: ${merchantOrderNo} (${verified.reason})`)
+            await alertAdminUnverified(merchantOrderNo, verified.reason || 'unknown')
+            return new Response('OK (unverified)', { status: 200, headers: corsHeaders })
+          }
+          // 一律採用藍新反查回報的真實金額/付款方式，而非 callback 帶入值
+          const amount = verified.amount
+          const paymentMethod = verified.payMethod || result.PaymentType
 
           // Defensive Date Parsing (防止日期格式錯誤導致寫入失敗)
           // 藍新 PayTime 為台灣時間且無時區標記；在 UTC 環境(Deno)若直接解析會被當成 UTC，
