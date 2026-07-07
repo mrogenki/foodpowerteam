@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import emailjs from '@emailjs/browser';
 import { UserPlus, Save, Loader2, Building2, User, Phone, Briefcase, FileText, CreditCard, Gift, Zap, Users, Target, Globe, Award } from 'lucide-react';
@@ -44,6 +44,41 @@ const MemberJoin: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // ── 入會折扣券（會籍券：coupons.activity_id 為 NULL）──
+  const [searchParams] = useSearchParams();
+  const [couponCode, setCouponCode] = useState('');
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [couponMsg, setCouponMsg] = useState('');
+  const [coupon, setCoupon] = useState<{ id: string; discount: number; isFree: boolean } | null>(null);
+
+  const finalFee = coupon ? (coupon.isFree ? 0 : Math.max(0, ANNUAL_FEE - coupon.discount)) : ANNUAL_FEE;
+
+  const applyCoupon = async (raw?: string) => {
+    const code = (raw ?? couponCode).trim().toUpperCase();
+    if (!code) { setCouponStatus('invalid'); setCouponMsg('請輸入折扣碼'); return; }
+    if (!supabase) return;
+    setCouponStatus('checking'); setCouponMsg('');
+    try {
+      const { data, error } = await supabase.from('coupons').select('*').eq('code', code).maybeSingle();
+      if (error || !data) { setCoupon(null); setCouponStatus('invalid'); setCouponMsg('查無此折扣碼'); return; }
+      if (data.activity_id) { setCoupon(null); setCouponStatus('invalid'); setCouponMsg('此折扣碼僅適用於活動報名，不適用入會'); return; }
+      if (data.is_used) { setCoupon(null); setCouponStatus('invalid'); setCouponMsg(data.is_free ? '此邀請連結已被使用' : '此折扣碼已被使用'); return; }
+      setCoupon({ id: String(data.id), discount: data.discount_amount || 0, isFree: !!data.is_free });
+      setCouponCode(code);
+      setCouponStatus('valid');
+      setCouponMsg(data.is_free ? '已套用：入會費全額減免' : `已套用：折抵 NT$ ${(data.discount_amount || 0).toLocaleString()}`);
+    } catch {
+      setCoupon(null); setCouponStatus('invalid'); setCouponMsg('驗證失敗，請稍後再試');
+    }
+  };
+
+  // 網址帶 ?c=CODE 時自動套用（後台發的會籍券連結）
+  useEffect(() => {
+    const c = searchParams.get('c');
+    if (c) { setCouponCode(c.toUpperCase()); applyCoupon(c); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sendJoinConfirmationEmail = async (memberData: any) => {
     // 檢查 EmailJS 設定是否存在
@@ -166,9 +201,11 @@ ${memberData.notes || '(無)'}
         notes: formData.notes,
 
         // 金流資訊
-        payment_status: PaymentStatus.PENDING,
+        payment_status: finalFee === 0 ? PaymentStatus.PAID : PaymentStatus.PENDING,
+        payment_method: finalFee === 0 ? 'coupon_free' : null,
         merchant_order_no: merchantOrderNo,
-        paid_amount: ANNUAL_FEE,
+        paid_amount: finalFee,
+        coupon_code: coupon ? couponCode : null,
       };
 
       // 2. 寫入資料庫 (member_applications)
@@ -176,13 +213,24 @@ ${memberData.notes || '(無)'}
 
       if (insertError) throw insertError;
 
-      // 3. 轉導至藍新金流付款
-      // 注意：原本在此發送的 "申請已收到" 信件已移除，改為付款成功後由後端發送，避免使用者誤會
+      // 標記折扣券已使用（沿用活動券模式：送出即核銷）
+      if (coupon) {
+        await supabase.from('coupons').update({ is_used: true, used_at: new Date().toISOString() }).eq('id', coupon.id);
+      }
+
+      // 全額減免（0 元）→ 無需付款，直接完成申請、待審核
+      if (finalFee === 0) {
+        alert(`申請資料已送出！\n\n您已使用減免券，入會費 0 元、無需付款。\n待管理員審核後即完成入會。`);
+        navigate('/');
+        return;
+      }
+
+      // 3. 轉導至藍新金流付款（金額為折扣後的實付金額）
       alert(`申請資料已送出！\n\n即將轉導至付款頁面，請完成繳費以完成入會程序。`);
-      
+
       await submitNewebPayForm({
         MerchantOrderNo: merchantOrderNo,
-        Amt: ANNUAL_FEE,
+        Amt: finalFee,
         ItemDesc: `食在力量會員年費 (${newApplication.name})`,
         Email: newApplication.email
       });
@@ -217,7 +265,27 @@ ${memberData.notes || '(無)'}
             <div className="flex flex-col md:flex-row gap-6 md:gap-12 relative z-10">
               <div className="bg-red-700/50 p-4 rounded-xl flex-1 backdrop-blur-sm border border-red-500/30">
                 <div className="text-red-200 text-sm font-bold mb-1 flex items-center gap-2"><CreditCard size={14}/> 會員費</div>
-                <div className="text-xl font-bold">NT$ 5,000 / 年（自加入日起一年到期）</div>
+                {coupon ? (
+                  <div>
+                    <div className="text-lg font-bold line-through opacity-60">NT$ {ANNUAL_FEE.toLocaleString()} / 年</div>
+                    <div className="text-2xl font-extrabold">{finalFee === 0 ? '入會費全免 🎉' : `NT$ ${finalFee.toLocaleString()} / 年`}</div>
+                  </div>
+                ) : (
+                  <div className="text-xl font-bold">NT$ 5,000 / 年（自加入日起一年到期）</div>
+                )}
+                {/* 折扣券（會籍券）*/}
+                <div className="mt-3">
+                  <div className="flex gap-2">
+                    <input value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponStatus('idle'); setCoupon(null); }}
+                      placeholder="輸入折扣碼（選填）"
+                      className="flex-1 px-3 py-2 rounded-lg text-gray-900 text-sm outline-none uppercase font-mono placeholder:text-gray-400 placeholder:normal-case" />
+                    <button type="button" onClick={() => applyCoupon()} disabled={couponStatus === 'checking'}
+                      className="px-4 py-2 rounded-lg bg-white text-red-700 font-bold text-sm hover:bg-red-50 disabled:opacity-50 shrink-0">
+                      {couponStatus === 'checking' ? '驗證中' : coupon ? '重新套用' : '套用'}
+                    </button>
+                  </div>
+                  {couponMsg && <p className={`text-xs mt-1 ${couponStatus === 'valid' ? 'text-green-200' : 'text-yellow-200'}`}>{couponMsg}</p>}
+                </div>
               </div>
             </div>
           </div>
@@ -400,7 +468,7 @@ ${memberData.notes || '(無)'}
             disabled={isSubmitting}
             className="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-red-200"
           >
-            {isSubmitting ? <><Loader2 className="animate-spin" /> 處理中...</> : <><Save /> 送出申請，並前往付款 $5000</>}
+            {isSubmitting ? <><Loader2 className="animate-spin" /> 處理中...</> : <><Save /> {finalFee === 0 ? '送出申請（免費入會）' : `送出申請，並前往付款 $${finalFee.toLocaleString()}`}</>}
           </button>
         </form>
       </div>

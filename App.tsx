@@ -594,6 +594,24 @@ const App: React.FC = () => {
     return (data || []) as Coupon[];
   };
 
+  // 產生會籍/入會券（不綁活動，activity_id = null）。amount=0 → 全額免費券
+  const handleGenerateMembershipCoupons = async (amount: number, count: number, note?: string): Promise<Coupon[]> => {
+    if (!supabase) return [];
+    const rows = Array.from({ length: count }, () => ({
+      activity_id: null,
+      member_id: null,
+      discount_amount: amount > 0 ? amount : 0,
+      is_free: amount <= 0,
+      is_used: false,
+      note: note || null,
+      code: `MEM-${Math.random().toString(36).substr(2, 7).toUpperCase()}`
+    }));
+    const { data, error } = await supabase.from('coupons').insert(rows).select();
+    if (error) { alert('產生會籍券失敗：' + error.message); return []; }
+    fetchData();
+    return (data || []) as Coupon[];
+  };
+
   // 事後編輯折扣券備註
   const handleUpdateCouponNote = async (couponId: string, note: string) => {
     if (!supabase) return;
@@ -1125,6 +1143,7 @@ const App: React.FC = () => {
                     onUploadImage={handleUploadImage}
                     onGenerateCoupons={handleGenerateCoupons}
                     onGenerateVipInvites={handleGenerateVipInvites}
+                    onGenerateMembershipCoupons={handleGenerateMembershipCoupons}
                     onUpdateCouponNote={handleUpdateCouponNote}
                     onApproveMemberApplication={handleApproveMemberApplication}
                     onDeleteMemberApplication={handleDeleteMemberApplication}

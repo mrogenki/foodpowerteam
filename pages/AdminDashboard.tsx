@@ -104,6 +104,7 @@ interface AdminDashboardProps {
   onUploadImage: (file: File) => Promise<string>;
   onGenerateCoupons?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
   onGenerateVipInvites?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
+  onGenerateMembershipCoupons?: (amount: number, count: number, note?: string) => Promise<Coupon[]>;
   onUpdateCouponNote?: (couponId: string, note: string) => Promise<void>;
   onApproveMemberApplication: (app: MemberApplication) => void; // 新增：核准
   onDeleteMemberApplication: (id: string | number) => void; // 新增：拒絕
@@ -3118,8 +3119,9 @@ const CouponManager: React.FC<{
   members: Member[];
   onGenerate?: (activityId: string, amount: number, memberIds: string[], sendEmail: boolean, note?: string) => void;
   onGenerateVip?: (activityId: string, count: number, note?: string) => Promise<Coupon[]>;
+  onGenerateMembership?: (amount: number, count: number, note?: string) => Promise<Coupon[]>;
   onUpdateNote?: (couponId: string, note: string) => Promise<void>;
-}> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip, onUpdateNote }) => {
+}> = ({ coupons, activities, memberActivities, members, onGenerate, onGenerateVip, onGenerateMembership, onUpdateNote }) => {
   const [amount, setAmount] = useState(100);
   const [actId, setActId] = useState('');
   const [target, setTarget] = useState('all');
@@ -3151,7 +3153,26 @@ const CouponManager: React.FC<{
 
   const allActs = [...activities, ...memberActivities].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const vipLink = (c: Coupon) => `${window.location.origin}/activity/${c.activity_id}?c=${c.code}`;
+  // 會籍/入會券
+  const [memAmount, setMemAmount] = useState(0); // 0 = 全額免費
+  const [memCount, setMemCount] = useState(1);
+  const [memNote, setMemNote] = useState('');
+  const [memGenerating, setMemGenerating] = useState(false);
+  const [memResult, setMemResult] = useState<Coupon[]>([]);
+  const handleGenerateMembership = async () => {
+    if (!onGenerateMembership) return;
+    if (memCount < 1 || memCount > 100) { alert('數量請介於 1~100'); return; }
+    if (memAmount < 0) { alert('折抵金額不可為負'); return; }
+    setMemGenerating(true);
+    const created = await onGenerateMembership(memAmount, memCount, memNote.trim() || undefined);
+    setMemResult(created);
+    setMemGenerating(false);
+  };
+
+  const isMembershipCoupon = (c: Coupon) => !c.activity_id;
+  const vipLink = (c: Coupon) => isMembershipCoupon(c)
+    ? `${window.location.origin}/join?c=${c.code}`
+    : `${window.location.origin}/activity/${c.activity_id}?c=${c.code}`;
   const copyLink = async (c: Coupon) => {
     try { await navigator.clipboard.writeText(vipLink(c)); setCopiedCode(c.code); setTimeout(() => setCopiedCode(''), 2000); }
     catch { alert('複製失敗，請手動複製：' + vipLink(c)); }
@@ -3204,6 +3225,30 @@ const CouponManager: React.FC<{
           )}
        </div>
 
+       {/* 會籍 / 入會券 */}
+       <div className="bg-teal-50/60 p-6 rounded-2xl border border-teal-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-teal-800"><Ticket size={18} /> 會籍 / 入會券（不綁活動）</h3>
+          <p className="text-sm text-teal-700/80">為準會員產生入會折扣／減免碼。折抵金額填 0 = 全額免費（減免）。每個碼單次使用，連結格式 <span className="font-mono">/join?c=代碼</span>，對方開啟入會頁自動套用。</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+             <div><label className="block text-sm font-bold mb-1">折抵金額（0 = 全額免費）</label><input type="number" min={0} className="w-full p-2 border rounded" value={memAmount} onChange={e=>setMemAmount(Number(e.target.value))} /></div>
+             <div><label className="block text-sm font-bold mb-1">數量</label><input type="number" min={1} max={100} className="w-full p-2 border rounded" value={memCount} onChange={e=>setMemCount(Number(e.target.value))} /></div>
+             <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">備註（選填）</label><input type="text" className="w-full p-2 border rounded" value={memNote} onChange={e=>setMemNote(e.target.value)} placeholder="例：活動贊助商減免、貴賓入會" /></div>
+             <div className="flex items-end"><button onClick={handleGenerateMembership} disabled={memGenerating} className="w-full bg-teal-600 text-white p-2 rounded font-bold hover:bg-teal-700 disabled:opacity-50">{memGenerating ? '處理中' : '產生會籍券'}</button></div>
+          </div>
+          {memResult.length > 0 && (
+            <div className="bg-white rounded-lg border border-teal-100 p-3 space-y-2">
+              <p className="text-xs font-bold text-teal-700">已產生 {memResult.length} 個，點「複製連結」發給對方：</p>
+              {memResult.map(c => (
+                <div key={c.id} className="flex items-center gap-2 text-sm">
+                  <span className="font-mono bg-gray-50 px-2 py-1 rounded">{c.code}</span>
+                  <span className="text-gray-400 text-xs">{c.is_free ? '全額免費' : `折抵 NT$ ${c.discount_amount}`}</span>
+                  <button type="button" onClick={()=>copyLink(c)} className={`ml-auto px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-teal-100 text-teal-700 hover:bg-teal-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>
+                </div>
+              ))}
+            </div>
+          )}
+       </div>
+
        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
           <h3 className="font-bold text-lg">產生折扣券</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -3225,8 +3270,8 @@ const CouponManager: React.FC<{
                     return (
                       <tr key={c.id} className="border-b">
                          <td className="p-3 font-mono">{c.code}</td>
-                         <td className="p-3">{act?.title || c.activity_id}</td>
-                         <td className="p-3">{c.is_free ? <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">VIP 免費</span> : `NT$ ${c.discount_amount}`}</td>
+                         <td className="p-3">{isMembershipCoupon(c) ? <span className="bg-teal-100 text-teal-700 px-2 py-0.5 rounded text-xs font-bold">會籍/入會</span> : (act?.title || c.activity_id)}</td>
+                         <td className="p-3">{c.is_free ? <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold">{isMembershipCoupon(c) ? '入會免費' : 'VIP 免費'}</span> : `NT$ ${c.discount_amount}`}</td>
                          <td className="p-3 text-gray-500 max-w-[220px]">
                            {editingNoteId === String(c.id) ? (
                              <div className="flex items-center gap-1">
@@ -3242,7 +3287,7 @@ const CouponManager: React.FC<{
                            )}
                          </td>
                          <td className="p-3">{c.is_used ? '已使用' : '未使用'}</td>
-                         <td className="p-3">{c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>}</td>
+                         <td className="p-3">{(c.is_free || isMembershipCoupon(c)) && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>{copiedCode===c.code ? '已複製' : '複製連結'}</button>}</td>
                       </tr>
                     )
                   })}
@@ -3257,8 +3302,8 @@ const CouponManager: React.FC<{
                 <div key={c.id} className="border border-gray-100 rounded-xl p-3 flex justify-between items-center gap-2">
                   <div className="min-w-0">
                     <div className="font-mono font-bold text-gray-900">{c.code}</div>
-                    <div className="text-xs text-gray-500 truncate">{act?.title || c.activity_id}</div>
-                    <div className="text-xs text-gray-400">{c.is_free ? 'VIP 免費邀請' : `折抵 NT$ ${c.discount_amount}`}</div>
+                    <div className="text-xs text-gray-500 truncate">{isMembershipCoupon(c) ? '會籍/入會' : (act?.title || c.activity_id)}</div>
+                    <div className="text-xs text-gray-400">{c.is_free ? (isMembershipCoupon(c) ? '入會免費' : 'VIP 免費邀請') : `折抵 NT$ ${c.discount_amount}`}</div>
                     {editingNoteId === String(c.id) ? (
                       <div className="flex items-center gap-1 mt-1">
                         <input autoFocus value={editNoteVal} onChange={e=>setEditNoteVal(e.target.value)} className="flex-grow min-w-0 px-2 py-1 border rounded text-xs" placeholder="輸入備註" />
@@ -3271,7 +3316,7 @@ const CouponManager: React.FC<{
                         {onUpdateNote && <button type="button" onClick={()=>startEditNote(c)} className="text-gray-300 hover:text-blue-600 shrink-0"><Edit2 size={13} /></button>}
                       </div>
                     )}
-                    {c.is_free && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`mt-1 px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{copiedCode===c.code ? '已複製連結' : '複製邀請連結'}</button>}
+                    {(c.is_free || isMembershipCoupon(c)) && !c.is_used && <button type="button" onClick={()=>copyLink(c)} className={`mt-1 px-2 py-1 rounded text-xs font-bold ${copiedCode===c.code ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{copiedCode===c.code ? '已複製連結' : '複製邀請連結'}</button>}
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${c.is_used ? 'bg-gray-200 text-gray-500' : (c.is_free ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')}`}>{c.is_used ? '已使用' : '未使用'}</span>
                 </div>
@@ -3796,7 +3841,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/festival-applications" element={<FestivalApplicationManager isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           <Route path="/receipts" element={<ReceiptManager />} />
           <Route path="/birthdays" element={<MemberBirthdayManager members={props.members} />} />
-          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} onUpdateNote={props.onUpdateCouponNote} />} />
+          <Route path="/coupons" element={<CouponManager coupons={props.coupons} activities={props.activities} memberActivities={props.memberActivities} members={props.members} onGenerate={props.onGenerateCoupons} onGenerateVip={props.onGenerateVipInvites} onGenerateMembership={props.onGenerateMembershipCoupons} onUpdateNote={props.onUpdateCouponNote} />} />
           
           <Route path="/users" element={<UserManager users={props.users} onAdd={props.onAddUser} onDelete={props.onDeleteUser} />} />
           
