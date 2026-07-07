@@ -734,6 +734,28 @@ const MemberApplicationManager: React.FC<{
     }
   };
 
+  // 會費減免：標記為已付款但金額 0（核准後入會費以 0 計，備註自動註記減免）
+  const handleMarkAsWaived = async (app: MemberApplication) => {
+    if (!confirm(`確定將 ${app.name} 標記為「會費減免（免收 NT$0）」嗎？\n狀態視為已付款、金額 0 元，核准後即可入會。`)) return;
+    try {
+      const { error } = await supabase
+        .from('member_applications')
+        .update({
+          payment_status: PaymentStatus.PAID,
+          paid_at: new Date().toISOString(),
+          payment_method: 'manual_admin',
+          paid_amount: 0,
+        })
+        .eq('id', app.id);
+      if (error) throw error;
+      alert('已標記為會費減免（NT$0）');
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      alert('更新失敗: ' + (err.message || '未知錯誤'));
+    }
+  };
+
   const handleRefundApp = async (app: MemberApplication) => {
     const orderNo = (app as any).merchant_order_no;
     if (!confirm(`即將處理 ${app.name} 入會費的退款。\n\n按「確定」繼續。`)) return;
@@ -1018,11 +1040,18 @@ const MemberApplicationManager: React.FC<{
                         >
                           {sendingEmailId === selectedApp.id ? '發送中...' : '補寄繳費連結'}
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleMarkAsPaid(selectedApp)}
                           className="text-sm bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded hover:bg-green-100 transition-colors"
                         >
                           手動標記為已付款
+                        </button>
+                        <button
+                          onClick={() => handleMarkAsWaived(selectedApp)}
+                          className="text-sm bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded hover:bg-amber-100 transition-colors"
+                          title="免收入會費，標記為已付款且金額 0 元"
+                        >
+                          會費減免（$0）
                         </button>
                       </div>
                    )}

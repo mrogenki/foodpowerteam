@@ -951,11 +951,12 @@ const App: React.FC = () => {
         return map[method] || method;
       };
 
+      const isWaived = (application.paid_amount || 0) === 0;
       const paymentRecord = {
         id: Date.now(),
         date: application.paid_at ? application.paid_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
         amount: application.paid_amount || 0,
-        note: `入會費 (${translatePaymentMethod(application.payment_method)}) - 訂單編號: ${application.merchant_order_no || '無'}`
+        note: `入會費 (${translatePaymentMethod(application.payment_method)}${isWaived ? '/會費減免' : ''}) - 訂單編號: ${application.merchant_order_no || '無'}`
       };
 
       const newMember = {
