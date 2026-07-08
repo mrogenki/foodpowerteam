@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu, ListChecks } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu, ListChecks, Banknote } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import emailjs from '@emailjs/browser';
@@ -15,6 +15,7 @@ import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 import BatchReceiptGenerator from '../components/BatchReceiptGenerator';
 import BlockEditor from '../components/BlockEditor';
 import SignupAdminPanel from '../components/SignupAdminPanel';
+import CashRegistrationModal from '../components/CashRegistrationModal';
 import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry, SignupEntry } from '../types';
 
 // ==========================================
@@ -128,6 +129,7 @@ const translatePaymentMethod = (method?: string) => {
     'BARCODE': '超商條碼',
     'LINEPAY': 'Line Pay',
     'manual_admin': '手動標記',
+    'cash': '現金',
     'ALIPAY': '支付寶',
     'WECHATPAY': '微信支付'
   };
@@ -1975,7 +1977,9 @@ const ActivityCheckInManager: React.FC<{
   isSuperAdmin?: boolean;
   signupEntries?: SignupEntry[];
   onToggleSignupCheckin?: (id: string, value: boolean) => void;
-}> = ({ type, activities, registrations, onUpdateReg, members, isSuperAdmin, signupEntries, onToggleSignupCheckin }) => {
+  onRefreshRegistrations?: () => void;
+}> = ({ type, activities, registrations, onUpdateReg, members, isSuperAdmin, signupEntries, onToggleSignupCheckin, onRefreshRegistrations }) => {
+  const [showCashModal, setShowCashModal] = useState(false);
   const [selectedActivityId, setSelectedActivityId] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sendingEmail, setSendingEmail] = useState<string[]>([]);
@@ -2238,6 +2242,12 @@ const ActivityCheckInManager: React.FC<{
            <p className="text-sm text-gray-500">報到管理列表</p>
          </div>
          <button
+           onClick={() => setShowCashModal(true)}
+           className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-green-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+         >
+           <Banknote size={18} /> 現場現金收款
+         </button>
+         <button
            onClick={() => setShowQrModal(true)}
            className="flex items-center gap-2 bg-gradient-to-br from-red-600 to-orange-500 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-red-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
          >
@@ -2247,6 +2257,13 @@ const ActivityCheckInManager: React.FC<{
 
        {showQrModal && currentActivity && (
          <CheckInQrModal activity={currentActivity} onClose={() => setShowQrModal(false)} />
+       )}
+       {showCashModal && currentActivity && (
+         <CashRegistrationModal
+           activity={currentActivity}
+           onClose={() => setShowCashModal(false)}
+           onDone={() => onRefreshRegistrations?.()}
+         />
        )}
 
        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -3824,7 +3841,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         <Routes>
           <Route path="/" element={<DashboardHome {...props} />} />
           
-          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} signupEntries={props.signupEntries} onToggleSignupCheckin={props.onToggleSignupCheckin} />} />
+          <Route path="/check-in" element={<ActivityCheckInManager type="unified" activities={[...props.activities, ...props.memberActivities]} registrations={[...props.registrations, ...props.memberRegistrations]} onUpdateReg={(reg: any) => (reg.audience === 'member_only' ? props.onUpdateMemberRegistration(reg) : props.onUpdateRegistration(reg))} members={props.members} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} signupEntries={props.signupEntries} onToggleSignupCheckin={props.onToggleSignupCheckin} onRefreshRegistrations={props.onRefreshRegistrations} />} />
           {/* 向下相容：舊連結 /member-check-in 重導至統一入口 */}
           <Route path="/member-check-in" element={<Navigate to="/admin/check-in" replace />} />
 
