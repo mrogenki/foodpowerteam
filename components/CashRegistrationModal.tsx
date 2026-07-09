@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import emailjs from '@emailjs/browser';
 import { supabase } from '../utils/supabaseClient';
 import { Activity, MemberActivity } from '../types';
+import { EMAIL_CONFIG } from '../constants';
 import { X, Banknote, Loader2 } from 'lucide-react';
 
 // 現場現金收款：一次完成「建立報名 + 標記現金已付 + 記入收支（選配開收據）」
@@ -37,7 +39,24 @@ const CashRegistrationModal: React.FC<{
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      alert(`✅ 已完成現金收款\n姓名：${name}\n金額：NT$ ${amount.toLocaleString()}${checkIn ? '\n已同時標記報到' : ''}${row?.receipt_no ? `\n收據號：${row.receipt_no}` : ''}`);
+      let receiptMsg = '';
+      if (row?.receipt_no) {
+        receiptMsg = `\n收據號：${row.receipt_no}`;
+        // 有 email 就自動寄送收據檢視連結（比照線上流程）
+        if (issueReceipt && email.trim() && row.receipt_token) {
+          try {
+            const link = `${window.location.origin}/receipt/${row.receipt_token}`;
+            await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.RECEIPT_TEMPLATE_ID, {
+              email: email.trim(), to_name: name, order_id: row.receipt_no, amount, receipt_link: link,
+            }, EMAIL_CONFIG.PUBLIC_KEY);
+            await supabase.from('receipts').update({ status: 'sent' }).eq('receipt_no', row.receipt_no);
+            receiptMsg += '（已寄出）';
+          } catch (mailErr) {
+            receiptMsg += '（已開立，但 email 寄送失敗，可稍後於名單手動寄送）';
+          }
+        }
+      }
+      alert(`✅ 已完成現金收款\n姓名：${name}\n金額：NT$ ${amount.toLocaleString()}${checkIn ? '\n已同時標記報到' : ''}${receiptMsg}`);
       onDone();
       onClose();
     } catch (err: any) {
@@ -111,7 +130,7 @@ const CashRegistrationModal: React.FC<{
                   <label className="block text-xs font-bold text-gray-600 mb-1">統一編號</label>
                   <input value={taxId} onChange={e => setTaxId(e.target.value)} className={inputCls} placeholder="8 位數字" inputMode="numeric" maxLength={8} />
                 </div>
-                <p className="sm:col-span-2 text-[11px] text-gray-400">收據建立後為「已開立」，如需寄送 email 可於報名名單再寄。</p>
+                <p className="sm:col-span-2 text-[11px] text-gray-400">有填 Email 會自動寄出收據連結（狀態→已寄出）；未填則僅建立收據（已開立）。</p>
               </div>
             )}
           </div>
