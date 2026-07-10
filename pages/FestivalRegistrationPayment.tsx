@@ -41,14 +41,9 @@ const FestivalRegistrationPayment: React.FC = () => {
     if (!reg) return;
     // 重新產生訂單編號（保留 FEST_ 前綴，讓金流回呼正確路由），避免重複單號
     const merchantOrderNo = `FEST_${Date.now()}`;
-    // 累積所有曾產生的訂單號，讓回呼能用歷史訂單號比對到此列（避免覆寫後舊號付款找不到列）
-    const prevHistory: string[] = Array.isArray(reg.order_no_history) ? reg.order_no_history : [];
-    const orderNoHistory = Array.from(new Set([...prevHistory, reg.merchant_order_no, merchantOrderNo].filter(Boolean)));
     try {
-      const { error } = await supabase
-        .from('festival_registrations')
-        .update({ merchant_order_no: merchantOrderNo, order_no_history: orderNoHistory })
-        .eq('id', id);
+      // 匿名安全 RPC：直接 UPDATE 在 RLS 下對匿名客戶會靜默失敗（訂單號沒寫進 DB → 回呼對不到）
+      const { error } = await supabase.rpc('update_festival_order_no', { p_id: id, p_order_no: merchantOrderNo });
       if (error) {
         console.error('Failed to update order no:', error);
         alert('系統錯誤，無法建立訂單編號，請稍後再試');
