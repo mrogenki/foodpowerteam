@@ -1,5 +1,6 @@
 
 {
+  "regions": ["bom1"],
   "buildCommand": "npm run build",
   "headers": [
     {
