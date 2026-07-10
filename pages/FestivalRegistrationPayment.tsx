@@ -21,13 +21,11 @@ const FestivalRegistrationPayment: React.FC = () => {
     const fetchReg = async () => {
       if (!id) return;
       try {
-        const { data, error } = await supabase
-          .from('festival_registrations')
-          .select('*')
-          .eq('id', id)
-          .single();
+        // 匿名安全 RPC：付款連結是給未登入客戶用的，改走 RPC 避免 RLS 擋掉匿名讀取
+        const { data, error } = await supabase.rpc('get_festival_payment_info', { p_id: id });
         if (error) throw error;
-        if (data) setReg(data);
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) setReg(row);
         else setError('找不到此繳費資料或連結已失效');
       } catch (err) {
         console.error('Error fetching festival registration:', err);
