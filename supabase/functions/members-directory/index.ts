@@ -11,8 +11,9 @@ const corsHeaders = {
 }
 
 // 白名單欄位：只暴露公開名冊需要的商務資訊
+// status / membership_expiry_date 非敏感，但前端需用來判斷會籍是否有效（缺了會全被過濾成空白）
 const SAFE_COLUMNS =
-  'id,member_no,name,brand_name,company,company_title,job_title,industry_category,main_service,intro,website'
+  'id,member_no,name,brand_name,company,company_title,job_title,industry_category,main_service,intro,website,status,membership_expiry_date'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
