@@ -1,6 +1,12 @@
 # foodpowerteam 資料庫遷移計畫：孟買（ap-south-1）→ 東京（ap-northeast-1）
 
-> 狀態：**階段一＋乾跑全部完成（2026-07-11）**，只剩切換窗口。
+> 狀態：**✅ 切換完成（2026-07-12 00:10–00:45）**。正式環境已全面運行於東京
+> `igowitmbnlvzznqgfpfl`。舊孟買專案保留至 2026-07-26（金流回呼 proxy 待命），屆時 pause、一個月後刪除。
+> 收尾驗證：官網/活動頁僅連東京、0 破圖 0 console 錯誤；share OG 正常；筆數全一致；
+> 切換窗口內舊庫零新增（無資料遺失）；DB 內 60 筆舊 storage 絕對網址已改寫。
+> 待辦：使用者做一筆小額金流實測；2026-07-26 pause 舊專案。
+>
+> ---（以下為切換前的計畫紀錄）---
 > 新專案：`igowitmbnlvzznqgfpfl`（foodpowerteam-tokyo，東京）。
 > 乾跑結果：22 張表＋auth 9 帳號筆數全一致；Storage 399 檔／191MB 全同步；
 > 9 個 functions 已部署（verify_jwt 對齊線上實況）；10 個 secrets 已複製（經
