@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase 設定
-const DEFAULT_URL = 'https://kpltydyspvzozgxfiwra.supabase.co';
-const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwbHR5ZHlzcHZ6b3pneGZpd3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NjI0MTUsImV4cCI6MjA4NjEzODQxNX0.1jraR6m6sKWSUJxek2noJi0YqyO3Ak4kPZ-X2qdwtGA';
+// 2026-07-12 遷移：孟買（kplty…）→ 東京（igow…），詳見 docs/migrate-db-to-tokyo.md
+const DEFAULT_URL = 'https://igowitmbnlvzznqgfpfl.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlnb3dpdG1ibmx2enpucWdmcGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3NjE2MzcsImV4cCI6MjA5OTMzNzYzN30.XovQ0zXKOZ58jEOUJvM7HYZWNW5OsJPTq3hlNWwfh70';
 
 const getConfig = (envKey: string, storageKey: string, defaultValue: string): string => {
   try {
