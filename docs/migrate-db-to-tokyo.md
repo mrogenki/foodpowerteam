@@ -1,6 +1,12 @@
 # foodpowerteam 資料庫遷移計畫：孟買（ap-south-1）→ 東京（ap-northeast-1）
 
-> 狀態：**計畫階段，尚未執行**。執行前需排定維護窗口並逐項確認。
+> 狀態：**階段一進行中（2026-07-11）**。
+> 新專案已建立：`igowitmbnlvzznqgfpfl`（foodpowerteam-tokyo，東京，$10/月）。
+> 已完成：storage buckets＋14 條 RLS 政策、extensions（pg_cron/pgcrypto/uuid-ossp）、
+> 搬遷腳本 `scripts/migrate/01~03`（DB dump/restore、Storage 增量同步、逐表筆數驗證）。
+> 待使用者提供：兩專案 DB 密碼＋新專案 service key（填 `.env.migration`，見 example）、
+> `supabase login`（部署 9 個 functions 用）、secrets 值（藍新/Telegram/EmailJS，dashboard 看不到舊值，需從原始來源取得）。
+> 另發現 pg_cron 排程 `signup-release-expired`（*/10 分鐘），restore 後需在新庫重建。
 
 ## 為什麼要搬
 
