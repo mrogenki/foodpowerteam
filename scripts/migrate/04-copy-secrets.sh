@@ -5,7 +5,7 @@
 # 需求：.env.migration 填 OLD_SERVICE_ROLE_KEY；已 `npx supabase login`。
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-source .env.migration
+set -a; source .env.migration; set +a  # export，讓 supabase CLI 讀到 SUPABASE_ACCESS_TOKEN
 
 OLD_REF=kpltydyspvzozgxfiwra
 NEW_REF=igowitmbnlvzznqgfpfl
