@@ -2,6 +2,13 @@
 # project_id 僅作為本機區分用途；部署目標一律用 --project-ref 明確指定，避免誤部署。
 project_id = "foodpowerteam"
 
-# 退款 function：閘道層強制驗證 JWT（函式內再驗 SUPER_ADMIN 角色，雙重防護）
+# verify_jwt 對齊 2026-07 線上部署實況（金流/報名走藍新簽章與自訂驗證，不驗 JWT）
+
+[functions.newebpay-notify]
+verify_jwt = false
+[functions.festival-apply]
+verify_jwt = false
+[functions.newebpay-query]
+verify_jwt = false
 [functions.newebpay-refund]
-verify_jwt = true
+verify_jwt = false

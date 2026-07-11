@@ -36,3 +36,4 @@ dist-server
 # 角色設計參考圖（不上線，僅本機保留）
 public/festival/麻吉貓三視圖.png
 .env.migration
+scripts/migrate/out/

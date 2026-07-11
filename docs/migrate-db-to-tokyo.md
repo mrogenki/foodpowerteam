@@ -1,12 +1,21 @@
 # foodpowerteam 資料庫遷移計畫：孟買（ap-south-1）→ 東京（ap-northeast-1）
 
-> 狀態：**階段一進行中（2026-07-11）**。
-> 新專案已建立：`igowitmbnlvzznqgfpfl`（foodpowerteam-tokyo，東京，$10/月）。
-> 已完成：storage buckets＋14 條 RLS 政策、extensions（pg_cron/pgcrypto/uuid-ossp）、
-> 搬遷腳本 `scripts/migrate/01~03`（DB dump/restore、Storage 增量同步、逐表筆數驗證）。
-> 待使用者提供：兩專案 DB 密碼＋新專案 service key（填 `.env.migration`，見 example）、
-> `supabase login`（部署 9 個 functions 用）、secrets 值（藍新/Telegram/EmailJS，dashboard 看不到舊值，需從原始來源取得）。
-> 另發現 pg_cron 排程 `signup-release-expired`（*/10 分鐘），restore 後需在新庫重建。
+> 狀態：**階段一＋乾跑全部完成（2026-07-11）**，只剩切換窗口。
+> 新專案：`igowitmbnlvzznqgfpfl`（foodpowerteam-tokyo，東京）。
+> 乾跑結果：22 張表＋auth 9 帳號筆數全一致；Storage 399 檔／191MB 全同步；
+> 9 個 functions 已部署（verify_jwt 對齊線上實況）；10 個 secrets 已複製（經
+> migration-env-dump 直搬，該臨時函數已刪）；藍新簽章實測通過；pg_cron 已重建。
+>
+> ## 切換窗口待辦（預估 15–30 分鐘，選離峰、避開金流交易時段）
+> 1. 重跑 `01`（全量補資料）→ `03`（驗證）→ `02`（Storage 增量）
+> 2. 前端：`utils/supabaseClient.ts` 預設 URL/anon key 改新專案；Vercel env
+>    `VITE_SUPABASE_URL`／`VITE_SUPABASE_ANON_KEY` 更新；`vercel.json` bom1→hnd1；push 部署
+>    （新 anon key：`eyJ…igowitmbnlvzznqgfpfl…`，Dashboard API Keys 可查）
+> 3. hub：`supabase secrets set FOODPOWER_SUPABASE_URL/FOODPOWER_SERVICE_ROLE_KEY`（rkmk 專案）
+>    ＋ hub Vercel env 同步更新 → redeploy
+> 4. 金流保險：舊專案 `newebpay-notify` 改部署為轉發 proxy → 新 URL（接住切換前發起的交易回呼）
+> 5. 驗證：官網登入/活動/會員名錄、LIFF 綁定、客服 AI 問活動、金流小額實測、`/share/:id`
+> 6. 觀察兩週無異常 → pause 舊專案（停止 $10/月×2 併行計費）→ 一個月後刪除
 
 ## 為什麼要搬
 

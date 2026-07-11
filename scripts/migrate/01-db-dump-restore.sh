@@ -34,7 +34,7 @@ echo "  新庫：$NH ($NU)"
 
 echo "▶ 1/5 dump 舊庫 public schema（結構）…"
 PGPASSWORD="$OLD_DB_PASSWORD" pg_dump -h "$OH" -p "$OP" -U "$OU" -d postgres \
-  --schema=public --schema-only --no-owner --quote-all-identifiers \
+  --schema=public --schema-only --no-owner --no-privileges --quote-all-identifiers \
   -f "$OUT/schema.sql"
 
 echo "▶ 2/5 dump auth 使用者（含密碼雜湊）…"
@@ -48,23 +48,38 @@ PGPASSWORD="$OLD_DB_PASSWORD" pg_dump -h "$OH" -p "$OP" -U "$OU" -d postgres \
   -f "$OUT/data.sql"
 
 echo "▶ 4/5 重建新庫 public schema…"
-PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-drop schema if exists public cascade;
-create schema public;
-grant usage on schema public to postgres, anon, authenticated, service_role;
-grant all on schema public to postgres, service_role;
-SQL
+# 只 drop 不 create——schema.sql 內含 CREATE SCHEMA public
+PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 \
+  -c 'drop schema if exists public cascade;'
 PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres \
   -v ON_ERROR_STOP=1 -q -f "$OUT/schema.sql"
+# 對齊 Supabase 預設權限（RLS 才是真正的閘門）
+PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant all on all tables in schema public to postgres, anon, authenticated, service_role;
+grant all on all sequences in schema public to postgres, anon, authenticated, service_role;
+grant all on all functions in schema public to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to postgres, anon, authenticated, service_role;
+SQL
 
 echo "▶ 5/5 灌資料（auth → public）…"
-# auth.users 若已有同 id（重跑）先清掉本批以外不動；這裡採簡單策略：僅在空表時灌入
+# 僅在空表時灌 auth（重跑安全）
 AUTH_COUNT=$(PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -Atc "select count(*) from auth.users")
 if [ "$AUTH_COUNT" = "0" ]; then
   PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 -q -f "$OUT/auth-data.sql"
 else
   echo "  auth.users 非空（$AUTH_COUNT），略過 auth 匯入（重跑情境）"
 fi
-PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 -q -f "$OUT/data.sql"
+# 循環外鍵（festival_registrations ↔ festival_applications）：
+# 先把所有 FK 改為 deferrable，整批資料在單一交易內延遲驗證
+PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -Atc \
+  "select format('alter table %s alter constraint %I deferrable;', conrelid::regclass, conname)
+   from pg_constraint where contype='f' and connamespace='public'::regnamespace" \
+  | PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres -v ON_ERROR_STOP=1 -q
+PGPASSWORD="$NEW_DB_PASSWORD" psql -h "$NH" -p "$NP" -U "$NU" -d postgres \
+  -v ON_ERROR_STOP=1 -q --single-transaction \
+  -c 'set constraints all deferred' -f "$OUT/data.sql"
 
 echo "✅ 完成。輸出檔在 $OUT/。請接著跑 scripts/migrate/03-verify-counts.sh 逐表比對筆數。"
