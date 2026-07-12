@@ -945,6 +945,17 @@ const App: React.FC = () => {
     if (!supabase) return;
     setLoading(true);
     try {
+      // 防重複建立：若已有會員用此入會訂單號建立過，代表已核准，直接中止（避免同一申請被核准兩次產生重複會員）
+      const joinOrderNo = (application as any).merchant_order_no;
+      if (joinOrderNo) {
+        const { data: dup } = await supabase.from('members').select('member_no').ilike('payment_records', `%${joinOrderNo}%`).limit(1);
+        if (dup && dup.length > 0) {
+          alert(`此申請已建立會員（編號 ${dup[0].member_no}），不重複建立。`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data: members, error: fetchError } = await supabase.from('members').select('member_no');
       if (fetchError) throw fetchError;
       const maxNo = members?.reduce((max, m) => {
