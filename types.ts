@@ -112,6 +112,8 @@ export interface SignupSettings {
   payment_deadline_hours?: number | null;
   payment_mode: 'online' | 'self';   // online=藍新金流 / self=發起人自主收款
   collect_note?: string | null;       // 自主收款說明（匯款帳號/現場繳費等）
+  host_name?: string | null;          // 主辦人姓名（報名者可聯絡）
+  host_phone?: string | null;         // 主辦人手機
   created_at?: string;
 }
 

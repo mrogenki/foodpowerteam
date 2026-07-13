@@ -233,6 +233,17 @@ const SignupChain: React.FC = () => {
           </div>
         )}
 
+        {/* 主辦人聯絡資訊 */}
+        {(settings.host_name || settings.host_phone) && (
+          <div className="mt-4 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 text-sm text-blue-800 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="font-bold">📞 有問題請聯絡主辦人</span>
+            {settings.host_name && <span>{settings.host_name}</span>}
+            {settings.host_phone && (
+              <a href={`tel:${settings.host_phone.replace(/[^0-9+]/g, '')}`} className="font-bold underline hover:text-blue-600">{settings.host_phone}</a>
+            )}
+          </div>
+        )}
+
         {/* 統計列 */}
         <div className="grid grid-cols-3 gap-3 mt-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center shadow-sm">

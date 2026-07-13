@@ -15,6 +15,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [deadlineHours, setDeadlineHours] = useState<string>(''); // 空 = 不自動釋放
   const [paymentMode, setPaymentMode] = useState<'online' | 'self'>('online');
   const [collectNote, setCollectNote] = useState('');
+  const [hostName, setHostName] = useState('');
+  const [hostPhone, setHostPhone] = useState('');
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -35,6 +37,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
       setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
       setCollectNote(ss.collect_note || '');
+      setHostName(ss.host_name || '');
+      setHostPhone(ss.host_phone || '');
     } else {
       setEnabled(false);
     }
@@ -57,6 +61,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
         p_fee_amount: Math.max(0, feeAmount || 0),
         p_payment_mode: paymentMode,
         p_collect_note: paymentMode === 'self' ? collectNote : '',
+        p_host_name: hostName,
+        p_host_phone: hostPhone,
       });
       if (error) throw error;
       alert(enabled ? '已更新接龍報名設定' : '已開啟接龍報名！');
@@ -179,6 +185,16 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                   className="w-full p-2 border rounded" />
               </div>
             )}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1">主辦人姓名（顯示給報名者聯絡）</label>
+              <input value={hostName} onChange={e => setHostName(e.target.value)} maxLength={40} placeholder="例：王小明"
+                className="w-full p-2 border rounded" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1">主辦人手機</label>
+              <input value={hostPhone} onChange={e => setHostPhone(e.target.value)} maxLength={30} inputMode="tel" placeholder="例：0912-345-678"
+                className="w-full p-2 border rounded" />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-4">
