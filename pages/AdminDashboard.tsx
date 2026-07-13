@@ -16,7 +16,8 @@ import BatchReceiptGenerator from '../components/BatchReceiptGenerator';
 import BlockEditor from '../components/BlockEditor';
 import SignupAdminPanel from '../components/SignupAdminPanel';
 import CashRegistrationModal from '../components/CashRegistrationModal';
-import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry, SignupEntry } from '../types';
+import ArticleManager from '../components/ArticleManager';
+import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry, SignupEntry, Article, ARTICLE_CATEGORIES } from '../types';
 
 // ==========================================
 // 共用：對「已付款」訂單執行退費
@@ -71,6 +72,10 @@ interface AdminDashboardProps {
   signupEntries?: SignupEntry[];
   onRefreshSignupEntries?: () => void;
   onToggleSignupCheckin?: (id: string, value: boolean) => void;
+  articles?: Article[];
+  onAddArticle?: (art: any) => void;
+  onUpdateArticle?: (art: any) => void;
+  onDeleteArticle?: (id: string | number) => void;
   memberRegistrations: MemberRegistration[];
   users: AdminUser[];
   members: Member[];
@@ -255,6 +260,7 @@ const Sidebar: React.FC<{ user: AdminUser; onLogout: () => void; pendingCount: n
           <Link to="/admin/activities" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/activities') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Calendar size={20} /><span>活動管理</span></Link>
           <Link to="/admin/club" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/club') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><Crown size={20} /><span>俱樂部管理</span></Link>
           <Link to="/admin/milestones" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/milestones') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><History size={20} /><span>大事記管理</span></Link>
+          <Link to="/admin/articles" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/articles') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}><FileText size={20} /><span>專欄管理</span></Link>
           <Link to="/admin/festival-applications" className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${location.pathname.startsWith('/admin/festival-applications') ? 'bg-red-600 text-white' : 'hover:bg-gray-800'}`}>
             <Flame size={20} />
             <div className="flex-grow flex justify-between items-center">
@@ -3852,6 +3858,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} onAdjustPoints={props.onAdjustPoints} onFetchPointsLedger={props.onFetchPointsLedger} />} />
           <Route path="/club" element={<ClubManager activities={props.clubActivities} onUpdate={props.onUpdateClubActivity} onAdd={props.onAddClubActivity} onDelete={props.onDeleteClubActivity} onUploadImage={props.onUploadImage} />} />
           <Route path="/milestones" element={<MilestoneManager milestones={props.milestones} onAdd={props.onAddMilestone} onUpdate={props.onUpdateMilestone} onDelete={props.onDeleteMilestone} onUploadImage={props.onUploadImage} />} />
+          <Route path="/articles" element={<ArticleManager articles={props.articles || []} onAdd={props.onAddArticle!} onUpdate={props.onUpdateArticle!} onDelete={props.onDeleteArticle!} onUploadImage={props.onUploadImage} />} />
           <Route path="/finances" element={<FinancialManager records={props.financialRecords} onAdd={props.onAddFinancialRecord} onUpdate={props.onUpdateFinancialRecord} onDelete={props.onDeleteFinancialRecord} onUploadImage={props.onUploadImage} />} />
           <Route path="/member-applications" element={<MemberApplicationManager applications={props.memberApplications} onApprove={props.onApproveMemberApplication} onDelete={props.onDeleteMemberApplication} isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />
           <Route path="/member-renewals" element={<MemberRenewalManager isSuperAdmin={currentUser?.role === UserRole.SUPER_ADMIN} />} />

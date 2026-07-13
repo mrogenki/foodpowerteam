@@ -157,6 +157,33 @@ export const IndustryCategories = [
 
 export type IndustryCategoryType = typeof IndustryCategories[number];
 
+// --- 文章/專欄 ---
+export const ARTICLE_CATEGORIES = [
+  '產業資訊',
+  '專家觀點',
+  '協會動態',
+  '活動報導'
+] as const;
+export type ArticleCategory = typeof ARTICLE_CATEGORIES[number];
+
+export interface Article {
+  id: string | number;
+  slug: string;
+  title: string;
+  excerpt?: string;
+  content: string;            // BlockEditor JSON string of Block[]
+  cover?: string;             // 封面圖 URL
+  category?: string;
+  author_name?: string;
+  author_title?: string;
+  author_bio?: string;
+  author_avatar?: string;
+  status: 'draft' | 'published';
+  published_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Member {
   id: string | number;
   

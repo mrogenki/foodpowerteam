@@ -8,8 +8,9 @@ import { headTagsHtml, PRERENDER_ROUTES } from './seo/routeMeta';
 
 export { PRERENDER_ROUTES };
 
-export function render(url: string): Promise<{ appHtml: string; headHtml: string }> {
+export function render(url: string, ssrData?: any, headMeta?: any): Promise<{ appHtml: string; headHtml: string }> {
   (globalThis as any).__SSR_URL__ = url;
+  (globalThis as any).__SSR_DATA__ = ssrData;   // 文章等動態頁：注入初始資料，讓正文進到 SSR HTML
   return new Promise((resolve, reject) => {
     let settled = false;
     let html = '';
@@ -17,7 +18,7 @@ export function render(url: string): Promise<{ appHtml: string; headHtml: string
       write(chunk, _enc, cb) { html += chunk.toString(); cb(); },
       final(cb) { cb(); },
     });
-    sink.on('finish', () => { if (!settled) { settled = true; resolve({ appHtml: html, headHtml: headTagsHtml(url) }); } });
+    sink.on('finish', () => { if (!settled) { settled = true; resolve({ appHtml: html, headHtml: headTagsHtml(url, headMeta) }); } });
 
     const { pipe, abort } = renderToPipeableStream(<App />, {
       onAllReady() { pipe(sink); },

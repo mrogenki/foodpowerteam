@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, MoveUp, MoveDown, Type, Image as ImageIcon, Video, GripVertical } from 'lucide-react';
+import type { Block, BlockType } from './blockTypes';
 
-export type BlockType = 'text' | 'image' | 'video';
-
-export interface Block {
-  id: string;
-  type: BlockType;
-  content: string;
-  caption?: string;
-}
+// 型別已移到 blockTypes.ts（SSR 友善）；此處 re-export 保持既有 import 相容。
+export type { Block, BlockType };
 
 interface BlockEditorProps {
   value: string; // JSON string of Block[]

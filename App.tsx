@@ -32,10 +32,12 @@ const ActivityCheckIn = lazy(() => import('./pages/ActivityCheckIn'));
 const ReceiptView = lazy(() => import('./pages/ReceiptView'));
 const SignupChain = lazy(() => import('./pages/SignupChain'));
 const SignupPayment = lazy(() => import('./pages/SignupPayment'));
+const ArticleList = lazy(() => import('./pages/ArticleList'));
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 
 import Seo from './components/Seo';
 
-import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry, SignupEntry } from './types';
+import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry, SignupEntry, Article } from './types';
 import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
 import { notifyAdmin } from './utils/notification';
 import { supabase } from './utils/supabaseClient';
@@ -90,6 +92,7 @@ const Header: React.FC = () => {
             <Link to="/milestones" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">大事記</Link>
             <Link to="/activities" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">協會活動</Link>
             <Link to="/members" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">會員列表</Link>
+            <Link to="/articles" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">專欄</Link>
             <Link
               to="/festival"
               className="inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full text-base font-bold shadow-md shadow-orange-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
@@ -127,6 +130,7 @@ const Header: React.FC = () => {
             <Link to="/milestones" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">大事記</Link>
             <Link to="/activities" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">協會活動</Link>
             <Link to="/members" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">會員列表</Link>
+            <Link to="/articles" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">專欄</Link>
             <Link
               to="/festival"
               onClick={() => setIsOpen(false)}
@@ -201,6 +205,7 @@ const App: React.FC = () => {
   const [memberActivities, setMemberActivities] = useState<MemberActivity[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [signupEntries, setSignupEntries] = useState<SignupEntry[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [memberRegistrations, setMemberRegistrations] = useState<MemberRegistration[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -405,6 +410,10 @@ const App: React.FC = () => {
           }
         });
       }
+
+      // 專欄文章：獨立抓取。RLS 讓匿名只拿到 published；登入管理員拿到全部（含草稿，供後台管理）。
+      supabase.from('articles').select('*').order('created_at', { ascending: false })
+        .then(({ data }) => { if (Array.isArray(data)) setArticles(data as Article[]); });
 
     } catch (err: any) {
       console.error('Fetch error:', err);
@@ -645,6 +654,37 @@ const App: React.FC = () => {
     if (!supabase || !currentUser) return;
     const { data } = await supabase.from('signup_entries').select('*').order('created_at', { ascending: true });
     if (data) setSignupEntries(data as SignupEntry[]);
+  };
+
+  const refreshArticles = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('articles').select('*').order('created_at', { ascending: false });
+    if (data) setArticles(data as Article[]);
+  };
+
+  const handleAddArticle = async (art: any) => {
+    if (!supabase) return;
+    const now = new Date().toISOString();
+    const payload = { ...art, published_at: art.status === 'published' ? (art.published_at || now) : null, updated_at: now };
+    const { data, error } = await supabase.from('articles').insert(payload).select().single();
+    if (error) { console.error(error); alert('新增文章失敗：' + (error.message || '未知錯誤')); return; }
+    if (data) setArticles(prev => [data as Article, ...prev]);
+  };
+
+  const handleUpdateArticle = async (art: any) => {
+    if (!supabase) return;
+    const now = new Date().toISOString();
+    const payload = { ...art, published_at: art.status === 'published' ? (art.published_at || now) : null, updated_at: now };
+    setArticles(prev => prev.map(a => a.id === art.id ? { ...a, ...payload } : a));
+    const { error } = await supabase.from('articles').update(payload).eq('id', art.id);
+    if (error) { console.error(error); alert('更新文章失敗'); refreshArticles(); }
+  };
+
+  const handleDeleteArticle = async (id: string | number) => {
+    if (!supabase) return;
+    setArticles(prev => prev.filter(a => a.id !== id));
+    const { error } = await supabase.from('articles').delete().eq('id', id);
+    if (error) { console.error(error); alert('刪除文章失敗'); refreshArticles(); }
   };
 
   const handleToggleSignupCheckin = async (id: string, value: boolean) => {
@@ -1089,6 +1129,8 @@ const App: React.FC = () => {
               <Route path="/pay-festival/:id" element={<><Seo title="燒肉/火鍋祭繳費" noindex /><FestivalRegistrationPayment /></>} />
               <Route path="/payment-result" element={<><Seo title="付款結果" noindex /><PaymentResult /></>} />
               <Route path="/milestones" element={<><Seo title="協會大事記" path="/milestones" description="食在力量發展歷程與重要里程碑回顧。" /><MilestoneTimeline /></>} />
+              <Route path="/articles" element={<><Seo title="產業專欄" path="/articles" description="食在力量產業專欄：產業資訊、專家觀點與協會動態，掌握餐飲與美食產業第一手洞見。" /><ArticleList articles={articles} /></>} />
+              <Route path="/article/:slug" element={<ArticleDetail articles={articles} />} />
               <Route path="/festival" element={<><Seo title="燒肉祭・火鍋祭" path="/festival" description="食在力量燒肉祭・火鍋祭，匯聚美食品牌的產業合作盛會。" image="https://www.foodpowerteam.com/og-brand.jpg" /><Festival /></>} />
               <Route path="/festival/pay" element={<FestivalPayment />} />
               <Route path="/festival/apply" element={<FestivalApply />} />
@@ -1121,6 +1163,10 @@ const App: React.FC = () => {
                     signupEntries={signupEntries}
                     onRefreshSignupEntries={refreshSignupEntries}
                     onToggleSignupCheckin={handleToggleSignupCheckin}
+                    articles={articles}
+                    onAddArticle={handleAddArticle}
+                    onUpdateArticle={handleUpdateArticle}
+                    onDeleteArticle={handleDeleteArticle}
                     memberRegistrations={memberRegistrations}
                     users={users}
                     members={members}

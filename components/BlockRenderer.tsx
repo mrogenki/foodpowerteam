@@ -1,5 +1,5 @@
 import React from 'react';
-import { Block } from './BlockEditor';
+import type { Block } from './blockTypes';
 
 interface BlockRendererProps {
   value: string; // JSON string of Block[]
