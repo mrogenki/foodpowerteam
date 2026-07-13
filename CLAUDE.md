@@ -47,10 +47,15 @@ git push origin main
 # ⚠️ 一定要在「專案根目錄」執行，且務必加 --project-ref，避免 CLI 往上層找到
 #    /Users/jackhsu/supabase（舊 linked 副本）而部署到過時程式碼。
 # 專案 supabase/config.toml 已建立，確保 CLI 以本專案為 workdir。
-supabase functions deploy newebpay-notify --no-verify-jwt --project-ref kpltydyspvzozgxfiwra
+supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmbnlvzznqgfpfl
 ```
 
-### Edge Functions（部署目標：kpltydyspvzozgxfiwra）
+## 🚨 Supabase 專案（重要）
+- **正式站（www.foodpowerteam.com）= 東京 `igowitmbnlvzznqgfpfl`（ap-northeast-1）**。2026-07-12 由印度遷移至此，前端 `VITE_SUPABASE_URL` / `supabaseClient.ts` 預設皆指向東京。
+- 舊專案 `kpltydyspvzozgxfiwra`（ap-south-1 印度）為**遷移前副本，已停用**，勿再對它做任何 DB / Edge Function 變更。
+- **所有 DB migration、`execute_sql`、Edge Function 部署一律用 `igowitmbnlvzznqgfpfl`。**
+
+### Edge Functions（部署目標：igowitmbnlvzznqgfpfl）
 | Function | 用途 |
 |----------|------|
 | `newebpay-notify` | 藍新背景通知（NotifyURL）→ 更新付款狀態、發 Telegram/Email、點數核銷 |
