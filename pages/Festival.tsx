@@ -1168,7 +1168,8 @@ const credits = {
     { name: '大苑子', role: '飲品贊助', icon: Gift, color: 'from-lime-500 to-green-500', logo: '/festival/logo-dayuanzi.jpg' },
     { name: '春一枝', role: '冰品贊助', icon: Gift, color: 'from-rose-500 to-pink-500', logo: '/festival/logo-chunyizhi.png' },
     { name: '福德生活', role: '食材贊助', icon: Gift, color: 'from-yellow-500 to-amber-500', logo: '/festival/logo-fude.jpg' },
-    { name: '金色三麥', role: '飲品贊助', icon: Gift, color: 'from-amber-500 to-yellow-500', logo: '/festival/贊助商-金色三麥logo.jpg' }
+    { name: '金色三麥', role: '飲品贊助', icon: Gift, color: 'from-amber-500 to-yellow-500', logo: '/festival/贊助商-金色三麥logo.jpg' },
+    { name: '龜甲萬', role: '調味贊助', icon: Gift, color: 'from-red-500 to-orange-500', logo: '/festival/贊助商-龜甲萬.png' }
   ]
 };
 
