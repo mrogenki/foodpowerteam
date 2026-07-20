@@ -1215,20 +1215,22 @@ const RoleBlock: React.FC<{
   items: { name: string; role: string; icon: typeof Award; color: string; logo?: string }[];
   cols: string;
   large?: boolean;
-}> = ({ title, titleEn, items, cols, large }) => (
+  note?: string;
+}> = ({ title, titleEn, items, cols, large, note }) => (
   <motion.div
     initial="hidden"
     whileInView="visible"
     viewport={{ once: true, margin: '-30px' }}
     variants={stagger}
   >
-    <motion.div variants={fadeUp} className="flex items-baseline justify-center sm:justify-start gap-3 mb-4">
+    <motion.div variants={fadeUp} className="flex flex-wrap items-baseline justify-center sm:justify-start gap-x-3 gap-y-1 mb-4">
       <div className="w-8 h-px bg-gradient-to-r from-transparent to-amber-400 hidden sm:block" />
       <div className="inline-flex items-baseline gap-2">
         <span className="text-base sm:text-lg font-black text-amber-700 tracking-widest">{title}</span>
         <span className="text-[10px] font-bold tracking-[0.3em] text-amber-500 uppercase">{titleEn}</span>
       </div>
       <div className="w-8 h-px bg-gradient-to-l from-transparent to-amber-400 hidden sm:block" />
+      {note && <span className="text-[11px] sm:text-xs text-gray-400 font-normal">{note}</span>}
     </motion.div>
     <div className={`grid ${cols} gap-4`}>
       {items.map((c) => (
@@ -1288,6 +1290,7 @@ const Sponsors: React.FC = () => (
           titleEn="Sponsors"
           items={credits.sponsor}
           cols="sm:grid-cols-2 lg:grid-cols-3"
+          note="※ 非所有合作餐廳皆使用本次贊助商產品"
         />
       </div>
     </div>
