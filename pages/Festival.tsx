@@ -1161,17 +1161,19 @@ const credits = {
     { name: '可可食集', role: '餐飲訂供貨平台', icon: Utensils, color: 'from-teal-500 to-cyan-500', logo: '/festival/協辦單位-可可食集logo.jpg' }
   ],
   sponsor: [
+    // 顯示順序依主辦方指定
     { name: '桂冠食品', role: '食材贊助', icon: Gift, color: 'from-amber-500 to-orange-500', logo: '/festival/logo-laurel.png' },
     { name: '南橋讚岐烏龍麵', role: '麵品贊助', icon: Gift, color: 'from-orange-500 to-red-500', logo: '/festival/logo-nanqiao.jpeg' },
-    { name: '史偉莎', role: '用品贊助', icon: Gift, color: 'from-cyan-500 to-blue-500', logo: '/festival/logo-shiweisha.jpg' },
     { name: '鮮乳坊', role: '乳品贊助', icon: Gift, color: 'from-sky-500 to-blue-500', logo: '/festival/logo-xianrufang.jpeg' },
+    { name: '金色三麥', role: '飲品贊助', icon: Gift, color: 'from-amber-500 to-yellow-500', logo: '/festival/贊助商-金色三麥logo.jpg' },
     { name: '大苑子', role: '飲品贊助', icon: Gift, color: 'from-lime-500 to-green-500', logo: '/festival/logo-dayuanzi.jpg' },
     { name: '春一枝', role: '冰品贊助', icon: Gift, color: 'from-rose-500 to-pink-500', logo: '/festival/logo-chunyizhi.png' },
     { name: '福德生活', role: '食材贊助', icon: Gift, color: 'from-yellow-500 to-amber-500', logo: '/festival/logo-fude.jpg' },
-    { name: '金色三麥', role: '飲品贊助', icon: Gift, color: 'from-amber-500 to-yellow-500', logo: '/festival/贊助商-金色三麥logo.jpg' },
     { name: '龜甲萬', role: '調味贊助', icon: Gift, color: 'from-red-500 to-orange-500', logo: '/festival/贊助商-龜甲萬.png' },
     { name: '黑蜜豬', role: '食材贊助', icon: Gift, color: 'from-stone-500 to-amber-600', logo: '/festival/贊助商-黑蜜豬logo.jpg' },
-    { name: '根島生態蝦', role: '海鮮贊助', icon: Gift, color: 'from-teal-500 to-emerald-500', logo: '/festival/贊助商-根島生態蝦logo.jpg' }
+    { name: '根島生態蝦', role: '海鮮贊助', icon: Gift, color: 'from-teal-500 to-emerald-500', logo: '/festival/贊助商-根島生態蝦logo.jpg' },
+    { name: '史偉莎', role: '用品贊助', icon: Gift, color: 'from-cyan-500 to-blue-500', logo: '/festival/logo-shiweisha.jpg' },
+    { name: '兔兔酒', role: '酒品贊助', icon: Gift, color: 'from-pink-400 to-rose-400', logo: '/festival/贊助商-兔兔酒logo.jpg' }
   ]
 };
 
