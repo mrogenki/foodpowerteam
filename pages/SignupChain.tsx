@@ -96,6 +96,7 @@ const SignupChain: React.FC = () => {
   const myIds = new Set(mySignups.map(m => m.id));
 
   const selfCollect = settings?.payment_mode === 'self';
+  const isFree = (settings?.fee_amount || 0) <= 0;   // 免費活動：無需繳費
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -121,14 +122,14 @@ const SignupChain: React.FC = () => {
       setCompanyTitle(''); setTaxId(''); setJobTitle(''); setReferrer(''); setNotes('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
-        if (selfCollect) {
+        if (selfCollect || isFree) {
           showToast('報名成功！🎉');
         } else {
           showToast('報名成功！正在前往付款…');
           setTimeout(() => goPay(row.id, row.cancel_token), 700);
         }
       } else {
-        showToast(selfCollect ? '已加入候補，有人取消會自動遞補 ⏳' : '已加入候補，遞補為正取後可付款 ⏳');
+        showToast((selfCollect || isFree) ? '已加入候補，有人取消會自動遞補 ⏳' : '已加入候補，遞補為正取後可付款 ⏳');
       }
     } catch (err: any) {
       showToast(err.message || '報名失敗，請稍後再試', true);
@@ -342,7 +343,7 @@ const SignupChain: React.FC = () => {
               {mySignups.map(m => {
                 const entry = entries.find(e => e.id === m.id);
                 if (!entry) return null;
-                const needPay = !selfCollect && entry.status === 'confirmed' && entry.payment_status !== 'paid';
+                const needPay = !selfCollect && !isFree && entry.status === 'confirmed' && entry.payment_status !== 'paid';
                 return (
                   <div key={m.id} className="flex flex-wrap items-center gap-3">
                     <span className="flex-1 min-w-[120px] text-sm font-medium text-gray-700">

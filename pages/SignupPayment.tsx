@@ -93,6 +93,7 @@ const SignupPayment: React.FC = () => {
 
   const isPaid = info.payment_status === 'paid';
   const isWaitlist = info.status !== 'confirmed';
+  const isFree = (info.amount || 0) <= 0;   // 免費活動：無需繳費
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -125,7 +126,16 @@ const SignupPayment: React.FC = () => {
           </div>
         </div>
 
-        {isPaid ? (
+        {isFree && !isPaid ? (
+          <div className="text-center space-y-6">
+            <div className="bg-green-50 text-green-700 p-4 rounded-xl flex items-center justify-center gap-2 font-bold">
+              <CheckCircle2 size={20} /> 此活動免費，報名已完成，無需繳費
+            </div>
+            <button onClick={() => navigate('/')} className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+              <Home size={20} /> 回首頁
+            </button>
+          </div>
+        ) : isPaid ? (
           <div className="text-center space-y-6">
             <div className="bg-green-50 text-green-700 p-4 rounded-xl flex items-center justify-center gap-2 font-bold">
               <CheckCircle2 size={20} /> 此報名已完成繳費
