@@ -942,11 +942,6 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '烤烤豬', category: '日式燒肉', logo: '/festival/brand-kaokao.jpg' },
   { name: '炭伙居酒屋', category: '燒肉名店', logo: '/festival/brand-tankaho.jpg' },
   { name: '純水燒肉', category: '燒肉名店', logo: '/festival/brand-chunshui.jpg' },
-  // ─── 新加入 ───
-  { name: '串燒殿', category: '串燒', logo: '/festival/brand-kushiden.png' },
-  { name: '娘子韓食', category: '韓式烤肉', logo: '/festival/brand-langzi.png' },
-  { name: '炎上燒肉', category: '日式燒肉', logo: '/festival/brand-enjo.jpg' },
-  { name: '燒肉來1喀', category: '燒肉名店', logo: '/festival/brand-laika.jpg' },
   { name: '一頭牛日式燒肉', category: '日式燒肉', logo: '/festival/brand-yitouniu.png' },
   { name: 'Char Char Steak & Bar', category: '牛排酒吧', logo: '/festival/brand-charchar.jpg' },
   { name: '燒肉smile', category: '日式燒肉', logo: '/festival/brand-smile.jpeg' },
@@ -954,7 +949,12 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '八色烤肉mini', category: '韓式烤肉', logo: '/festival/brand-basei.png' },
   { name: '精誠壹山燒肉', category: '燒肉名店', logo: '/festival/brand-yishan.jpeg' },
   { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' },
-  { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' }
+  { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' },
+  // ─── 移至最後 ───
+  { name: '串燒殿', category: '串燒', logo: '/festival/brand-kushiden.png' },
+  { name: '娘子韓食', category: '韓式烤肉', logo: '/festival/brand-langzi.png' },
+  { name: '炎上燒肉', category: '日式燒肉', logo: '/festival/brand-enjo.jpg' },
+  { name: '燒肉來1喀', category: '燒肉名店', logo: '/festival/brand-laika.jpg' }
 ];
 
 // 火鍋品牌：logo 放入 public/festival/火鍋logo/ 後加到此陣列
