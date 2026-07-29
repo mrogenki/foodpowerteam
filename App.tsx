@@ -87,12 +87,12 @@ const Header: React.FC = () => {
             </Link>
           </div>
           <div className="hidden lg:flex items-center space-x-10">
-            <Link to="/" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">首頁</Link>
             <Link to="/about" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">關於我們</Link>
             <Link to="/milestones" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">大事記</Link>
             <Link to="/activities" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">協會活動</Link>
             <Link to="/members" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">會員列表</Link>
             <Link to="/articles" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">專欄</Link>
+            <a href="https://www.foodpowerclub.com/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">食在俱樂部</a>
             <Link
               to="/festival"
               className="inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full text-base font-bold shadow-md shadow-orange-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
@@ -125,12 +125,12 @@ const Header: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             className="lg:hidden bg-white border-t px-4 py-6 space-y-4 shadow-2xl absolute top-full left-0 w-full"
           >
-            <Link to="/" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">首頁</Link>
             <Link to="/about" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">關於我們</Link>
             <Link to="/milestones" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">大事記</Link>
             <Link to="/activities" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">協會活動</Link>
             <Link to="/members" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">會員列表</Link>
             <Link to="/articles" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">專欄</Link>
+            <a href="https://www.foodpowerclub.com/" target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">食在俱樂部</a>
             <Link
               to="/festival"
               onClick={() => setIsOpen(false)}
