@@ -951,9 +951,6 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' },
   { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' },
   // ─── 移至最後 ───
-  { name: '串燒殿', category: '串燒', logo: '/festival/brand-kushiden.png' },
-  { name: '娘子韓食', category: '韓式烤肉', logo: '/festival/brand-langzi.png' },
-  { name: '炎上燒肉', category: '日式燒肉', logo: '/festival/brand-enjo.jpg' },
   { name: '燒肉來1喀', category: '燒肉名店', logo: '/festival/brand-laika.jpg' }
 ];
 
@@ -972,21 +969,13 @@ const hotpotBrands: BrandEntry[] = [
   { name: '百味釜精緻鍋物', category: '精緻鍋物', logo: '/festival/brand-baiweiku.jpg' },
   { name: '老東家重慶麻辣鍋', category: '麻辣鍋', logo: '/festival/brand-laodongja.jpg' },
   { name: '草原風蒙古火鍋', category: '蒙古火鍋', logo: '/festival/brand-caoyuan.jpg' },
-  { name: '椒心苑', category: '麻辣鍋', logo: '/festival/brand-jiaoxinyuan.jpg' },
-  { name: '深紅汕頭鍋物', category: '汕頭鍋物', logo: '/festival/brand-shenhong.jpg' },
-  { name: '發火鍋', category: '火鍋', logo: '/festival/brand-fahuo.jpg' },
   { name: '米釉鍋物', category: '精緻鍋物', logo: '/festival/brand-miyou.jpg' },
-  { name: '阿忠羊肉爐', category: '羊肉爐', logo: '/festival/brand-azhong.jpg' },
   { name: '潮牛殿', category: '潮汕鍋物', logo: '/festival/brand-chaoniudian.jpg' },
   { name: '聚食釜', category: '精緻鍋物', logo: '/festival/brand-jushifu.jpg' },
   { name: '老井麻神', category: '鍋物', logo: '/festival/brand-laojin-mashen.jpg' },
-  { name: '潮肉壽喜燒', category: '壽喜燒', logo: '/festival/brand-chaorou-sukiyaki.jpeg' },
   { name: '尚石苑', category: '精緻鍋物', logo: '/festival/brand-shangshiyuan.jpg' },
   { name: '徐泰山汕頭火鍋', category: '汕頭鍋物', logo: '/festival/brand-xutaishan.png' },
   { name: '今之旬', category: '鍋物', logo: '/festival/brand-jinzhixun.png' },
-  { name: '小膳香成都麻辣火鍋', category: '麻辣鍋', logo: '/festival/brand-xiaoshanxiang.jpeg' },
-  { name: '極禾鍋物職人', category: '精緻鍋物', logo: '/festival/brand-jihe.png' },
-  { name: '滇發哥', category: '雲南鍋物', logo: '/festival/brand-dianfage.png' },
   { name: '百年土種蔘雞湯', category: '雞湯鍋', logo: '/festival/brand-bainian.png' },
   { name: '鍋泰暖', category: '鍋物', logo: '/festival/brand-guotainan.png' },
   { name: '聰明鍋', category: '鍋物', logo: '/festival/火鍋logo/聰明鍋logo.jpeg' },
