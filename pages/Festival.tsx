@@ -930,10 +930,7 @@ type BrandEntry = { name: string; category: string; logo?: string };
 
 const yakinikuBrands: BrandEntry[] = [
   { name: '屋馬燒肉', category: '燒肉名店', logo: '/festival/brand-umma.png' },
-  { name: '尚屋韓式烤肉', category: '韓式烤肉', logo: '/festival/brand-sangok.jpg' },
   { name: '燒肉眾', category: '燒肉名店', logo: '/festival/brand-sioumazang.jpg' },
-  { name: '榮次郎', category: '燒肉名店', logo: '/festival/brand-eijiro.jpg' },
-  { name: '鹿兒島', category: '日式燒肉', logo: '/festival/brand-kagoshima.jpg' },
   { name: '狸小路燒肉', category: '日式燒肉', logo: '/festival/brand-tanukikoji.png' },
   { name: '延香炭食', category: '炭火燒肉', logo: '/festival/brand-yanxiang.jpg' },
   { name: '老井極上燒肉', category: '極上和牛', logo: '/festival/brand-laojin.png' },
