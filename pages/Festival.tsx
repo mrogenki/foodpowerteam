@@ -950,6 +950,8 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '精誠壹山燒肉', category: '燒肉名店', logo: '/festival/brand-yishan.jpeg' },
   { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' },
   { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' },
+  { name: '吃肉肉', category: '燒肉吃到飽', logo: '/festival/燒肉logo/吃肉肉logo.png' },
+  { name: '油花', category: '迴轉燒肉', logo: '/festival/燒肉logo/油花迴轉吧燒肉logo.jpg' },
   // ─── 移至最後 ───
   { name: '燒肉來1喀', category: '燒肉名店', logo: '/festival/brand-laika.jpg' }
 ];
