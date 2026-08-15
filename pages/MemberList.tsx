@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Globe, Building2, User, Tag, Briefcase, Share2 } from 'lucide-react';
+import { Globe, Building2, User, Tag, Briefcase, Share2, Search, X } from 'lucide-react';
 import { Member, IndustryCategories } from '../types';
 
 interface MemberListProps {
@@ -63,6 +63,7 @@ const getCategoryStyle = (category: string) => {
 
 const MemberList: React.FC<MemberListProps> = ({ members }) => {
   const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState<string>('');
 
   // 自動判斷會籍是否有效 (前端顯示邏輯)
   const isMemberActive = (m: Member) => {
@@ -87,9 +88,18 @@ const MemberList: React.FC<MemberListProps> = ({ members }) => {
     return valA.localeCompare(valB, undefined, { numeric: true });
   });
 
-  const filteredMembers = filter === 'all' 
-    ? sortedMembers 
+  const byCategory = filter === 'all'
+    ? sortedMembers
     : sortedMembers.filter(m => m.industry_category === filter);
+
+  const q = search.trim().toLowerCase();
+  const filteredMembers = !q
+    ? byCategory
+    : byCategory.filter(m =>
+        [m.name, m.brand_name, m.company_title, m.company, m.job_title, m.main_service, m.intro, m.industry_category, m.member_no]
+          .map(v => (v ?? '').toString().toLowerCase())
+          .some(s => s.includes(q))
+      );
 
   return (
     <div className="pb-20">
@@ -97,9 +107,29 @@ const MemberList: React.FC<MemberListProps> = ({ members }) => {
       <section className="bg-white border-b py-16 px-4 mb-10">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-gray-900">協會成員名單</h1>
-          <p className="text-gray-500 max-w-2xl mx-auto">匯聚各產業菁英，打造最強商務連結。點擊下方分類快速尋找合作夥伴。</p>
-          
-          <div className="flex flex-wrap justify-center gap-3 mt-8">
+          <p className="text-gray-500 max-w-2xl mx-auto">匯聚各產業菁英，打造最強商務連結。搜尋或點擊下方分類快速尋找合作夥伴。</p>
+
+          <div className="max-w-xl mx-auto mt-8 relative">
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="搜尋姓名、品牌、公司、產業別或服務…"
+              className="w-full pl-12 pr-11 py-3 rounded-full border border-gray-200 bg-white text-gray-800 outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent shadow-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                aria-label="清除搜尋"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3 mt-6">
             <button 
               onClick={() => setFilter('all')}
               className={`px-5 py-2 rounded-full font-bold transition-all ${filter === 'all' ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
@@ -214,7 +244,7 @@ const MemberList: React.FC<MemberListProps> = ({ members }) => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
               <User size={32} />
             </div>
-            <p className="text-gray-400 font-bold">此分類目前尚無成員資料</p>
+            <p className="text-gray-400 font-bold">{search.trim() ? `找不到符合「${search.trim()}」的成員` : '此分類目前尚無成員資料'}</p>
           </div>
         )}
       </div>
