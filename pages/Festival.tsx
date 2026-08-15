@@ -963,7 +963,6 @@ const hotpotBrands: BrandEntry[] = [
   { name: '二本松涮涮屋', category: '涮涮鍋', logo: '/festival/brand-nihonmatsu.jpg' },
   { name: '橋山壽喜燒', category: '壽喜燒', logo: '/festival/brand-hashiyama.jpg' },
   { name: '祇園禪院壽喜燒', category: '壽喜燒', logo: '/festival/brand-gion.jpg' },
-  { name: '馫麻辣', category: '麻辣鍋', logo: '/festival/brand-xunmala.jpg' },
   { name: '川鳳港式麻辣雞煲火鍋', category: '港式火鍋', logo: '/festival/brand-chuanfeng.jpg' },
   { name: '百味釜精緻鍋物', category: '精緻鍋物', logo: '/festival/brand-baiweiku.jpg' },
   { name: '老東家重慶麻辣鍋', category: '麻辣鍋', logo: '/festival/brand-laodongja.jpg' },
