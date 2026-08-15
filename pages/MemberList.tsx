@@ -1,11 +1,17 @@
 
 import React, { useState } from 'react';
-import { Globe, Building2, User, Tag, Briefcase } from 'lucide-react';
+import { Globe, Building2, User, Tag, Briefcase, Share2 } from 'lucide-react';
 import { Member, IndustryCategories } from '../types';
 
 interface MemberListProps {
   members: Member[];
 }
+
+// LINE 電子名片 LIFF app id（在 LINE Console「食在力量會員綁定」channel 下，已開啟 shareTargetPicker）。
+// 點擊後於 LINE App 內開啟名片分享頁。非機密，允許 env 覆寫。
+const LIFF_CARD_ID = ((import.meta as any)?.env?.VITE_LIFF_CARD_ID as string) || '2010533806-16QDwn2u';
+const buildCardShareUrl = (id: string | number): string | null =>
+  LIFF_CARD_ID ? `https://liff.line.me/${LIFF_CARD_ID}?member=${encodeURIComponent(String(id))}` : null;
 
 // 定義產業分類的顏色樣式
 const getCategoryStyle = (category: string) => {
@@ -181,6 +187,17 @@ const MemberList: React.FC<MemberListProps> = ({ members }) => {
                         <Globe size={16} />
                         暫無網站
                       </button>
+                    )}
+                    {buildCardShareUrl(member.id) && (
+                      <a
+                        href={buildCardShareUrl(member.id)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#06C755] text-white text-sm font-bold hover:bg-[#05b34c] transition-all"
+                      >
+                        <Share2 size={16} />
+                        分享電子名片
+                      </a>
                     )}
                   </div>
               </div>

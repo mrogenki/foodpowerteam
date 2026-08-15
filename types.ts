@@ -215,6 +215,7 @@ export interface Member {
   job_title?: string; // 職稱
   main_service?: string; // 主要服務/產品
   website?: string; // 網站
+  picture?: string; // 大頭照（LINE 電子名片用）
 
   // 相容性保留 (Optional)
   company?: string; // 對應到 brand_name 或 company_title

@@ -2548,7 +2548,7 @@ const ActivityCheckInManager: React.FC<{
   );
 };
 
-const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; onUpdate: (m: Member) => void; onDelete: (id: string | number) => void; onImport: (ms: Member[]) => void; onAdjustPoints?: (memberId: string, delta: number, reason: string) => Promise<boolean>; onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]> }> = ({ members, onAdd, onUpdate, onDelete, onImport, onAdjustPoints, onFetchPointsLedger }) => {
+const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; onUpdate: (m: Member) => void; onDelete: (id: string | number) => void; onImport: (ms: Member[]) => void; onAdjustPoints?: (memberId: string, delta: number, reason: string) => Promise<boolean>; onFetchPointsLedger?: (memberId: string) => Promise<PointsLedgerEntry[]>; onUploadImage?: (file: File) => Promise<string> }> = ({ members, onAdd, onUpdate, onDelete, onImport, onAdjustPoints, onFetchPointsLedger, onUploadImage }) => {
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -3008,6 +3008,23 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
                            <div><label className="block text-sm font-bold mb-1">職稱</label><input type="text" value={formData.job_title || ''} onChange={e => setFormData({...formData, job_title: e.target.value})} className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-red-500"/></div>
                            <div><label className="block text-sm font-bold mb-1">公司網站</label><input type="text" value={formData.website || ''} onChange={e => setFormData({...formData, website: e.target.value})} className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-red-500"/></div>
                            <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">主要服務/產品</label><textarea rows={3} value={formData.main_service || ''} onChange={e => setFormData({...formData, main_service: e.target.value})} className="w-full p-2 border rounded outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
+                           <div className="md:col-span-2">
+                             <label className="block text-sm font-bold mb-1">大頭照（LINE 電子名片用）</label>
+                             <div className="flex items-center gap-4">
+                               {formData.picture && <img src={formData.picture} alt="大頭照" className="w-20 h-20 object-cover rounded-lg border" />}
+                               <label className="flex-grow flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:bg-gray-50 transition-all">
+                                 <UploadCloud size={24} className="text-gray-400" />
+                                 <span className="text-sm text-gray-500 font-bold">{formData.picture ? '更換照片' : '點擊上傳照片'}</span>
+                                 <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                   if (onUploadImage && e.target.files?.[0]) {
+                                     const url = await onUploadImage(e.target.files[0]);
+                                     if (url) setFormData((prev: any) => ({ ...prev, picture: url }));
+                                   }
+                                 }} />
+                               </label>
+                               {formData.picture && <button type="button" onClick={() => setFormData((prev: any) => ({ ...prev, picture: '' }))} className="text-xs text-red-500 font-bold hover:underline shrink-0">移除</button>}
+                             </div>
+                           </div>
                        </div>
                    </div>
                    
@@ -3855,7 +3872,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
           {/* 向下相容：舊連結 /member-activities 重導 */}
           <Route path="/member-activities" element={<Navigate to="/admin/activities" replace />} />
           
-          <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} onAdjustPoints={props.onAdjustPoints} onFetchPointsLedger={props.onFetchPointsLedger} />} />
+          <Route path="/members" element={<MemberManager members={props.members} onAdd={props.onAddMember} onUpdate={props.onUpdateMember} onDelete={props.onDeleteMember} onImport={props.onAddMembers!} onAdjustPoints={props.onAdjustPoints} onFetchPointsLedger={props.onFetchPointsLedger} onUploadImage={props.onUploadImage} />} />
           <Route path="/club" element={<ClubManager activities={props.clubActivities} onUpdate={props.onUpdateClubActivity} onAdd={props.onAddClubActivity} onDelete={props.onDeleteClubActivity} onUploadImage={props.onUploadImage} />} />
           <Route path="/milestones" element={<MilestoneManager milestones={props.milestones} onAdd={props.onAddMilestone} onUpdate={props.onUpdateMilestone} onDelete={props.onDeleteMilestone} onUploadImage={props.onUploadImage} />} />
           <Route path="/articles" element={<ArticleManager articles={props.articles || []} onAdd={props.onAddArticle!} onUpdate={props.onUpdateArticle!} onDelete={props.onDeleteArticle!} onUploadImage={props.onUploadImage} />} />

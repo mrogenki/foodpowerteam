@@ -34,6 +34,7 @@ const SignupChain = lazy(() => import('./pages/SignupChain'));
 const SignupPayment = lazy(() => import('./pages/SignupPayment'));
 const ArticleList = lazy(() => import('./pages/ArticleList'));
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
+const LiffCard = lazy(() => import('./pages/LiffCard'));
 
 import Seo from './components/Seo';
 
@@ -1225,4 +1226,24 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+// LIFF 電子名片：在 LINE App 內開啟時，短路成獨立全頁（跳過全站資料載入與導覽）。
+// 支援直接進入 /liff/card，或 OAuth 重導回來時參數包在 liff.state 的情況。
+const Root: React.FC = () => {
+  if (typeof window !== 'undefined') {
+    const p = window.location.pathname;
+    const s = window.location.search;
+    const isCardPath =
+      p.startsWith('/liff/card') ||
+      (s.includes('liff.state') && /(member|ids)(=|%3D)/.test(s));
+    if (isCardPath) {
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <LiffCard />
+        </Suspense>
+      );
+    }
+  }
+  return <App />;
+};
+
+export default Root;

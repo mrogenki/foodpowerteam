@@ -18,6 +18,7 @@
     "@editorjs/list": "^2.0.9",
     "@editorjs/quote": "^2.7.6",
     "@emailjs/browser": "4.1.0",
+    "@line/liff": "^2.29.2",
     "@supabase/supabase-js": "2.48.1",
     "@tailwindcss/vite": "^4.2.2",
     "crypto-js": "4.2.0",
