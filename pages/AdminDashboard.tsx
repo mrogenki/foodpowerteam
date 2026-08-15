@@ -3011,7 +3011,7 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
                            <div className="md:col-span-2">
                              <label className="block text-sm font-bold mb-1">大頭照（LINE 電子名片用）</label>
                              <div className="flex items-center gap-4">
-                               {formData.picture && <img src={formData.picture} alt="大頭照" className="w-20 h-20 object-cover rounded-lg border" />}
+                               {formData.picture && <img src={formData.picture} alt="大頭照" className="w-[72px] h-24 object-cover rounded-lg border shrink-0" />}
                                <label className="flex-grow flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl p-6 cursor-pointer hover:bg-gray-50 transition-all">
                                  <UploadCloud size={24} className="text-gray-400" />
                                  <span className="text-sm text-gray-500 font-bold">{formData.picture ? '更換照片' : '點擊上傳照片'}</span>
@@ -3024,6 +3024,7 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
                                </label>
                                {formData.picture && <button type="button" onClick={() => setFormData((prev: any) => ({ ...prev, picture: '' }))} className="text-xs text-red-500 font-bold hover:underline shrink-0">移除</button>}
                              </div>
+                             <p className="text-xs text-gray-400 mt-1.5">建議直式 3:4（如 600×800）或正方形，臉部置中；名片以 3:4 裁切顯示。</p>
                            </div>
                        </div>
                    </div>

@@ -24,7 +24,7 @@ const FPT_RED = '#dc2626';   // red-600（主要按鈕）
 const FPT_ORANGE = '#ea580c'; // orange-600（產業別標籤）
 // 找不到大頭照時的預設圖（LINE flex 的 image 需可公開存取的 https）
 const PLACEHOLDER_IMG =
-  'https://placehold.co/600x600/f3f4f6/9ca3af/png?text=Food+Power+Team';
+  'https://placehold.co/600x800/f3f4f6/9ca3af/png?text=Food+Power+Team';
 
 /** 補齊網址協定：沒有 http(s) 前綴時自動補 https:// */
 function normalizeUrl(url?: string | null): string | null {
@@ -147,7 +147,9 @@ export function buildMemberCardBubble(m: MemberCardData): any {
       type: 'image',
       url: safeImageUrl(m.picture),
       size: 'full',
-      aspectRatio: '1:1',
+      // 直式 3:4：直式人像照可完整顯示頭部（1:1 置中裁切會切到偏上的頭）；
+      // 正方照則僅裁少量左右，臉部仍置中保留。
+      aspectRatio: '3:4',
       aspectMode: 'cover',
     },
     body: {

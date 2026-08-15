@@ -399,11 +399,11 @@ const CardPreview: React.FC<{ m: MemberCardData }> = ({ m }) => {
         <img
           src={m.picture}
           alt={m.name}
-          className="w-full aspect-square object-cover"
+          className="w-full aspect-[3/4] object-cover"
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-gray-300 text-3xl font-black">
+        <div className="w-full aspect-[3/4] bg-gray-100 flex items-center justify-center text-gray-300 text-3xl font-black">
           食在力量
         </div>
       )}
