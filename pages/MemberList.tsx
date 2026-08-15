@@ -150,9 +150,13 @@ const MemberList: React.FC<MemberListProps> = ({ members }) => {
                   </div>
                   
                   <div className="flex-grow space-y-3 relative z-10">
-                    <div className="flex items-center gap-2 text-gray-700 font-medium border-b border-gray-50 pb-2">
-                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
-                         <User size={16} />
+                    <div className="flex items-center gap-2.5 text-gray-700 font-medium border-b border-gray-50 pb-2">
+                      <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 overflow-hidden flex-shrink-0 border border-gray-100">
+                         {member.picture ? (
+                           <img src={member.picture} alt={member.name} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                         ) : (
+                           <User size={18} />
+                         )}
                       </div>
                       <div>
                          <div className="text-sm">{member.name}</div>
