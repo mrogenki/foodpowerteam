@@ -52,7 +52,7 @@ supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmb
 
 ## 🚨 Supabase 專案（重要）
 - **正式站（www.foodpowerteam.com）= 東京 `igowitmbnlvzznqgfpfl`（ap-northeast-1）**。2026-07-12 由印度遷移至此，前端 `VITE_SUPABASE_URL` / `supabaseClient.ts` 預設皆指向東京。
-- 舊專案 `kpltydyspvzozgxfiwra`（ap-south-1 印度）為**遷移前副本，已停用**，勿再對它做任何 DB / Edge Function 變更。
+- 舊專案 `kpltydyspvzozgxfiwra`（ap-south-1 印度）為遷移前副本，**已於 2026-08-21 永久刪除**（刪前確認：程式/文件無引用、無 app 流量、東京 DB 無任何印度圖片網址）。
 - **所有 DB migration、`execute_sql`、Edge Function 部署一律用 `igowitmbnlvzznqgfpfl`。**
 
 ### Edge Functions（部署目標：igowitmbnlvzznqgfpfl）
