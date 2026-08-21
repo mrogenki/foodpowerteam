@@ -55,7 +55,7 @@
 - prerender 的 Supabase 連線**必須指向與線上前端相同的專案**（見 Phase 0-D）。
 
 ### D. 🚨 上線前必查：Supabase 專案 / 環境變數
-- 前端 `utils/supabaseClient.ts:5-6` 有 hardcoded `DEFAULT_URL`/`DEFAULT_KEY`（`igowitmbnlvzznqgfpfl`），但正式站以 **Vercel 的 `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`** 為準。本專案所有 DB 作業經 MCP 在 `kpltydyspvzozgxfiwra`。
+- 前端 `utils/supabaseClient.ts:5-6` 有 hardcoded `DEFAULT_URL`/`DEFAULT_KEY`（`igowitmbnlvzznqgfpfl`），但正式站以 **Vercel 的 `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`** 為準。本專案所有 DB 作業經 MCP 在 `igowitmbnlvzznqgfpfl`（東京）。
 - **執行 Phase 1 前，先確認「線上前端實際連的專案 = 建立 articles 表的專案」**（用 MCP 讀 Vercel env，或以線上 admin 能看到本 session 既有資料反推）。若兩者不一致,文章會建在一個專案、前端讀另一個 → 全空。
 - prerender.mjs 取 env 用 `process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL`（+ 對應 anon key）；**不要 fallback 到 hardcoded DEFAULT**（可能指向錯的專案）。Vercel build env 要有 `VITE_SUPABASE_*`（build 前確認）。
 

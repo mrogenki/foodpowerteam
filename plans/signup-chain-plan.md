@@ -5,7 +5,7 @@
 > 逾時未付款可依「可調參數」自動釋放名額給候補。
 >
 > 技術棧：React + TS + Vite + Tailwind + Supabase + 藍新金流。
-> 部署：前端 push `main` → Vercel；Edge Function → `supabase functions deploy ... --project-ref kpltydyspvzozgxfiwra`；DB → migration / Supabase MCP。
+> 部署：前端 push `main` → Vercel；Edge Function → `supabase functions deploy ... --project-ref igowitmbnlvzznqgfpfl`；DB → migration / Supabase MCP。
 > 每階段結束跑 `npx tsc --noEmit`。
 
 ---
@@ -283,7 +283,7 @@ if (merchantOrderNo.startsWith('SIGNUP_')) {
 }
 ```
 放在 registrations fallthrough（index.ts:285）**之前**，確保 signup 不誤入 registrations 更新。
-部署：`supabase functions deploy newebpay-notify --no-verify-jwt --project-ref kpltydyspvzozgxfiwra`（**專案根目錄執行**）。
+部署：`supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmbnlvzznqgfpfl`（**專案根目錄執行**）。
 
 ### 文件參考
 - 樣式來源：`newebpay-notify/index.ts:234-283`（Festival 前綴分支 + 早 return）。
@@ -361,7 +361,7 @@ if (merchantOrderNo.startsWith('SIGNUP_')) {
 - [ ] 端對端：開啟接龍 → 匿名報名(正取) → 付款 → notify 回寫 paid → 收據/收入產生；容量滿 → 候補；取消 → 遞補；逾時未付款 → 釋放 → 遞補。
 - [ ] anon 讀名單無 phone/email 外洩（查 `signup_entries_public`）。
 - [ ] `get_advisors`（security + performance）無新高風險。
-- [ ] 部署：前端 `git push origin main`（Vercel）；Edge Function `supabase functions deploy newebpay-notify --no-verify-jwt --project-ref kpltydyspvzozgxfiwra`；DB migration 已套用遠端。
+- [ ] 部署：前端 `git push origin main`（Vercel）；Edge Function `supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmbnlvzznqgfpfl`；DB migration 已套用遠端。
 
 ### 反樣式守則
 - 上線前務必在沙盒金鑰跑完整付款；勿用正式金鑰測試。

@@ -91,5 +91,5 @@
 ## 事後
 
 - [ ] 兩週無異常 → pause 舊專案；一個月後刪除
-- [ ] 更新各 repo 交接文件中的 ref（kpltydyspvzozgxfiwra → 新 ref）
+- [x] 更新各 repo 交接文件中的 ref（kpltydyspvzozgxfiwra → igowitmbnlvzznqgfpfl，2026-08-21 完成）
 - [ ] （次優先）foodpowerclub 新加坡 → 東京，同本計畫流程，無金流、更簡單
