@@ -979,7 +979,9 @@ const hotpotBrands: BrandEntry[] = [
   { name: '聰明鍋', category: '鍋物', logo: '/festival/火鍋logo/聰明鍋logo.jpeg' },
   { name: '李鐵柱', category: '麻辣燙', logo: '/festival/火鍋logo/李鐵柱logo.jpeg' },
   { name: '蘇記嘀兜雞', category: '雞煲', logo: '/festival/火鍋logo/蘇記嘀兜雞logo.jpeg' },
-  { name: '荖子鍋', category: '鍋物', logo: '/festival/火鍋logo/荖子鍋logo.jpg' }
+  { name: '荖子鍋', category: '鍋物', logo: '/festival/火鍋logo/荖子鍋logo.jpg' },
+  { name: '金蒔鍋物', category: '精緻鍋物', logo: '/festival/火鍋logo/金蒔鍋物logo.png' },
+  { name: '六松今苑', category: '壽喜燒', logo: '/festival/火鍋logo/六松今苑logo.jpeg' }
 ];
 
 const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ brands, showCta }) => (
