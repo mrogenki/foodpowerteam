@@ -12,6 +12,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [open, setOpen] = useState(true);
   const [capacity, setCapacity] = useState(0);
   const [feeAmount, setFeeAmount] = useState(0);
+  const [memberFeeAmount, setMemberFeeAmount] = useState<string>(''); // 空 = 會員同一般價
   const [deadlineHours, setDeadlineHours] = useState<string>(''); // 空 = 不自動釋放
   const [paymentMode, setPaymentMode] = useState<'online' | 'self'>('online');
   const [collectNote, setCollectNote] = useState('');
@@ -34,6 +35,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       setOpen(ss.registration_open);
       setCapacity(ss.capacity);
       setFeeAmount(ss.fee_amount);
+      setMemberFeeAmount(ss.member_fee_amount != null ? String(ss.member_fee_amount) : '');
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
       setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
       setCollectNote(ss.collect_note || '');
@@ -53,12 +55,14 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     setSaving(true);
     try {
       const dh = deadlineHours.trim() === '' ? null : Math.max(1, parseInt(deadlineHours, 10) || 0);
+      const mfa = memberFeeAmount.trim() === '' ? null : Math.max(0, parseInt(memberFeeAmount, 10) || 0);
       const { error } = await supabase.rpc('signup_admin_update', {
         p_activity_id: activityId,
         p_capacity: Math.max(0, capacity || 0),
         p_open: open,
         p_deadline_hours: paymentMode === 'self' ? null : dh,
         p_fee_amount: Math.max(0, feeAmount || 0),
+        p_member_fee_amount: mfa,
         p_payment_mode: paymentMode,
         p_collect_note: paymentMode === 'self' ? collectNote : '',
         p_host_name: hostName,
@@ -167,9 +171,15 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                 className="w-full p-2 border rounded" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">報名費用 (NT$)</label>
+              <label className="block text-xs font-bold text-gray-600 mb-1">報名費用 / 一般價 (NT$)</label>
               <input type="number" min={0} value={feeAmount} onChange={e => setFeeAmount(parseInt(e.target.value, 10) || 0)}
                 className="w-full p-2 border rounded" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1">會員價 (NT$，空 = 同一般價)</label>
+              <input type="number" min={0} value={memberFeeAmount} onChange={e => setMemberFeeAmount(e.target.value)} placeholder="例如 500"
+                className="w-full p-2 border rounded" />
+              <p className="text-[11px] text-gray-400 mt-1">報名者填寫的手機若對應在會會員，自動套用此價。</p>
             </div>
             {paymentMode === 'online' && (
               <div>

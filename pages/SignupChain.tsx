@@ -97,6 +97,7 @@ const SignupChain: React.FC = () => {
 
   const selfCollect = settings?.payment_mode === 'self';
   const isFree = (settings?.fee_amount || 0) <= 0;   // 免費活動：無需繳費
+  const hasMemberPrice = settings?.member_fee_amount != null && settings.member_fee_amount !== settings.fee_amount;
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -219,9 +220,18 @@ const SignupChain: React.FC = () => {
               {activity.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 shrink-0 opacity-80" />{activity.time}</div>}
               {activity.location && <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4 shrink-0 opacity-80" />{activity.location}</div>}
               {settings.fee_amount > 0 && (
-                <div className="flex items-center gap-2 font-bold">
-                  費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
-                </div>
+                hasMemberPrice ? (
+                  <div className="sm:col-span-2 font-bold flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>一般 NT$ {settings.fee_amount.toLocaleString()}</span>
+                    <span className="text-amber-200">會員 NT$ {settings.member_fee_amount!.toLocaleString()}</span>
+                    {selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+                    <span className="w-full font-normal text-orange-100 text-xs">📱 報名填會員手機自動套用會員價</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 font-bold">
+                    費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+                  </div>
+                )
               )}
             </div>
           </div>

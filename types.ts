@@ -109,6 +109,7 @@ export interface SignupSettings {
   capacity: number;
   registration_open: boolean;
   fee_amount: number;
+  member_fee_amount?: number | null;  // 會員價（null = 與一般價相同）
   payment_deadline_hours?: number | null;
   payment_mode: 'online' | 'self';   // online=藍新金流 / self=發起人自主收款
   collect_note?: string | null;       // 自主收款說明（匯款帳號/現場繳費等）
@@ -132,6 +133,8 @@ export interface SignupEntry {
   status: 'confirmed' | 'waitlist';
   payment_status: 'unpaid' | 'paid' | 'refunded';
   paid_amount?: number;
+  member_id?: string | null;  // 報名當下命中的在會會員（有值＝套用會員價）
+  fee_amount?: number | null; // 報名當下鎖定的應付價
   merchant_order_no?: string;
   paid_at?: string;
   check_in_status?: boolean;

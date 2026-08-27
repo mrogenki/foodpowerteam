@@ -14,6 +14,7 @@ interface SignupPayInfo {
   activity_picture?: string | null;
   payment_status: 'unpaid' | 'paid';
   status: 'confirmed' | 'waitlist';
+  is_member?: boolean;
 }
 
 const SignupPayment: React.FC = () => {
@@ -121,7 +122,10 @@ const SignupPayment: React.FC = () => {
             <span className="font-bold text-gray-900 break-all text-right pl-4">{info.email}</span>
           </div>
           <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
-            <span className="text-gray-900 font-bold">應付金額</span>
+            <span className="text-gray-900 font-bold flex items-center gap-2">
+              應付金額
+              {info.is_member && <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">已套用會員價</span>}
+            </span>
             <span className="text-2xl font-bold text-red-600">NT$ {info.amount.toLocaleString()}</span>
           </div>
         </div>
