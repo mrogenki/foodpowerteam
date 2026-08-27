@@ -19,16 +19,19 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [hostName, setHostName] = useState('');
   const [hostPhone, setHostPhone] = useState('');
   const [entries, setEntries] = useState<SignupEntry[]>([]);
+  const [activityInfo, setActivityInfo] = useState<{ title?: string; date?: string; location?: string }>({});
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase || !activityId) return;
     setLoading(true);
-    const [{ data: s }, { data: e }] = await Promise.all([
+    const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
+      supabase.from('activities').select('title,date,location').eq('id', activityId).maybeSingle(),
     ]);
+    if (act) setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
     if (s) {
       const ss = s as SignupSettings;
       setEnabled(true);
@@ -120,15 +123,41 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const confirmed = entries.filter(e => e.status === 'confirmed' && e.payment_status !== 'refunded');
   const waitlist = entries.filter(e => e.status === 'waitlist');
 
-  const copyChainText = () => {
-    let text = confirmed.map((r, i) => `${i + 1}.${r.name}${r.company ? '/' + r.company : ''}`).join('\n');
-    if (waitlist.length) {
-      text += '\n額滿————\n' + waitlist.map((r, i) => `候補${i + 1} ${r.name}${r.company ? '/' + r.company : ''}`).join('\n');
-    }
-    navigator.clipboard.writeText(text).then(() => alert('已複製接龍文字')).catch(() => alert('複製失敗'));
-  };
-
   const signupUrl = `${window.location.origin}/signup/${activityId}`;
+
+  const copyChainText = () => {
+    const lines: string[] = [];
+    // 開頭：活動標題 + 日期 + 地點
+    const header = [activityInfo.title, activityInfo.date, activityInfo.location].filter(Boolean).join('　');
+    if (header) lines.push(header);
+    // 費用（含會員價）
+    if (feeAmount > 0) {
+      const mfa = memberFeeAmount.trim() === '' ? null : (parseInt(memberFeeAmount, 10) || 0);
+      const suffix = paymentMode === 'self' ? '（向主辦繳交）' : '';
+      if (mfa != null && mfa !== feeAmount) {
+        lines.push(`費用｜一般 NT$${feeAmount.toLocaleString()}・會員 NT$${mfa.toLocaleString()}${suffix}`);
+      } else {
+        lines.push(`費用｜NT$${feeAmount.toLocaleString()}${suffix}`);
+      }
+    }
+    if (lines.length) lines.push('———————');
+    // 正取（線上收款且有費用時標示已付款）
+    const showPaid = paymentMode === 'online' && feeAmount > 0;
+    confirmed.forEach((r, i) => {
+      const paid = showPaid && r.payment_status === 'paid' ? ' ✅已付' : '';
+      lines.push(`${i + 1}.${r.name}${r.company ? '/' + r.company : ''}${paid}`);
+    });
+    if (confirmed.length === 0) lines.push('（尚無報名）');
+    // 候補
+    if (waitlist.length) {
+      lines.push('額滿————');
+      waitlist.forEach((r, i) => lines.push(`候補${i + 1} ${r.name}${r.company ? '/' + r.company : ''}`));
+    }
+    // 結尾：報名連結
+    lines.push('———————');
+    lines.push(`報名：${signupUrl}`);
+    navigator.clipboard.writeText(lines.join('\n')).then(() => alert('已複製接龍文字')).catch(() => alert('複製失敗'));
+  };
 
   return (
     <div className="md:col-span-2 border-2 border-amber-200 bg-amber-50/40 rounded-2xl p-5">
