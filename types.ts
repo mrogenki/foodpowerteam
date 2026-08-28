@@ -135,6 +135,7 @@ export interface SignupEntry {
   paid_amount?: number;
   member_id?: string | null;  // 報名當下命中的在會會員（有值＝套用會員價）
   fee_amount?: number | null; // 報名當下鎖定的應付價
+  cancel_token?: string;      // 認領/繳費授權碼（後台複製繳費連結用）
   merchant_order_no?: string;
   paid_at?: string;
   check_in_status?: boolean;

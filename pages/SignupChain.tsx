@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, MapPin, ChevronLeft, Loader2, CreditCard, CheckCircle2 } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import { Activity, SignupSettings, SignupEntry } from '../types';
 import { supabase } from '../utils/supabaseClient';
+import { EMAIL_CONFIG } from '../constants';
 
 // ── 接龍報名（免登入）：名單即時公開，正取者導去付款 ──
 
@@ -109,6 +111,8 @@ const SignupChain: React.FC = () => {
     if (!company.trim())  { showToast('請填寫公司/品牌名稱', true); return; }
     if (!jobTitle.trim()) { showToast('請填寫職務', true); return; }
     setSubmitting(true);
+    const regName = name.trim();
+    const regEmail = email.trim();
     try {
       const { data, error } = await supabase.rpc('signup_register', {
         p_activity_id: activityId, p_name: name, p_phone: phone, p_email: email, p_company: company,
@@ -126,7 +130,18 @@ const SignupChain: React.FC = () => {
         if (selfCollect || isFree) {
           showToast('報名成功！🎉');
         } else {
-          showToast('報名成功！正在前往付款…');
+          // 寄專屬繳費連結（換裝置/清資料也能回來補繳）
+          const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
+          emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
+            to_name: regName, email: regEmail, to_email: regEmail, reply_to: regEmail,
+            activity_title: `【接龍報名】${activity?.title || ''}`,
+            activity_date: activity?.date || '',
+            activity_time: activity?.time || '',
+            activity_location: activity?.location || '',
+            activity_price: '請於連結中確認金額',
+            message: `親愛的 ${regName} 您好，\n\n您已成功報名「${activity?.title || ''}」（正取）。\n請點擊以下專屬連結完成繳費，以確認保留名額：\n\n${payLink}\n\n此連結可隨時回來繳費（換手機／瀏覽器亦適用）。若您已完成繳費，請忽略此信件。`,
+          }, EMAIL_CONFIG.PUBLIC_KEY).catch(err => console.error('接龍確認信寄送失敗', err));
+          showToast('報名成功！繳費連結已寄到你的 Email，正在前往付款…');
           setTimeout(() => goPay(row.id, row.cancel_token), 700);
         }
       } else {

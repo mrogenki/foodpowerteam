@@ -125,6 +125,14 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
 
   const signupUrl = `${window.location.origin}/signup/${activityId}`;
 
+  const copyPayLink = (entry: SignupEntry) => {
+    if (!entry.cancel_token) { alert('此筆缺少授權碼，無法產生繳費連結'); return; }
+    const link = `${window.location.origin}/pay-signup/${entry.id}?token=${entry.cancel_token}`;
+    navigator.clipboard.writeText(link)
+      .then(() => alert(`已複製「${entry.name}」的繳費連結，可私訊給對方補繳`))
+      .catch(() => alert('複製失敗'));
+  };
+
   const copyChainText = () => {
     const lines: string[] = [];
     // 開頭：活動標題 + 日期 + 地點
@@ -295,6 +303,13 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
+                              {paymentMode === 'online' && feeAmount > 0 && r.status === 'confirmed' && r.payment_status === 'unpaid' && (
+                                <button type="button" onClick={() => copyPayLink(r)}
+                                  className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-amber-100"
+                                  title="複製此人的專屬繳費連結，可私訊給他補繳">
+                                  <Copy size={12} /> 繳費連結
+                                </button>
+                              )}
                               {isSuperAdmin && r.payment_status === 'paid' && (
                                 <button type="button" onClick={() => handleRefund(r)} disabled={refundingId === r.id}
                                   className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-red-100 disabled:opacity-50"
