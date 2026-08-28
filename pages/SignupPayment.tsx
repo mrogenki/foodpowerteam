@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { submitNewebPayForm } from '../utils/newebpay';
-import { Loader2, CheckCircle2, AlertCircle, CreditCard, Home, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, CreditCard, Home, Clock, Copy } from 'lucide-react';
 
 // ── 接龍報名付款頁（免登入，憑 token 認領）──
 
@@ -26,6 +26,13 @@ const SignupPayment: React.FC = () => {
   const [info, setInfo] = useState<SignupPayInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const copyMyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); })
+      .catch(() => alert('複製失敗，請手動複製上方網址列的連結'));
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -162,6 +169,16 @@ const SignupPayment: React.FC = () => {
               <CreditCard size={24} /> {paying ? '前往中…' : '立即前往繳費'}
             </button>
             <p className="text-xs text-center text-gray-400">點擊後將轉導至藍新金流安全支付頁面</p>
+
+            <div className="pt-3 border-t border-gray-100">
+              <button onClick={copyMyLink}
+                className="w-full border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                <Copy size={18} /> {linkCopied ? '已複製 ✓' : '複製我的專屬繳費連結'}
+              </button>
+              <p className="text-xs text-center text-amber-600 mt-2 leading-relaxed">
+                ⚠️ 用 LINE 開啟可能不會記住你的報名。<br />建議先「複製連結」貼到自己的 LINE 或記事本，之後即可隨時回來補繳。
+              </p>
+            </div>
           </div>
         )}
       </div>
