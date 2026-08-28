@@ -24,7 +24,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|TelegramBot|WhatsApp|Discordbot|LinkedInBot|Pinterest|Googlebot|bingbot|Applebot|SkypeUriPreview|Line/).*"
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|TelegramBot|Discordbot|LinkedInBot|Pinterest|Googlebot|bingbot|Applebot|SkypeUriPreview).*"
         }
       ],
       "destination": "/api/share?id=:id&signup=1"
