@@ -11,12 +11,13 @@ const escapeHtml = (s: string) =>
 
 const extractPlainText = (raw: string | null | undefined): string => {
   if (!raw) return '';
-  // 嘗試解析 BlockEditor 格式 (Editor.js)
+  // 嘗試解析 BlockEditor 格式：支援頂層陣列 [{type,content}] 與 Editor.js {blocks:[{data:{text}}]}
   try {
     const parsed = JSON.parse(raw);
-    if (parsed?.blocks && Array.isArray(parsed.blocks)) {
-      return parsed.blocks
-        .map((b: any) => b?.data?.text || b?.data?.caption || '')
+    const blocks = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.blocks) ? parsed.blocks : null);
+    if (blocks) {
+      return blocks
+        .map((b: any) => b?.content || b?.data?.text || b?.data?.caption || b?.text || '')
         .join(' ')
         .replace(/<[^>]+>/g, '')
         .trim();
