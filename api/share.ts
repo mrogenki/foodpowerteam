@@ -144,7 +144,10 @@ const handler: VercelHandler = async (req, res) => {
 </html>`;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+  // 接龍分享卡與 /signup/:id 同網址：若被 CDN 快取，真人也會拿到 OG 跳轉頁 → 無限迴圈。
+  // 故 signup 版一律不快取（爬蟲量低，影響可忽略）；一般 /share 維持短快取。
+  res.setHeader('Vary', 'User-Agent');
+  res.setHeader('Cache-Control', isSignup ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=86400');
   res.status(200).send(html);
 };
 
