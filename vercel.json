@@ -19,6 +19,17 @@
       "destination": "/api/share?id=:id"
     },
     {
+      "source": "/signup/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|TelegramBot|WhatsApp|Discordbot|LinkedInBot|Pinterest|Googlebot|bingbot|Applebot|SkypeUriPreview|Line/).*"
+        }
+      ],
+      "destination": "/api/share?id=:id&signup=1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app.html"
     }

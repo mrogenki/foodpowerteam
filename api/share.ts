@@ -103,14 +103,19 @@ const handler: VercelHandler = async (req, res) => {
     // fall through — render fallback page
   }
 
-  const redirectTarget = `/#/activity/${encodeURIComponent(id)}`;
-  const shareUrl = `${origin}/share/${encodeURIComponent(id)}`;
+  // signup=1：接龍報名分享卡（爬蟲讀 OG、真人導向報名頁）
+  const isSignup = req.query?.signup === '1' || req.query?.signup === 'true';
 
-  const title = activity?.title ? `${activity.title} - 食在力量` : '食在力量活動';
+  const redirectTarget = isSignup ? `/signup/${encodeURIComponent(id)}` : `/#/activity/${encodeURIComponent(id)}`;
+  const shareUrl = isSignup ? `${origin}/signup/${encodeURIComponent(id)}` : `${origin}/share/${encodeURIComponent(id)}`;
+
+  const title = activity?.title
+    ? (isSignup ? `立即報名｜${activity.title}` : `${activity.title} - 食在力量`)
+    : '食在力量活動';
   const descBody = extractPlainText(activity?.description).slice(0, 80);
   const descMeta = activity
-    ? [activity.date, activity.time, activity.location].filter(Boolean).join(' ') + (descBody ? ` — ${descBody}` : '')
-    : '點擊查看活動詳情';
+    ? (isSignup ? '誠摯邀請您報名參加　' : '') + [activity.date, activity.time, activity.location].filter(Boolean).join(' ') + (descBody ? ` — ${descBody}` : '')
+    : (isSignup ? '點擊前往報名' : '點擊查看活動詳情');
   const picture = activity?.picture || `${origin}/logo.svg`;
 
   const html = `<!DOCTYPE html>
@@ -132,7 +137,7 @@ const handler: VercelHandler = async (req, res) => {
 <script>window.location.replace(${JSON.stringify(redirectTarget)});</script>
 </head>
 <body style="font-family:system-ui;padding:2em;text-align:center;color:#444">
-<p>正在開啟活動頁面...</p>
+<p>正在開啟${isSignup ? '報名' : '活動'}頁面...</p>
 <p><a href="${escapeHtml(redirectTarget)}">如未自動跳轉請點此</a></p>
 </body>
 </html>`;
