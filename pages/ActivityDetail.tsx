@@ -47,6 +47,15 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
 
   // 點數抵扣
   const [pointsApplied, setPointsApplied] = useState(0);
+  // 名額合併：此活動若有開接龍且已額滿（接龍+一般報名合計），前台直接擋下並引導去接龍候補
+  const [signupFull, setSignupFull] = useState(false);
+  useEffect(() => {
+    if (!id || !supabase) return;
+    supabase.rpc('activity_signup_capacity', { p_activity_id: String(id) }).then(({ data }) => {
+      const c = Array.isArray(data) ? data[0] : data;
+      setSignupFull(!!(c?.enabled && c?.is_full));
+    });
+  }, [id]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -444,6 +453,20 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                 </p>
                 <button onClick={() => navigate('/')} className="w-full bg-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-300 transition-colors">
                   查看其他活動
+                </button>
+              </div>
+            ) : signupFull ? (
+              // 名額已滿：引導去接龍報名候補
+              <div className="text-center py-8">
+                <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Ban size={40} />
+                </div>
+                <h3 className="text-2xl font-bold mb-2 text-gray-700">名額已滿</h3>
+                <p className="text-gray-500 text-sm mb-6">
+                  本活動正取名額已額滿。<br/>可改用「接龍報名」排候補，有人取消將自動遞補。
+                </p>
+                <button onClick={() => navigate(`/signup/${activity.id}`)} className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors">
+                  前往接龍報名候補
                 </button>
               </div>
             ) : (

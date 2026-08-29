@@ -744,6 +744,15 @@ const App: React.FC = () => {
   // 報名 CRUD — 統一 registrations 表，audience 區分公開／會員專屬
   const handleRegister = async (newReg: Registration, couponId?: string): Promise<boolean> => {
     if (!supabase) return false;
+    // 名額合併：若此活動有開接龍且已額滿（接龍正取 + 一般報名合計），擋下並引導去接龍候補
+    if (newReg.activityId != null) {
+      const { data: cap } = await supabase.rpc('activity_signup_capacity', { p_activity_id: String(newReg.activityId) });
+      const c = Array.isArray(cap) ? cap[0] : cap;
+      if (c?.enabled && c?.is_full) {
+        alert('此活動名額已滿，請改用「接龍報名」排候補。');
+        return false;
+      }
+    }
     const payload = { ...newReg, audience: newReg.audience || 'public' };
     const { error } = await supabase.from('registrations').insert([payload]);
     if (error) { alert('報名失敗：' + error.message); return false; }

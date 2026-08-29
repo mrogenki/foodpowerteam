@@ -52,18 +52,22 @@ const SignupChain: React.FC = () => {
 
   const fetchList = async (id: string) => {
     if (!supabase) return;
-    const [{ data: settingsData }, { data: entriesData, error: entriesError }] = await Promise.all([
+    const [{ data: settingsData }, { data: rosterData, error: rosterError }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', id).maybeSingle(),
-      // 匿名安全 view：不含 phone / email
-      supabase.from('signup_entries_public').select('*').eq('activity_id', id).order('created_at', { ascending: true }),
+      // 合併名單：接龍 + 一般活動報名（伺服端 RPC，只回公開欄位，不含 phone/email）
+      supabase.rpc('public_activity_roster', { p_activity_id: id }),
     ]);
     setSettings((settingsData as SignupSettings) || null);
-    if (!entriesError && entriesData) {
-      setEntries(entriesData as SignupEntry[]);
-      // 清掉伺服器上已不存在的本機報名紀錄（被取消/釋放）
-      const serverIds = new Set((entriesData as SignupEntry[]).map(e => e.id));
+    if (!rosterError && rosterData) {
+      const mapped = (rosterData as any[]).map(r => ({
+        id: r.entry_id, name: r.name, company: r.company,
+        status: r.status, payment_status: r.payment_status, source: r.source,
+      }));
+      setEntries(mapped as unknown as SignupEntry[]);
+      // 清掉伺服器上已不存在的本機報名紀錄（僅比對接龍來源的 id）
+      const signupIds = new Set(mapped.filter(e => e.source === 'signup').map(e => e.id));
       const local = readMine(id);
-      const alive = local.filter(m => serverIds.has(m.id));
+      const alive = local.filter(m => signupIds.has(m.id));
       if (alive.length !== local.length) saveMine(id, alive);
       setMySignups(alive);
     }
