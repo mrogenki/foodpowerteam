@@ -37,6 +37,10 @@ const SignupChain: React.FC = () => {
   const [referrer, setReferrer] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 折扣券
+  const [couponCode, setCouponCode] = useState('');
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
+  const [couponMsg, setCouponMsg] = useState('');
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -102,6 +106,24 @@ const SignupChain: React.FC = () => {
   const hasMemberPrice = settings?.member_fee_amount != null && settings.member_fee_amount !== settings.fee_amount;
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
+  const applyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code || !activityId || !supabase) return;
+    setCouponStatus('validating'); setCouponMsg('');
+    try {
+      const { data } = await supabase.from('coupons').select('*').eq('code', code).maybeSingle();
+      if (!data) { setCouponStatus('invalid'); setCouponMsg('無效的折扣碼'); return; }
+      if (String(data.activity_id) !== String(activityId)) { setCouponStatus('invalid'); setCouponMsg('此折扣碼不適用於本活動'); return; }
+      if (data.is_used) { setCouponStatus('invalid'); setCouponMsg(data.is_free ? '此邀請連結已被使用' : '此折扣碼已被使用'); return; }
+      if (data.is_free) { setCouponStatus('valid'); setCouponMsg('✓ VIP 免費券已套用，本次報名免費'); return; }
+      const d = Number(data.discount_amount) || 0;
+      setCouponStatus('valid');
+      setCouponMsg(`✓ 折扣碼適用，折抵 NT$${d.toLocaleString()}（實付金額於付款頁確認）`);
+    } catch {
+      setCouponStatus('invalid'); setCouponMsg('驗證失敗，請稍後再試');
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activityId || !supabase) return;
@@ -117,6 +139,7 @@ const SignupChain: React.FC = () => {
       const { data, error } = await supabase.rpc('signup_register', {
         p_activity_id: activityId, p_name: name, p_phone: phone, p_email: email, p_company: company,
         p_company_title: companyTitle, p_tax_id: taxId, p_title: jobTitle, p_referrer: referrer, p_notes: notes,
+        p_coupon_code: couponStatus === 'valid' ? couponCode.trim() : '',
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -125,6 +148,7 @@ const SignupChain: React.FC = () => {
       setMySignups(next);
       setName(''); setPhone(''); setEmail(''); setCompany('');
       setCompanyTitle(''); setTaxId(''); setJobTitle(''); setReferrer(''); setNotes('');
+      setCouponCode(''); setCouponStatus('idle'); setCouponMsg('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
         if (selfCollect || isFree) {
@@ -346,6 +370,24 @@ const SignupChain: React.FC = () => {
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={300} rows={2} placeholder="若有特殊需求請在此說明"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
               </div>
+              {!isFree && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">折扣碼（選填）</label>
+                  <div className="flex gap-2">
+                    <input value={couponCode}
+                      onChange={e => { setCouponCode(e.target.value); if (couponStatus !== 'idle') { setCouponStatus('idle'); setCouponMsg(''); } }}
+                      maxLength={40} placeholder="輸入折扣碼"
+                      className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+                    <button type="button" onClick={applyCoupon} disabled={couponStatus === 'validating' || !couponCode.trim()}
+                      className="px-5 py-3 rounded-xl bg-gray-900 text-white font-bold text-sm disabled:opacity-40 whitespace-nowrap">
+                      {couponStatus === 'validating' ? '驗證中…' : couponStatus === 'valid' ? '已套用' : '套用'}
+                    </button>
+                  </div>
+                  {couponMsg && (
+                    <p className={`text-xs mt-1.5 ${couponStatus === 'valid' ? 'text-emerald-600' : 'text-red-500'}`}>{couponMsg}</p>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-gray-400">🔒 電話與 Email 不會公開，只有主辦看得到。名單僅顯示姓名與公司/品牌。</p>
               {isFull && (
                 <div className="bg-amber-50 border border-amber-100 text-amber-600 rounded-2xl px-4 py-3 text-xs">
