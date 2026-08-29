@@ -120,6 +120,23 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     }
   };
 
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  const handleMarkPaid = async (entry: SignupEntry, paid: boolean) => {
+    if (!supabase) return;
+    if (paid && !window.confirm(`確認已收到「${entry.name}」的款項，標記為已付款？`)) return;
+    if (!paid && !window.confirm(`將「${entry.name}」改回未付款？`)) return;
+    setMarkingId(entry.id);
+    try {
+      const { error } = await supabase.rpc('signup_admin_mark_paid', { p_id: entry.id, p_paid: paid });
+      if (error) throw error;
+      await load();
+    } catch (err: any) {
+      alert(err.message || '標記失敗');
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
   const confirmed = entries.filter(e => e.status === 'confirmed' && e.payment_status !== 'refunded');
   const waitlist = entries.filter(e => e.status === 'waitlist');
 
@@ -149,8 +166,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       }
     }
     if (lines.length) lines.push('———————');
-    // 正取（線上收款且有費用時標示已付款）
-    const showPaid = paymentMode === 'online' && feeAmount > 0;
+    // 正取（有費用時標示已付款；自主收款可手動標記，線上走藍新）
+    const showPaid = feeAmount > 0;
     confirmed.forEach((r, i) => {
       const paid = showPaid && r.payment_status === 'paid' ? ' ✅已付' : '';
       lines.push(`${i + 1}.${r.name}${r.company ? '/' + r.company : ''}${paid}`);
@@ -297,9 +314,17 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                           <td className="px-3 py-2">{r.email || '—'}</td>
                           <td className="px-3 py-2">{r.payment_status === 'refunded' ? <span className="text-gray-400">—</span> : r.status === 'confirmed' ? '正取' : '候補'}</td>
                           <td className="px-3 py-2">
-                            {r.payment_status === 'paid' ? <span className="text-emerald-600 font-bold">已付</span>
-                              : r.payment_status === 'refunded' ? <span className="text-gray-400">已退費</span>
-                              : <span className="text-gray-400">未付</span>}
+                            {paymentMode === 'self' && r.payment_status !== 'refunded' ? (
+                              <button type="button" onClick={() => handleMarkPaid(r, r.payment_status !== 'paid')} disabled={markingId === r.id}
+                                className={`text-xs px-2 py-1 rounded-full font-bold transition-colors disabled:opacity-50 ${r.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}
+                                title="點擊切換付款狀態（自主收款）">
+                                {markingId === r.id ? '…' : r.payment_status === 'paid' ? '已付 ✓' : '未付・點我標記'}
+                              </button>
+                            ) : (
+                              r.payment_status === 'paid' ? <span className="text-emerald-600 font-bold">已付</span>
+                                : r.payment_status === 'refunded' ? <span className="text-gray-400">已退費</span>
+                                : <span className="text-gray-400">未付</span>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
