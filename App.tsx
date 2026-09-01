@@ -773,9 +773,10 @@ const App: React.FC = () => {
       }
     }
 
-    // 0 元訂單（VIP 免費 / 折扣全免 / 點數全抵）：直接標記已付、不進金流；有預扣點數則一併核銷
+    // 0 元訂單（VIP 免費 / 折扣全免 / 點數全抵）：標記已付、不進金流；有預扣點數則一併核銷
+    // 匿名報名者無 registrations UPDATE 權限，改走 SECURITY DEFINER RPC（僅對金額 0 的單標記）
     if ((newReg.paid_amount ?? 0) === 0) {
-      await supabase.from('registrations').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', newReg.id);
+      await supabase.rpc('mark_free_registration_paid', { p_id: String(newReg.id) });
       if (usedPoints) await supabase.rpc('points_commit', { p_order_no: newReg.merchant_order_no });
     }
     if (usedPoints) fetchMembers(); // 更新會員餘額顯示
