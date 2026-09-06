@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, DollarSign, ArrowLeft, CheckCircle2, Share2, CopyCheck, Clock, Loader2, Crown, UserCheck, Ticket, User, Users, Search, ChevronDown, Lock, AlertCircle, CreditCard, Ban, Info, ShieldAlert, Copy } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 import { Activity, MemberActivity, Registration, MemberRegistration, Member, PaymentStatus } from '../types';
-import { EMAIL_CONFIG, POINT_TO_TWD } from '../constants';
+import { POINT_TO_TWD } from '../constants';
 import { submitNewebPayForm, NEWEB_CONFIG } from '../utils/newebpay';
 import { supabase } from '../utils/supabaseClient';
 import BlockRenderer from '../components/BlockRenderer';
@@ -242,33 +241,28 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   }, [activity?.id]);
 
   const sendConfirmationEmail = async (name: string, email: string, payLink?: string) => {
-    if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
-      console.warn('EmailJS 未設定或為預設值，跳過發送');
-      return;
-    }
-
     setIsSendingEmail(true);
     try {
-      const templateParams = {
-        email: email, 
-        to_name: name,
-        phone: formData.phone,
-        company: formData.company,
-        job_title: formData.title, 
-        activity_title: activity.title,
-        activity_date: activity.date,
-        activity_time: activity.time,
-        // 範本 template_ih0plai 只渲染 activity_location（不渲染 message），故稍後付款時把繳費連結併入地點欄位確保出現。
-        activity_location: payLink
-          ? `${activity.location}\n\n💳 立即點此完成繳費以保留名額：\n${payLink}`
-          : activity.location,
-        activity_price: finalPrice,
-        ...(payLink ? { message: `親愛的 ${name} 您好，\n\n您已完成報名「${activity.title}」，本次選擇稍後付款。\n請點以下專屬連結完成繳費以保留名額（任何裝置皆可）：\n\n${payLink}\n\n若您已完成繳費，請忽略此信件。` } : {}),
-      };
-      await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, templateParams, EMAIL_CONFIG.PUBLIC_KEY);
-    } catch (error) { 
-      console.error('報名確認信發送失敗:', error); 
-    } finally { 
+      // 改由 Resend（send-email Edge Function）寄送：版型寫在程式碼、繳費連結為真正的按鈕。
+      await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'activity_confirm',
+          params: {
+            to_name: name,
+            to_email: email,
+            activity_title: activity.title,
+            activity_date: activity.date,
+            activity_time: activity.time,
+            activity_location: activity.location,
+            fee: Number(finalPrice) || 0,
+            is_free: Number(finalPrice) === 0,
+            pay_link: payLink || '',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('報名確認信發送失敗:', error);
+    } finally {
       setIsSendingEmail(false); 
     }
   };

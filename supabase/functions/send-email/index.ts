@@ -119,6 +119,36 @@ const templates: Record<string, (p: any) => Built> = {
     `;
     return { subject: `【接龍報名】${title} — 報名確認`, html: layout({ title, bodyHtml: body }) };
   },
+
+  // 一般活動報名確認信（免費 or 稍後付款；立即付款者由付款成功後另寄）
+  activity_confirm: (p): Built => {
+    const title = String(p.activity_title || '活動');
+    const detail = rows([
+      ['活動名稱', esc(title)],
+      ['日期', esc(p.activity_date)],
+      ['時間', esc(p.activity_time)],
+      ['地點', esc(p.activity_location)],
+      ['費用', p.is_free ? '免費' : money(p.fee)],
+    ]);
+    const who = esc(p.to_name || '');
+
+    let intro = '';
+    let cta = '';
+    if (p.is_free || !p.pay_link) {
+      intro = `您已完成報名，我們已收到您的報名資訊。`;
+    } else {
+      intro = `您已完成報名，本次選擇稍後付款。請點下方按鈕完成繳費以保留名額（任何裝置皆可）。`;
+      cta = button('前往繳費', p.pay_link);
+    }
+
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">感謝您報名參加「食在力量」的活動！<br>${esc(intro)}</p>
+      <div style="padding:16px;background:#f9fafb;border-radius:12px;">${detail}</div>
+      ${cta}
+    `;
+    return { subject: `【活動報名】${title} — 報名確認`, html: layout({ title, bodyHtml: body }) };
+  },
 };
 
 serve(async (req: Request) => {
