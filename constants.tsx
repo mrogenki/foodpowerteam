@@ -9,17 +9,7 @@ export const POINTS_ON_JOIN = 0;      // 入會贈點（0 = 不贈）
 export const POINTS_ON_RENEWAL = 0;   // 續費贈點（0 = 不贈）
 export const POINTS_EARN_RATE = 0;    // 每消費 N 元回饋 1 點（0 = 不回饋）
 
-// ==========================================
-// EmailJS 設定 (已更新為正式金鑰)
-// ==========================================
-export const EMAIL_CONFIG = {
-  SERVICE_ID: 'service_z0iyas9',
-  TEMPLATE_ID: 'template_ih0plai', // 一般活動報名用的模板
-  MEMBER_JOIN_TEMPLATE_ID: 'template_gu7mwvm', // 新增：會員申請專用的模板
-  RENEWAL_TEMPLATE_ID: 'template_3bgk8ts', // 新增：會員續約通知模板 (45天前)
-  RECEIPT_TEMPLATE_ID: 'template_4eq02vf', // 更新為使用者提供的 Template ID
-  PUBLIC_KEY: 'ajJknYqtnk3p1_WmI'
-};
+// 寄信已全面改用 Resend（supabase/functions/send-email）；EmailJS 設定已移除。
 
 // ==========================================
 // 收據印章（存 Supabase Storage 公開路徑，線上收據頁與後台共用）

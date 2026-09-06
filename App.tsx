@@ -40,7 +40,7 @@ const LiffMember = lazy(() => import('./pages/LiffMember'));
 import Seo from './components/Seo';
 
 import { Activity, MemberActivity, Registration, MemberRegistration, AdminUser, Member, Coupon, MemberApplication, UserRole, ClubActivity, Milestone, FinancialRecord, PointsLedgerEntry, SignupEntry, Article } from './types';
-import { INITIAL_ACTIVITIES, INITIAL_MEMBERS, EMAIL_CONFIG } from './constants';
+import { INITIAL_ACTIVITIES, INITIAL_MEMBERS } from './constants';
 import { notifyAdmin } from './utils/notification';
 import { supabase } from './utils/supabaseClient';
 
