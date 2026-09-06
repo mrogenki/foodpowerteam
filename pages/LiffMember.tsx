@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import liff from '@line/liff';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2, Share2 } from 'lucide-react';
+import { MemberCardData, buildMemberShareMessages } from '../utils/memberCard';
 
 // 會員專區 LIFF（LINE 內）：綁定 LINE 身分 → 查會籍 / 點數 / 報名
 const MEMBER_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_MEMBER_ID as string) || '2010533806-E7Dmp1Mc';
@@ -25,6 +26,8 @@ export default function LiffMember() {
   const [ledger, setLedger] = useState<Ledger[]>([]);
   const [regs, setRegs] = useState<Reg[]>([]);
   const [tab, setTab] = useState<'membership' | 'points' | 'regs'>('membership');
+  const [canShare, setCanShare] = useState(false);
+  const [sharingCard, setSharingCard] = useState(false);
   // 綁定表單
   const [bPhone, setBPhone] = useState('');
   const [bName, setBName] = useState('');
@@ -53,6 +56,9 @@ export default function LiffMember() {
         try { await liff.init({ liffId: MEMBER_LIFF_ID }); }
         catch (e: any) { setPhase({ kind: 'error', msg: 'LINE 初始化失敗：' + (e?.message || e) }); return; }
         if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
+        // isApiAvailable 在 iOS LINE 內建瀏覽器有時誤報 false，
+        // 故只要在 LINE 內(isInClient)就允許嘗試，實際能否用交給 shareTargetPicker try/catch。
+        setCanShare(liff.isInClient() || liff.isApiAvailable('shareTargetPicker'));
         const prof = await liff.getProfile();
         setUserId(prof.userId);
         setBName(prof.displayName || '');
@@ -82,6 +88,27 @@ export default function LiffMember() {
       alert(e?.message || '綁定失敗，請確認資料是否與入會時一致');
     } finally {
       setBinding(false);
+    }
+  };
+
+  // 分享「自己的」電子名片：以綁定的 line_user_id 直接取本人名片 → shareTargetPicker
+  const shareMyCard = async () => {
+    if (!supabase || !userId) return;
+    if (typeof (liff as any).shareTargetPicker !== 'function') {
+      alert('此環境不支援分享，請在 LINE App 內開啟本頁');
+      return;
+    }
+    setSharingCard(true);
+    try {
+      const { data, error } = await supabase.rpc('member_card_by_line', { p_line_user_id: userId });
+      const card = (Array.isArray(data) ? data[0] : data) as MemberCardData | undefined;
+      if (error || !card) { alert('取得名片資料失敗，請稍後再試'); return; }
+      const { messages } = buildMemberShareMessages([card]);
+      await liff.shareTargetPicker(messages);
+    } catch (e: any) {
+      alert('分享失敗：' + (e?.message ?? String(e)));
+    } finally {
+      setSharingCard(false);
     }
   };
 
@@ -152,6 +179,18 @@ export default function LiffMember() {
           <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-sm font-bold">
             {p.is_active ? <><CheckCircle2 size={15} /> 會籍有效</> : <><AlertCircle size={15} /> 會籍已過期</>}
           </div>
+          {/* 分享自己的電子名片：一鍵傳給好友/群組，免去官網找自己 */}
+          <button
+            onClick={shareMyCard}
+            disabled={sharingCard || !canShare}
+            className="mt-4 w-full bg-white text-red-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:opacity-80 disabled:opacity-60"
+          >
+            <Share2 size={18} />
+            {sharingCard ? '開啟分享中…' : '分享我的電子名片'}
+          </button>
+          {!canShare && (
+            <p className="text-center text-[11px] text-orange-100 mt-2">請從 LINE App 內開啟才能分享名片</p>
+          )}
         </div>
 
         {/* 分頁 */}

@@ -22,6 +22,9 @@ export interface MemberCardData {
 // 食在力量品牌色
 const FPT_RED = '#dc2626';   // red-600（主要按鈕）
 const FPT_ORANGE = '#ea580c'; // orange-600（產業別標籤）
+// 名片預覽/再分享 LIFF（與 LiffCard 同一支）；收到名片的人點「分享這張名片」即開此頁再轉發。
+const LIFF_CARD_ID =
+  ((import.meta as any)?.env?.VITE_LIFF_CARD_ID as string) || '2010533806-16QDwn2u';
 // 找不到大頭照時的預設圖（LINE flex 的 image 需可公開存取的 https）
 const PLACEHOLDER_IMG =
   'https://placehold.co/600x800/f3f4f6/9ca3af/png?text=Food+Power+Team';
@@ -140,6 +143,18 @@ export function buildMemberCardBubble(m: MemberCardData): any {
       action: { type: 'uri', label: '寫信給我', uri: `mailto:${email}` },
     });
   }
+
+  // 「分享這張名片」：連到名片預覽 LIFF，收到的人可一鍵再轉發（免存檔、免回官網找）
+  footerContents.push({
+    type: 'button',
+    style: 'secondary',
+    height: 'sm',
+    action: {
+      type: 'uri',
+      label: '分享這張名片',
+      uri: `https://liff.line.me/${LIFF_CARD_ID}?member=${encodeURIComponent(m.id)}`,
+    },
+  });
 
   const bubble: any = {
     type: 'bubble',
