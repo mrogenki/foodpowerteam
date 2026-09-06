@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import liff from '@line/liff';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2, Share2 } from 'lucide-react';
+import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2, Share2, User } from 'lucide-react';
 import { MemberCardData, buildMemberShareMessages } from '../utils/memberCard';
 
 // 會員專區 LIFF（LINE 內）：綁定 LINE 身分 → 查會籍 / 點數 / 報名
 const MEMBER_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_MEMBER_ID as string) || '2010533806-E7Dmp1Mc';
 
 interface Portal {
-  member_no: string; name: string; industry_category: string | null; company: string | null;
+  member_no: string; name: string;
+  industry_chain: string | null; industry_category: string | null;
+  company: string | null; company_title: string | null; job_title: string | null;
   membership_expiry_date: string | null; status: string | null; is_active: boolean;
-  points_balance: number; phone: string | null; email: string | null;
+  points_balance: number;
+  picture: string | null;
+  phone: string | null; home_phone: string | null; address: string | null; email: string | null;
+  main_service: string | null; tax_id: string | null;
 }
 interface Ledger { change: number; balance_after: number; type: string | null; reason: string | null; created_at: string; }
 interface Reg { source: string; title: string | null; activity_date: string | null; status: string; payment_status: string; amount: number; ref_id: string; token: string | null; created_at: string; }
@@ -203,17 +208,61 @@ export default function LiffMember() {
           ))}
         </div>
 
-        {/* 會籍 */}
+        {/* 會籍（本人專屬畫面，顯示完整會員資訊） */}
         {tab === 'membership' && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3 text-sm">
-            <Row label="姓名" value={p.name} />
-            <Row label="會員編號" value={`#${(p.member_no || '').padStart(5, '0')}`} />
-            {p.company && <Row label="公司/品牌" value={p.company} />}
-            {p.industry_category && <Row label="產業別" value={p.industry_category} />}
-            <Row label="會籍到期日" value={expiryLabel} />
-            <Row label="會籍狀態" value={p.is_active ? '有效' : '已過期／未生效'} valueClass={p.is_active ? 'text-emerald-600' : 'text-red-500'} />
-            {!p.is_active && (
-              <a href="/renew" className="block mt-2 w-full bg-red-600 text-white py-3 rounded-xl font-bold text-center">前往續費</a>
+          <div className="space-y-4">
+            {/* 照片 + 姓名 */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                {p.picture ? (
+                  <img src={p.picture} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <User size={32} className="text-gray-300" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-gray-900 truncate">{p.name}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">會員編號 #{(p.member_no || '').padStart(5, '0')}</p>
+                {(p.company_title || p.job_title) && (
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {[p.company_title, p.job_title].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 會籍 / 產業 */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3 text-sm">
+              <p className="text-xs font-bold text-gray-400 mb-1">會籍</p>
+              <Row label="會籍到期日" value={expiryLabel} />
+              <Row label="會籍狀態" value={p.is_active ? '有效' : '已過期／未生效'} valueClass={p.is_active ? 'text-emerald-600' : 'text-red-500'} />
+              {p.industry_chain && <Row label="產業鏈" value={p.industry_chain} />}
+              {p.industry_category && <Row label="產業別" value={p.industry_category} />}
+              {!p.is_active && (
+                <a href="/renew" className="block mt-2 w-full bg-red-600 text-white py-3 rounded-xl font-bold text-center">前往續費</a>
+              )}
+            </div>
+
+            {/* 公司 / 品牌 */}
+            {(p.company || p.company_title || p.main_service || p.tax_id) && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3 text-sm">
+                <p className="text-xs font-bold text-gray-400 mb-1">公司 / 品牌</p>
+                {p.company && <Row label="公司/品牌" value={p.company} />}
+                {p.company_title && <Row label="抬頭" value={p.company_title} />}
+                {p.tax_id && <Row label="統一編號" value={p.tax_id} />}
+                {p.main_service && <Row label="主要服務/產品" value={p.main_service} />}
+              </div>
+            )}
+
+            {/* 聯絡資訊 */}
+            {(p.phone || p.home_phone || p.email || p.address) && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3 text-sm">
+                <p className="text-xs font-bold text-gray-400 mb-1">聯絡資訊</p>
+                {p.phone && <Row label="手機" value={p.phone} />}
+                {p.home_phone && <Row label="電話" value={p.home_phone} />}
+                {p.email && <Row label="信箱" value={p.email} />}
+                {p.address && <Row label="地址" value={p.address} />}
+              </div>
             )}
           </div>
         )}
@@ -292,9 +341,9 @@ export default function LiffMember() {
 
 function Row({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-gray-400">{label}</span>
-      <span className={`font-bold text-gray-900 text-right ${valueClass || ''}`}>{value}</span>
+    <div className="flex justify-between items-start gap-4">
+      <span className="text-gray-400 shrink-0">{label}</span>
+      <span className={`font-bold text-gray-900 text-right break-words min-w-0 ${valueClass || ''}`}>{value}</span>
     </div>
   );
 }
