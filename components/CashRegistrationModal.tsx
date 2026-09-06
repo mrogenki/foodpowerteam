@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import emailjs from '@emailjs/browser';
 import { supabase } from '../utils/supabaseClient';
 import { Activity, MemberActivity } from '../types';
-import { EMAIL_CONFIG } from '../constants';
 import { X, Banknote, Loader2 } from 'lucide-react';
 
 // 現場現金收款：一次完成「建立報名 + 標記現金已付 + 記入收支（選配開收據）」
@@ -46,9 +44,13 @@ const CashRegistrationModal: React.FC<{
         if (issueReceipt && email.trim() && row.receipt_token) {
           try {
             const link = `${window.location.origin}/receipt/${row.receipt_token}`;
-            await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.RECEIPT_TEMPLATE_ID, {
-              email: email.trim(), to_name: name, order_id: row.receipt_no, amount, receipt_link: link,
-            }, EMAIL_CONFIG.PUBLIC_KEY);
+            const { data: mailRes, error: fnErr } = await supabase.functions.invoke('send-email', {
+              body: {
+                template: 'receipt',
+                params: { to_email: email.trim(), to_name: name, order_id: row.receipt_no, amount, receipt_link: link },
+              },
+            });
+            if (fnErr || !(mailRes as any)?.ok) throw new Error((fnErr?.message || (mailRes as any)?.error || '寄送失敗'));
             await supabase.from('receipts').update({ status: 'sent' }).eq('receipt_no', row.receipt_no);
             receiptMsg += '（已寄出）';
           } catch (mailErr) {

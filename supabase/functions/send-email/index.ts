@@ -149,6 +149,23 @@ const templates: Record<string, (p: any) => Built> = {
     `;
     return { subject: `【活動報名】${title} — 報名確認`, html: layout({ title, bodyHtml: body }) };
   },
+
+  // 線上收據信（附線上收據連結）
+  receipt: (p): Built => {
+    const who = esc(p.to_name || '');
+    const detail = rows([
+      ['收據編號', esc(p.order_id)],
+      ['金額', money(p.amount)],
+    ]);
+    const cta = p.receipt_link ? button('查看／下載收據', p.receipt_link) : '';
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">感謝您的支持，您的款項已收到，以下為本次的電子收據。</p>
+      <div style="padding:16px;background:#f9fafb;border-radius:12px;">${detail}</div>
+      ${cta}
+    `;
+    return { subject: `【食在力量】電子收據 ${esc(p.order_id)}`, html: layout({ title: '電子收據', bodyHtml: body }) };
+  },
 };
 
 serve(async (req: Request) => {

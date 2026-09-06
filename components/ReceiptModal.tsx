@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Send, Mail } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
-import emailjs from '@emailjs/browser';
-import { EMAIL_CONFIG, RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
+import { RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
 
 export interface ReceiptData {
   receiptNo?: string;
@@ -293,24 +292,21 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
       if (tokErr || !row?.public_token) throw new Error('取得收據連結失敗');
       const receiptLink = `${window.location.origin}/receipt/${row.public_token}`;
 
-      // 3. 透過 EmailJS 寄出「線上收據連結」（與系統自動寄送一致，永不跑版）
-      const templateParams = {
-        email: email,        // {{email}}
-        to_name: payerName,  // {{to_name}}
-        order_id: receiptNo, // {{order_id}}
-        amount: amount,      // {{amount}}
-        receipt_link: receiptLink // {{receipt_link}} → 線上收據頁
-      };
-
-      const emailResponse = await emailjs.send(
-        EMAIL_CONFIG.SERVICE_ID,
-        EMAIL_CONFIG.RECEIPT_TEMPLATE_ID,
-        templateParams,
-        EMAIL_CONFIG.PUBLIC_KEY
-      );
-
-      if (emailResponse.status !== 200) {
-        throw new Error(`EmailJS 寄送失敗: ${emailResponse.text}`);
+      // 3. 透過 Resend（send-email Edge Function）寄出「線上收據連結」（版型寫在程式碼，永不跑版）
+      const { data: emailResult, error: fnErr } = await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'receipt',
+          params: {
+            to_email: email,
+            to_name: payerName,
+            order_id: receiptNo,
+            amount: amount,
+            receipt_link: receiptLink,
+          },
+        },
+      });
+      if (fnErr || !(emailResult as any)?.ok) {
+        throw new Error(`收據寄送失敗: ${fnErr?.message || (emailResult as any)?.error || '未知錯誤'}`);
       }
 
       // 4. 標記為已寄出

@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import html2pdf from 'html2pdf.js';
-import emailjs from '@emailjs/browser';
-import { EMAIL_CONFIG } from '../constants';
 import { ReceiptData } from './ReceiptModal';
 
 interface BatchReceiptGeneratorProps {
@@ -71,23 +69,20 @@ const BatchReceiptGenerator: React.FC<BatchReceiptGeneratorProps> = ({ receiptsT
           .from('receipts')
           .getPublicUrl(fileName);
 
-        const templateParams = {
-          email: currentReceipt.email,
-          to_name: currentReceipt.payerName,
-          order_id: currentReceipt.receiptNo,
-          amount: currentReceipt.amount,
-          receipt_link: publicUrl
-        };
-
-        const emailResponse = await emailjs.send(
-          EMAIL_CONFIG.SERVICE_ID,
-          EMAIL_CONFIG.RECEIPT_TEMPLATE_ID,
-          templateParams,
-          EMAIL_CONFIG.PUBLIC_KEY
-        );
-
-        if (emailResponse.status !== 200) {
-          throw new Error(`EmailJS 寄送失敗: ${emailResponse.text}`);
+        const { data: emailResult, error: fnErr } = await supabase.functions.invoke('send-email', {
+          body: {
+            template: 'receipt',
+            params: {
+              to_email: currentReceipt.email,
+              to_name: currentReceipt.payerName,
+              order_id: currentReceipt.receiptNo,
+              amount: currentReceipt.amount,
+              receipt_link: publicUrl,
+            },
+          },
+        });
+        if (fnErr || !(emailResult as any)?.ok) {
+          throw new Error(`收據寄送失敗: ${fnErr?.message || (emailResult as any)?.error || '未知錯誤'}`);
         }
       }
 
