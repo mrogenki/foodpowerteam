@@ -3,9 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, MapPin, ChevronLeft, Loader2, CreditCard, CheckCircle2 } from 'lucide-react';
 import emailjs from '@emailjs/browser';
+import liff from '@line/liff';
 import { Activity, SignupSettings, SignupEntry } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { EMAIL_CONFIG } from '../constants';
+
+// 接龍報名 LIFF app（在 LINE 內開啟時綁定 LINE 身分、引導加好友）。非機密，允許 env 覆寫。
+const SIGNUP_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_SIGNUP_ID as string) || '2010533806-UAyCj3qx';
 
 // ── 接龍報名（免登入）：名單即時公開，正取者導去付款 ──
 
@@ -27,6 +31,7 @@ const SignupChain: React.FC = () => {
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [mySignups, setMySignups] = useState<MySignup[]>([]);
+  const lineUserIdRef = useRef<string>('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -69,7 +74,18 @@ const SignupChain: React.FC = () => {
       const local = readMine(id);
       const alive = local.filter(m => signupIds.has(m.id));
       if (alive.length !== local.length) saveMine(id, alive);
-      setMySignups(alive);
+      // 合併「以 LINE 身分綁定」的報名（跨裝置/session 持久，解決 LINE 不留 localStorage）
+      let merged: MySignup[] = alive;
+      const luid = lineUserIdRef.current;
+      if (luid && supabase) {
+        const { data: mine } = await supabase.rpc('my_signups_by_line', { p_line_user_id: luid });
+        const lineForThis = ((mine as any[]) || [])
+          .filter(r => r.activity_id === id)
+          .map(r => ({ id: String(r.entry_id), cancel_token: String(r.cancel_token), name: r.name }));
+        const seen = new Set(alive.map(m => m.id));
+        merged = [...alive, ...lineForThis.filter(m => !seen.has(m.id))];
+      }
+      setMySignups(merged);
     }
   };
 
@@ -78,6 +94,15 @@ const SignupChain: React.FC = () => {
     setMySignups(readMine(activityId));
     const init = async () => {
       setLoading(true);
+      // LINE 身分綁定（僅在 LINE App 內；登入會順帶引導加官方帳號好友）
+      try {
+        await liff.init({ liffId: SIGNUP_LIFF_ID });
+        if (liff.isInClient()) {
+          if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
+          const prof = await liff.getProfile();
+          lineUserIdRef.current = prof.userId;
+        }
+      } catch { /* 非 LINE 環境或初始化失敗 → 走 web 備援 */ }
       if (supabase) {
         const { data: actData } = await supabase.from('activities').select('*').eq('id', activityId).maybeSingle();
         if (actData) setActivity(actData as Activity);
@@ -144,6 +169,7 @@ const SignupChain: React.FC = () => {
         p_activity_id: activityId, p_name: name, p_phone: phone, p_email: email, p_company: company,
         p_company_title: companyTitle, p_tax_id: taxId, p_title: jobTitle, p_referrer: referrer, p_notes: notes,
         p_coupon_code: couponStatus === 'valid' ? couponCode.trim() : '',
+        p_line_user_id: lineUserIdRef.current || null,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
