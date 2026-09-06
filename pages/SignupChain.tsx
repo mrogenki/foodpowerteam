@@ -2,11 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, MapPin, ChevronLeft, Loader2, CreditCard, CheckCircle2 } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 import liff from '@line/liff';
 import { Activity, SignupSettings, SignupEntry } from '../types';
 import { supabase } from '../utils/supabaseClient';
-import { EMAIL_CONFIG } from '../constants';
 
 // 接龍報名 LIFF app（在 LINE 內開啟時綁定 LINE 身分、引導加好友）。非機密，允許 env 覆寫。
 const SIGNUP_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_SIGNUP_ID as string) || '2010533806-UAyCj3qx';
@@ -204,39 +202,33 @@ const SignupChain: React.FC = () => {
       setCouponCode(''); setCouponStatus('idle'); setCouponMsg('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
+        // 報名確認信改由 Resend（send-email Edge Function）寄送：版型寫在程式碼、繳費連結為真正的按鈕。
+        const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
+        const mode = isFree ? 'free' : (selfCollect ? 'self_collect' : 'online');
+        supabase.functions.invoke('send-email', {
+          body: {
+            template: 'signup_confirm',
+            params: {
+              to_name: regName, to_email: regEmail,
+              activity_title: activity?.title || '',
+              activity_date: activity?.date || '',
+              activity_time: activity?.time || '',
+              activity_location: activity?.location || '',
+              fee: Number(row.fee_amount ?? settings?.fee_amount ?? 0),
+              is_member: !!row.is_member,
+              is_free: isFree,
+              mode,
+              pay_link: isFree ? '' : payLink,
+              collect_note: selfCollect ? (settings?.collect_note || '') : '',
+            },
+          },
+        }).catch(err => console.error('接龍確認信寄送失敗', err));
+
         if (isFree) {
           showToast('報名成功！🎉');
         } else if (selfCollect) {
-          // 自主收款：寄繳費說明 + 回填連結（換裝置也能回來填）
-          const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
-          const fee = Number(row.fee_amount ?? settings?.fee_amount ?? 0);
-          // 範本 template_ih0plai 只渲染 activity_location（不渲染 message），故把回填連結併入地點欄位確保出現。
-          const locWithLink = `${activity?.location || ''}\n\n💳 完成繳費後請點此回填繳費資訊（轉帳末五碼／LINE Pay／現金）：\n${payLink}${settings?.collect_note ? `\n\n【繳費方式】\n${settings.collect_note}` : ''}`;
-          emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
-            to_name: regName, email: regEmail, to_email: regEmail, reply_to: regEmail,
-            activity_title: `【接龍報名】${activity?.title || ''}`,
-            activity_date: activity?.date || '',
-            activity_time: activity?.time || '',
-            activity_location: locWithLink,
-            activity_price: `${fee.toLocaleString()}${row.is_member ? '（會員價）' : ''}`,
-            message: `親愛的 ${regName} 您好，\n\n您已成功報名「${activity?.title || ''}」（正取）。\n${settings?.collect_note ? '【繳費方式】\n' + settings.collect_note + '\n\n' : ''}完成繳費後，請點以下專屬連結回填繳費資訊（轉帳末五碼／LINE Pay／現金），主辦核對後會將您標記為已付款：\n\n${payLink}\n\n此連結可隨時回來填寫（換手機／瀏覽器亦適用）。`,
-          }, EMAIL_CONFIG.PUBLIC_KEY).catch(err => console.error('接龍確認信寄送失敗', err));
           showToast('報名成功！繳費方式與回填連結已寄到你的 Email 🎉');
         } else {
-          // 線上金流：寄專屬繳費連結（換裝置/清資料也能回來補繳）
-          const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
-          const fee = Number(row.fee_amount ?? 0);
-          // 範本只渲染 activity_location，故把繳費連結併入地點欄位確保出現。
-          const locWithLink = `${activity?.location || ''}\n\n💳 立即點此完成繳費以保留名額：\n${payLink}`;
-          emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
-            to_name: regName, email: regEmail, to_email: regEmail, reply_to: regEmail,
-            activity_title: `【接龍報名】${activity?.title || ''}`,
-            activity_date: activity?.date || '',
-            activity_time: activity?.time || '',
-            activity_location: locWithLink,
-            activity_price: `${fee.toLocaleString()}${row.is_member ? '（會員價）' : ''}`,
-            message: `親愛的 ${regName} 您好，\n\n您已成功報名「${activity?.title || ''}」（正取）。\n請點擊以下專屬連結完成繳費，以確認保留名額：\n\n${payLink}\n\n此連結可隨時回來繳費（換手機／瀏覽器亦適用）。若您已完成繳費，請忽略此信件。`,
-          }, EMAIL_CONFIG.PUBLIC_KEY).catch(err => console.error('接龍確認信寄送失敗', err));
           showToast('報名成功！繳費連結已寄到你的 Email，正在前往付款…');
           setTimeout(() => goPay(row.id, row.cancel_token), 700);
         }
