@@ -1153,6 +1153,7 @@ const App: React.FC = () => {
               <Route path="/design/cn" element={<DesignDemoCN />} />
               <Route path="/checkin/:activityId" element={<><Seo title="活動報到" noindex /><ActivityCheckIn /></>} />
               <Route path="/signup/:activityId" element={<><Seo title="接龍報名" noindex /><SignupChain /></>} />
+              <Route path="/signup" element={<><Seo title="接龍報名" noindex /><SignupChain /></>} />
               <Route path="/pay-signup/:id" element={<><Seo title="接龍報名繳費" noindex /><SignupPayment /></>} />
               <Route path="/receipt/:token" element={<><Seo title="電子收據" noindex /><ReceiptView /></>} />
 

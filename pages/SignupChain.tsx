@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, MapPin, ChevronLeft, Loader2, CreditCard, CheckCircle2 } from 'lucide-react';
@@ -24,7 +24,26 @@ const saveMine = (activityId: string, list: MySignup[]) => {
 };
 
 const SignupChain: React.FC = () => {
-  const { activityId } = useParams<{ activityId: string }>();
+  const { activityId: pathActivityId } = useParams<{ activityId: string }>();
+  // 活動 id 來源：路徑 /signup/:id、或 LIFF 開啟時的 ?a=（含 liff.state 包裹）
+  const activityId = useMemo(() => {
+    if (pathActivityId) return pathActivityId;
+    const sp = new URLSearchParams(window.location.search);
+    let a = sp.get('a');
+    if (!a) {
+      const state = sp.get('liff.state');
+      if (state) { const s = new URLSearchParams(state.startsWith('?') ? state.slice(1) : state); a = s.get('a'); }
+    }
+    return a || undefined;
+  }, [pathActivityId]);
+
+  // 在 LINE App 內、且是直接開 /signup/:id（非 LIFF）→ 轉到 liff.line.me 以正式 LIFF 開啟，才能可靠取得 LINE 身分
+  useEffect(() => {
+    if (pathActivityId && SIGNUP_LIFF_ID && /Line\//i.test(navigator.userAgent)) {
+      window.location.replace(`https://liff.line.me/${SIGNUP_LIFF_ID}?a=${encodeURIComponent(pathActivityId)}`);
+    }
+  }, [pathActivityId]);
+
   const navigate = useNavigate();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [settings, setSettings] = useState<SignupSettings | null>(null);
@@ -92,6 +111,8 @@ const SignupChain: React.FC = () => {
 
   useEffect(() => {
     if (!activityId) return;
+    // 即將轉址到 LIFF（LINE 內直接開 /signup/:id）→ 不做初始化，避免競爭
+    if (pathActivityId && SIGNUP_LIFF_ID && /Line\//i.test(navigator.userAgent)) return;
     setMySignups(readMine(activityId));
     const init = async () => {
       setLoading(true);
