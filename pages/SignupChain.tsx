@@ -32,6 +32,7 @@ const SignupChain: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [mySignups, setMySignups] = useState<MySignup[]>([]);
   const lineUserIdRef = useRef<string>('');
+  const [lineName, setLineName] = useState<string>(''); // 綁到 LINE 身分時顯示（狀態提示）
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -101,6 +102,7 @@ const SignupChain: React.FC = () => {
           if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
           const prof = await liff.getProfile();
           lineUserIdRef.current = prof.userId;
+          setLineName(prof.displayName || 'LINE 使用者');
         }
       } catch { /* 非 LINE 環境或初始化失敗 → 走 web 備援 */ }
       if (supabase) {
@@ -360,6 +362,11 @@ const SignupChain: React.FC = () => {
         {/* 報名表單 */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 mt-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">📝 我要報名</h2>
+          {lineName && (
+            <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm text-emerald-700 font-medium flex items-center gap-2">
+              <span className="text-base">🟢</span> 已透過 LINE 連結：{lineName}（報名會記住你，換裝置也找得回）
+            </div>
+          )}
           {!settings.registration_open ? (
             <div className="bg-red-50 border border-red-100 text-red-500 rounded-2xl px-5 py-4 text-center text-sm font-medium">報名目前已關閉</div>
           ) : (
