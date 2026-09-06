@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, DollarSign, ArrowLeft, CheckCircle2, Share2, CopyCheck, Clock, Loader2, Crown, UserCheck, Ticket, User, Users, Search, ChevronDown, Lock, AlertCircle, CreditCard, Ban, Info, ShieldAlert } from 'lucide-react';
+import { Calendar, MapPin, DollarSign, ArrowLeft, CheckCircle2, Share2, CopyCheck, Clock, Loader2, Crown, UserCheck, Ticket, User, Users, Search, ChevronDown, Lock, AlertCircle, CreditCard, Ban, Info, ShieldAlert, Copy } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { Activity, MemberActivity, Registration, MemberRegistration, Member, PaymentStatus } from '../types';
 import { EMAIL_CONFIG, POINT_TO_TWD } from '../constants';
@@ -49,6 +49,9 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const [pointsApplied, setPointsApplied] = useState(0);
   // 名額合併：此活動若有開接龍且已額滿（接龍+一般報名合計），前台直接擋下並引導去接龍候補
   const [signupFull, setSignupFull] = useState(false);
+  // 稍後付款：報名成功畫面顯示補繳連結
+  const [lastPayLink, setLastPayLink] = useState('');
+  const [payLinkCopied, setPayLinkCopied] = useState(false);
   useEffect(() => {
     if (!id || !supabase) return;
     supabase.rpc('activity_signup_capacity', { p_activity_id: String(id) }).then(({ data }) => {
@@ -238,7 +241,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity?.id]);
 
-  const sendConfirmationEmail = async (name: string, email: string) => {
+  const sendConfirmationEmail = async (name: string, email: string, payLink?: string) => {
     if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
       console.warn('EmailJS 未設定或為預設值，跳過發送');
       return;
@@ -257,6 +260,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
         activity_time: activity.time,
         activity_location: activity.location,
         activity_price: finalPrice,
+        ...(payLink ? { message: `親愛的 ${name} 您好，\n\n您已完成報名「${activity.title}」，本次選擇稍後付款。\n請點以下專屬連結完成繳費以保留名額（任何裝置皆可）：\n\n${payLink}\n\n若您已完成繳費，請忽略此信件。` } : {}),
       };
       await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, templateParams, EMAIL_CONFIG.PUBLIC_KEY);
     } catch (error) { 
@@ -327,8 +331,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
       if (success) {
         // 只有在「免費活動」或「不須立即付款」時才發送確認信
         // 繳費活動的信件將移至後端付款成功後發送，避免使用者誤會
+        // 稍後付款且需繳費 → 產生補繳連結（信件附上 + 成功畫面顯示）
+        const payLink = (!payNow && finalPrice > 0) ? `${window.location.origin}/pay-activity/${commonData.id}` : '';
+        if (payLink) setLastPayLink(payLink);
         if (formData.email && (!payNow || finalPrice === 0)) {
-          await sendConfirmationEmail(formData.name, formData.email);
+          await sendConfirmationEmail(formData.name, formData.email, payLink || undefined);
         }
 
         // 處理金流轉跳
@@ -368,6 +375,21 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
           感謝您的參與，我們期待在活動現場見到您。<br/>
           {formData.email && <span className="text-sm text-gray-400">(確認信已發送至 {formData.email})</span>}
         </p>
+        {lastPayLink && (
+          <div className="max-w-md mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 text-left">
+            <p className="text-sm font-bold text-amber-800 mb-1">⏳ 尚未繳費</p>
+            <p className="text-xs text-amber-700 mb-3 leading-relaxed">請於期限內完成繳費以保留名額。繳費連結已寄到你的 Email，也可先複製此連結存起來,之後任何裝置都能回來繳。</p>
+            <div className="flex gap-2">
+              <a href={lastPayLink} className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-bold text-sm text-center hover:bg-red-700 transition-colors flex items-center justify-center gap-1">
+                <CreditCard size={16} /> 立即前往繳費
+              </a>
+              <button onClick={() => { navigator.clipboard.writeText(lastPayLink).then(() => { setPayLinkCopied(true); setTimeout(() => setPayLinkCopied(false), 2500); }); }}
+                className="px-4 py-2.5 rounded-xl border border-amber-300 text-amber-700 font-bold text-sm hover:bg-amber-100 transition-colors flex items-center gap-1">
+                <Copy size={16} /> {payLinkCopied ? '已複製 ✓' : '複製連結'}
+              </button>
+            </div>
+          </div>
+        )}
         <button onClick={() => navigate('/')} className="bg-red-600 text-white px-8 py-3 rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg">返回活動列表</button>
       </div>
     );
