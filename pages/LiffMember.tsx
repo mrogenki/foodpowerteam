@@ -9,13 +9,13 @@ import { IndustryCategories } from '../types';
 interface EditForm {
   phone: string; home_phone: string; email: string; address: string;
   brand_name: string; company_title: string; tax_id: string; job_title: string;
-  industry_category: string; industry_chain: string;
-  website: string; main_service: string; intro: string; picture: string;
+  industry_category: string;
+  website: string; main_service: string; picture: string;
 }
 const EMPTY_EDIT: EditForm = {
   phone: '', home_phone: '', email: '', address: '',
   brand_name: '', company_title: '', tax_id: '', job_title: '',
-  industry_category: '', industry_chain: '', website: '', main_service: '', intro: '', picture: '',
+  industry_category: '', website: '', main_service: '', picture: '',
 };
 
 // 會員專區 LIFF（LINE 內）：綁定 LINE 身分 → 查會籍 / 點數 / 報名
@@ -145,8 +145,8 @@ export default function LiffMember() {
       setEditForm({
         phone: row.phone || '', home_phone: row.home_phone || '', email: row.email || '', address: row.address || '',
         brand_name: row.brand_name || '', company_title: row.company_title || '', tax_id: row.tax_id || '', job_title: row.job_title || '',
-        industry_category: row.industry_category || '', industry_chain: row.industry_chain || '',
-        website: row.website || '', main_service: row.main_service || '', intro: row.intro || '', picture: row.picture || '',
+        industry_category: row.industry_category || '',
+        website: row.website || '', main_service: row.main_service || '', picture: row.picture || '',
       });
       setEditing(true);
     } catch (e: any) {
@@ -323,16 +323,10 @@ export default function LiffMember() {
                 {(IndustryCategories as readonly string[]).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {field('產業鏈', 'industry_chain')}
             {field('公司網站', 'website', 'text', 'https://')}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">主要服務/產品</label>
               <textarea value={editForm.main_service} onChange={e => setField('main_service', e.target.value)} rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">簡介</label>
-              <textarea value={editForm.intro} onChange={e => setField('intro', e.target.value)} rows={3}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
             </div>
           </div>
@@ -421,7 +415,6 @@ export default function LiffMember() {
               <p className="text-xs font-bold text-gray-400 mb-1">會籍</p>
               <Row label="會籍到期日" value={expiryLabel} />
               <Row label="會籍狀態" value={p.is_active ? '有效' : '已過期／未生效'} valueClass={p.is_active ? 'text-emerald-600' : 'text-red-500'} />
-              {p.industry_chain && <Row label="產業鏈" value={p.industry_chain} />}
               {p.industry_category && <Row label="產業別" value={p.industry_category} />}
               {!p.is_active && (
                 <a href="/renew" className="block mt-2 w-full bg-red-600 text-white py-3 rounded-xl font-bold text-center">前往續費</a>
