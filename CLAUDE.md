@@ -62,8 +62,16 @@ supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmb
 | `newebpay-query` | 後備：付款返回頁主動向藍新 QueryTradeInfo 確認，補寫漏接的付款（需帶 User-Agent 過 Akamai WAF）|
 | `festival-apply` | 燒肉/火鍋祭合作報名寫入 + Telegram 通知 |
 | `create-admin` | 總管理員新增後台帳號（verify_jwt=true）|
+| `send-email` | **共用寄信（Resend）**。所有信件 HTML 版型寫在此函式（`templates` map），前端 `supabase.functions.invoke('send-email',{body:{template,params}})`、Edge Function 以 service role JWT POST 呼叫。verify_jwt=true。|
 
 付款相關 RPC（SECURITY DEFINER）：`handle_festival_payment`、`handle_renewal_payment`（含自動延長會籍、冪等）、`confirm_payment_paid`（後備跨表補寫）、`points_commit`/`points_refund`、`check_payment_status`。
+
+### 📧 寄信（2026-09 由 EmailJS 全面改為 Resend）
+- **統一走 `send-email` Edge Function（Resend）**，前端已移除 `@emailjs/browser`；信件版型全部在 `supabase/functions/send-email/index.ts` 的 `templates`：
+  `signup_confirm`(接龍)、`activity_confirm`(一般活動)、`receipt`(收據)、`payment_notice`(通用繳費/入會/續費補寄)、`paid_confirm`(付款成功)、`renewal_reminder`(續約/喚醒)。
+- 需要的 Supabase secrets：`RESEND_API_KEY`（必要）、`RESEND_FROM`（預設 `食在力量 <noreply@foodpowerteam.com>`，網域已在 Resend 驗證）、`RESEND_REPLY_TO`（選填）。
+- 新增一種信：在 `send-email` 的 `templates` 加一個 builder → `deploy` → 呼叫端傳 `{template,params}`。**勿再用 EmailJS**。
+- 舊的 `EMAILJS_*` secrets 已無用，可自行於後台刪除。
 
 ---
 
