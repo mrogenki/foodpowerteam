@@ -109,23 +109,22 @@ serve(async (req) => {
       // 後備路徑補齊 notify 的副作用：開線上收據 + 寄連結 + 記收入（RPC 冪等，與 notify 不衝突）
       if (confirmType) {
         const SITE_URL = Deno.env.get('SITE_URL') || 'https://www.foodpowerteam.com'
-        const sendEmail = async (templateId: string, params: any) => {
-          const serviceId = Deno.env.get('EMAILJS_SERVICE_ID')
-          const publicKey = Deno.env.get('EMAILJS_PUBLIC_KEY')
-          const privateKey = Deno.env.get('EMAILJS_PRIVATE_KEY')
-          if (!serviceId || !publicKey) return
-          const payload: any = { service_id: serviceId, template_id: templateId, user_id: publicKey, template_params: params }
-          if (privateKey) payload.accessToken = privateKey
+        // 透過 send-email Edge Function（Resend）寄信
+        const sendEmail = async (template: string, params: any) => {
           try {
-            await fetch('https://api.emailjs.com/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            await fetch(`${SupabaseUrl}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SupabaseKey}`, 'apikey': SupabaseKey as string },
+              body: JSON.stringify({ template, params }),
+            })
           } catch (e) { console.error('[Query] email error:', e) }
         }
         try {
           const { data: rcpt, error: rErr } = await supabase.rpc('issue_receipt_for_order', { p_order_no: order_no, p_source: confirmType })
           if (rErr) console.error('[Query] issue_receipt_for_order error:', rErr)
           else if (rcpt?.ok && !rcpt.already && rcpt.email) {
-            await sendEmail(Deno.env.get('EMAILJS_RECEIPT_TEMPLATE_ID') || 'template_4eq02vf', {
-              email: rcpt.email, to_name: rcpt.payer_name, order_id: rcpt.receipt_no, amount: rcpt.amount, receipt_link: `${SITE_URL}/receipt/${rcpt.token}`,
+            await sendEmail('receipt', {
+              to_email: rcpt.email, to_name: rcpt.payer_name, order_id: rcpt.receipt_no, amount: rcpt.amount, receipt_link: `${SITE_URL}/receipt/${rcpt.token}`,
             })
             await supabase.from('receipts').update({ status: 'sent' }).eq('receipt_no', rcpt.receipt_no)
             console.log('[Query] receipt issued & sent (fallback):', rcpt.receipt_no)

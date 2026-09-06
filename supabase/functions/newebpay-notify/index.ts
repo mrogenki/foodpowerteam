@@ -245,47 +245,23 @@ serve(async (req) => {
             }
           };
 
-          // Helper: Send Email via EmailJS REST API
-          const sendEmail = async (templateId: string, params: any) => {
-            const serviceId = Deno.env.get('EMAILJS_SERVICE_ID');
-            const publicKey = Deno.env.get('EMAILJS_PUBLIC_KEY');
-            const privateKey = Deno.env.get('EMAILJS_PRIVATE_KEY'); // Optional: Private Key (accessToken)
-            
-            if (!serviceId || !publicKey) {
-              console.warn('[Notify] EmailJS env variables missing, skipping email');
-              return;
-            }
-
+          // Helper: 透過 send-email Edge Function（Resend）寄信。template=我方模板名稱，params=模板參數。
+          const sendEmail = async (template: string, params: any) => {
             try {
-              const payload: any = {
-                service_id: serviceId,
-                template_id: templateId,
-                user_id: publicKey,
-                template_params: params
-              };
-
-              // If private key is provided, add it as accessToken
-              if (privateKey) {
-                payload.accessToken = privateKey;
-              }
-
-              console.log(`[Notify] Sending email payload to EmailJS:`, JSON.stringify({
-                ...payload,
-                accessToken: payload.accessToken ? '***HIDDEN***' : undefined,
-                user_id: '***HIDDEN***'
-              }));
-
-              const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+              const response = await fetch(`${SupabaseUrl}/functions/v1/send-email`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${SupabaseKey}`,
+                  'apikey': SupabaseKey as string,
+                },
+                body: JSON.stringify({ template, params }),
               });
-              
               if (response.ok) {
-                console.log(`[Notify] Email sent successfully to ${params.email || params.to_email}`);
+                console.log(`[Notify] Email(${template}) sent to ${params.to_email || params.email}`);
               } else {
                 const errText = await response.text();
-                console.error(`[Notify] Email sending failed with status ${response.status}:`, errText);
+                console.error(`[Notify] Email(${template}) failed status ${response.status}:`, errText);
               }
             } catch (e) {
               console.error('[Notify] Email sending network/fetch error:', e);
@@ -302,8 +278,8 @@ serve(async (req) => {
               if (rcpt.already) { console.log(`[Notify] receipt already exists for ${orderNo}`); return; }
               if (!rcpt.email) { console.warn(`[Notify] receipt has no email, skip send: ${orderNo}`); return; }
               const link = `${SITE_URL}/receipt/${rcpt.token}`;
-              await sendEmail(Deno.env.get('EMAILJS_RECEIPT_TEMPLATE_ID') || 'template_4eq02vf', {
-                email: rcpt.email,
+              await sendEmail('receipt', {
+                to_email: rcpt.email,
                 to_name: rcpt.payer_name,
                 order_id: rcpt.receipt_no,
                 amount: rcpt.amount,
@@ -349,14 +325,15 @@ serve(async (req) => {
               }
               try {
                 await Promise.all([
-                  sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
+                  sendEmail('paid_confirm', {
                     to_name: sEntry.name,
-                    email: sEntry.email,
+                    to_email: sEntry.email,
+                    kind: '接龍報名',
                     activity_title: sTitle,
                     activity_date: sDate,
                     activity_time: sTime,
                     activity_location: sLoc,
-                    activity_price: sEntry.paid_amount || 0
+                    amount: sEntry.paid_amount || 0
                   }),
                   sendTelegram('接龍報名 (已付款)', `活動：${sTitle}\n姓名：${sEntry.name}\n電話：${sEntry.phone || ''}\nEmail：${sEntry.email}\n公司：${sEntry.company || '—'}\n金額：NT$ ${sEntry.paid_amount?.toLocaleString()}`)
                 ]);
@@ -399,14 +376,15 @@ serve(async (req) => {
               const festivalLabel = festData.festival_type === 'hotpot' ? '火鍋祭' : festData.festival_type === 'both' ? '燒肉祭與火鍋祭' : '燒肉祭';
               try {
                 await Promise.all([
-                  sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
+                  sendEmail('paid_confirm', {
                     to_name: festData.contact_name,
-                    email: festData.contact_email,
+                    to_email: festData.contact_email,
+                    kind: festivalLabel,
                     activity_title: `【食在力量】${festivalLabel}報名`,
                     activity_date: new Date().toISOString().slice(0, 10),
                     activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
                     activity_location: `${festivalLabel}（已完成繳費）`,
-                    activity_price: festData.paid_amount || 0
+                    amount: festData.paid_amount || 0
                   }),
                   sendTelegram(`${festivalLabel}報名 (已付款)`, `品牌：${festData.brand_name}\n聯絡人：${festData.contact_name}\n電話：${festData.contact_phone}\nEmail：${festData.contact_email}\n抬頭：${festData.invoice_title || '—'}\n統編：${festData.tax_id || '—'}\n品牌數：${festData.brand_count}\n網紅影音升級：${festData.influencer_video_count}\n金額：NT$ ${festData.paid_amount?.toLocaleString()}`)
                 ]);
@@ -489,14 +467,15 @@ serve(async (req) => {
 
               console.log(`[Notify] Sending ${isMemberOnly ? 'member' : 'general'} activity email to ${recipientEmail}`);
               await Promise.all([
-                sendEmail(Deno.env.get('EMAILJS_TEMPLATE_ID') || 'template_ih0plai', {
+                sendEmail('paid_confirm', {
                   to_name: recipientName,
-                  email: recipientEmail,
+                  to_email: recipientEmail,
+                  kind: '活動報名',
                   activity_title: activityTitle,
                   activity_date: activityDate,
                   activity_time: activityTime,
                   activity_location: activityLocation,
-                  activity_price: regData.paid_amount || 0
+                  amount: regData.paid_amount || 0
                 }),
                 sendTelegram(label, telegramBody)
               ]);
@@ -532,15 +511,12 @@ serve(async (req) => {
                 try {
                   console.log(`[Notify] Sending member join email to ${appData.email} for ${appData.name}`);
                   await Promise.all([
-                    sendEmail(Deno.env.get('EMAILJS_MEMBER_JOIN_TEMPLATE_ID') || 'template_gu7mwvm', {
+                    sendEmail('payment_notice', {
                       to_name: appData.name,
                       to_email: appData.email,
-                      activity_title: '【食在力量】會員入會申請',
-                      activity_date: new Date().toISOString().slice(0, 10),
-                      activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-                      activity_location: '線上申請 (已完成繳費)',
-                      activity_price: `NT$ ${appData.paid_amount?.toLocaleString()}`,
-                      message: `您的入會申請已收到並完成繳費，管理員將於 3-5 個工作天內完成審核。`
+                      subject: '【食在力量】會員入會申請 — 繳費成功',
+                      intro: '您的入會申請已收到並完成繳費，管理員將於 3-5 個工作天內完成審核，審核通過後會再通知您。感謝您加入食在力量！',
+                      rows: [['已付金額', `NT$ ${(appData.paid_amount || 0).toLocaleString()}`]],
                     }),
                     sendTelegram('新會員申請 (已付款)', `姓名：${appData.name}\n公司：${appData.company_title || '無'}\n電話：${appData.phone}\nEmail：${appData.email}\n金額：NT$ ${appData.paid_amount?.toLocaleString()}`)
                   ]);
@@ -605,15 +581,12 @@ serve(async (req) => {
                     try {
                       console.log(`[Notify] Sending renewal email to ${memberEmail} for member ${memberName}`);
                       await Promise.all([
-                        sendEmail(Deno.env.get('EMAILJS_RENEWAL_TEMPLATE_ID') || 'template_3bgk8ts', {
+                        sendEmail('payment_notice', {
                           to_name: memberName,
                           to_email: memberEmail,
-                          activity_title: '【食在力量】會員續約成功',
-                          activity_date: new Date().toISOString().slice(0, 10),
-                          activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-                          activity_location: '線上續約 (已完成繳費)',
-                          activity_price: `NT$ ${renewData.amount?.toLocaleString()}`,
-                          message: `您的會員續約已完成繳費，會籍已自動延長。`
+                          subject: '【食在力量】會員續約成功',
+                          intro: '您的會員續約已完成繳費，會籍已自動延長。感謝您持續支持食在力量！',
+                          rows: [['已付金額', `NT$ ${(renewData.amount || 0).toLocaleString()}`]],
                         }),
                         sendTelegram('會員續約申請 (已付款)', `會員：${memberName}\n金額：NT$ ${renewData.amount?.toLocaleString()}`)
                       ]);

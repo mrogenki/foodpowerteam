@@ -187,6 +187,26 @@ const templates: Record<string, (p: any) => Built> = {
     return { subject: String(p.subject || '食在力量 通知'), html: layout({ title: String(p.subject || '通知'), bodyHtml: body }) };
   },
 
+  // 付款成功確認（金流 webhook 觸發：接龍/活動/祭典等）
+  paid_confirm: (p): Built => {
+    const title = String(p.activity_title || '活動');
+    const kind = String(p.kind || '報名');
+    const who = esc(p.to_name || '');
+    const detail = rows([
+      ['項目', esc(title)],
+      ['日期', esc(p.activity_date)],
+      ['時間', esc(p.activity_time)],
+      ['地點', esc(p.activity_location)],
+      ['已付金額', money(p.amount)],
+    ]);
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">您的款項已收到，繳費成功！以下為本次的確認資訊，我們期待當天與您交流、共創產業商機。</p>
+      <div style="padding:16px;background:#f9fafb;border-radius:12px;">${detail}</div>
+    `;
+    return { subject: `【${esc(kind)}】${title} — 繳費成功`, html: layout({ title, bodyHtml: body }) };
+  },
+
   // 會籍續約／喚醒通知（到期前提醒）
   renewal_reminder: (p): Built => {
     const who = esc(p.to_name || '');
