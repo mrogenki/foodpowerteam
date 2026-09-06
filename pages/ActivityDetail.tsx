@@ -258,7 +258,10 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
         activity_title: activity.title,
         activity_date: activity.date,
         activity_time: activity.time,
-        activity_location: activity.location,
+        // 範本 template_ih0plai 只渲染 activity_location（不渲染 message），故稍後付款時把繳費連結併入地點欄位確保出現。
+        activity_location: payLink
+          ? `${activity.location}\n\n💳 立即點此完成繳費以保留名額：\n${payLink}`
+          : activity.location,
         activity_price: finalPrice,
         ...(payLink ? { message: `親愛的 ${name} 您好，\n\n您已完成報名「${activity.title}」，本次選擇稍後付款。\n請點以下專屬連結完成繳費以保留名額（任何裝置皆可）：\n\n${payLink}\n\n若您已完成繳費，請忽略此信件。` } : {}),
       };
