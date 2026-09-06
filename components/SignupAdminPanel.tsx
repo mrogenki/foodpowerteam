@@ -325,6 +325,11 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                                 : r.payment_status === 'refunded' ? <span className="text-gray-400">已退費</span>
                                 : <span className="text-gray-400">未付</span>
                             )}
+                            {r.self_pay_reported_at && (
+                              <div className="mt-1 text-[11px] text-gray-500 leading-tight">
+                                <span className="text-amber-700 font-bold">回報：</span>{r.self_pay_method || '—'}{r.self_pay_ref ? `／${r.self_pay_ref}` : ''}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">

@@ -136,6 +136,9 @@ export interface SignupEntry {
   member_id?: string | null;  // 報名當下命中的在會會員（有值＝套用會員價）
   fee_amount?: number | null; // 報名當下鎖定的應付價
   coupon_id?: string | null;  // 報名時套用的折扣券
+  self_pay_method?: string | null;      // 自主收款：報名者回報的繳費方式
+  self_pay_ref?: string | null;         // 自主收款：轉帳末五碼／備註
+  self_pay_reported_at?: string | null; // 自主收款：回報時間
   cancel_token?: string;      // 認領/繳費授權碼（後台複製繳費連結用）
   merchant_order_no?: string;
   paid_at?: string;

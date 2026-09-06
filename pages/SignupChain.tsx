@@ -155,10 +155,23 @@ const SignupChain: React.FC = () => {
       setCouponCode(''); setCouponStatus('idle'); setCouponMsg('');
       await fetchList(activityId);
       if (row.status === 'confirmed') {
-        if (selfCollect || isFree) {
+        if (isFree) {
           showToast('報名成功！🎉');
+        } else if (selfCollect) {
+          // 自主收款：寄繳費說明 + 回填連結（換裝置也能回來填）
+          const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
+          emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
+            to_name: regName, email: regEmail, to_email: regEmail, reply_to: regEmail,
+            activity_title: `【接龍報名】${activity?.title || ''}`,
+            activity_date: activity?.date || '',
+            activity_time: activity?.time || '',
+            activity_location: activity?.location || '',
+            activity_price: `NT$ ${(settings?.fee_amount ?? 0).toLocaleString()}`,
+            message: `親愛的 ${regName} 您好，\n\n您已成功報名「${activity?.title || ''}」（正取）。\n${settings?.collect_note ? '【繳費方式】\n' + settings.collect_note + '\n\n' : ''}完成繳費後，請點以下專屬連結回填繳費資訊（轉帳末五碼／LINE Pay／現金），主辦核對後會將您標記為已付款：\n\n${payLink}\n\n此連結可隨時回來填寫（換手機／瀏覽器亦適用）。`,
+          }, EMAIL_CONFIG.PUBLIC_KEY).catch(err => console.error('接龍確認信寄送失敗', err));
+          showToast('報名成功！繳費方式與回填連結已寄到你的 Email 🎉');
         } else {
-          // 寄專屬繳費連結（換裝置/清資料也能回來補繳）
+          // 線上金流：寄專屬繳費連結（換裝置/清資料也能回來補繳）
           const payLink = `${window.location.origin}/pay-signup/${row.id}?token=${row.cancel_token}`;
           emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.TEMPLATE_ID, {
             to_name: regName, email: regEmail, to_email: regEmail, reply_to: regEmail,
@@ -415,6 +428,7 @@ const SignupChain: React.FC = () => {
                 const entry = entries.find(e => e.id === m.id);
                 if (!entry) return null;
                 const needPay = !selfCollect && !isFree && entry.status === 'confirmed' && entry.payment_status !== 'paid';
+                const needSelfReport = selfCollect && !isFree && entry.status === 'confirmed' && entry.payment_status !== 'paid';
                 return (
                   <div key={m.id} className="flex flex-wrap items-center gap-3">
                     <span className="flex-1 min-w-[120px] text-sm font-medium text-gray-700">
@@ -430,6 +444,12 @@ const SignupChain: React.FC = () => {
                       <button onClick={() => goPay(m.id, m.cancel_token)}
                         className="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors">
                         <CreditCard size={14} /> 前往付款
+                      </button>
+                    )}
+                    {needSelfReport && (
+                      <button onClick={() => goPay(m.id, m.cancel_token)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-white bg-amber-600 px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
+                        <CreditCard size={14} /> 填寫繳費資訊
                       </button>
                     )}
                     {entry.payment_status === 'paid' ? (

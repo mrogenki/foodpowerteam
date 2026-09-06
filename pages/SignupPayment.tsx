@@ -16,7 +16,13 @@ interface SignupPayInfo {
   status: 'confirmed' | 'waitlist';
   is_member?: boolean;
   has_coupon?: boolean;
+  payment_mode?: 'online' | 'self';
+  collect_note?: string | null;
+  self_pay_method?: string | null;
+  self_pay_ref?: string | null;
 }
+
+const SELF_PAY_METHODS = ['轉帳', 'LINE Pay', '現金'];
 
 const SignupPayment: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +34,34 @@ const SignupPayment: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  // 自主收款回填繳費資訊
+  const [selfMethod, setSelfMethod] = useState('轉帳');
+  const [selfRef, setSelfRef] = useState('');
+  const [selfSubmitting, setSelfSubmitting] = useState(false);
+  const [selfDone, setSelfDone] = useState(false);
+
+  useEffect(() => {
+    if (info?.self_pay_method) { setSelfMethod(info.self_pay_method); setSelfDone(true); }
+    if (info?.self_pay_ref) setSelfRef(info.self_pay_ref);
+  }, [info]);
+
+  const submitSelfPay = async () => {
+    if (!id || !token || !supabase) return;
+    if (selfMethod === '轉帳' && !selfRef.trim()) { alert('請填寫轉帳末五碼'); return; }
+    setSelfSubmitting(true);
+    try {
+      const { error } = await supabase.rpc('signup_submit_payment_info', {
+        p_id: id, p_token: token, p_method: selfMethod, p_ref: selfRef.trim(),
+      });
+      if (error) throw error;
+      setSelfDone(true);
+      alert('已回報繳費資訊！主辦確認後會將您標記為已付款。');
+    } catch (err: any) {
+      alert(err.message || '送出失敗，請稍後再試');
+    } finally {
+      setSelfSubmitting(false);
+    }
+  };
 
   const copyMyLink = () => {
     navigator.clipboard.writeText(window.location.href)
@@ -103,6 +137,7 @@ const SignupPayment: React.FC = () => {
   const isPaid = info.payment_status === 'paid';
   const isWaitlist = info.status !== 'confirmed';
   const isFree = (info.amount || 0) <= 0;   // 免費活動：無需繳費
+  const isSelf = info.payment_mode === 'self'; // 發起人自主收款
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -113,7 +148,7 @@ const SignupPayment: React.FC = () => {
               className="w-full h-36 object-cover rounded-2xl mb-5 shadow-sm" loading="eager" />
           )}
           <h1 className="text-2xl font-bold text-gray-900 mb-2">接龍報名費繳納</h1>
-          <p className="text-gray-500">請確認以下資訊並完成繳費</p>
+          <p className="text-gray-500">{isSelf ? '請依繳費方式繳費後，於下方回報繳費資訊' : '請確認以下資訊並完成繳費'}</p>
         </div>
 
         <div className="space-y-4 mb-8 bg-gray-50 p-6 rounded-xl">
@@ -163,6 +198,51 @@ const SignupPayment: React.FC = () => {
               <Clock size={20} /> 您目前為候補，遞補為正取後即可付款
             </div>
             <button onClick={() => navigate(-1)} className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors">返回名單</button>
+          </div>
+        ) : isSelf ? (
+          <div className="space-y-4">
+            {info.collect_note && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 whitespace-pre-wrap">
+                <span className="font-bold">💰 繳費方式：</span>{'\n'}{info.collect_note}
+              </div>
+            )}
+            {selfDone && (
+              <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm">
+                <CheckCircle2 size={18} /> 已回報繳費資訊，等待主辦確認
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">繳費方式</label>
+              <div className="grid grid-cols-3 gap-2">
+                {SELF_PAY_METHODS.map(m => (
+                  <button key={m} type="button" onClick={() => setSelfMethod(m)}
+                    className={`py-2.5 rounded-xl text-sm font-bold border transition-all ${selfMethod === m ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                {selfMethod === '轉帳' ? '轉帳帳號末五碼' : '備註（選填）'}
+                {selfMethod === '轉帳' && <span className="text-red-600"> *</span>}
+              </label>
+              <input value={selfRef} onChange={e => setSelfRef(e.target.value)} maxLength={40}
+                placeholder={selfMethod === '轉帳' ? '例：12345' : selfMethod === 'LINE Pay' ? '例：已用 LINE Pay 轉帳' : '例：現場繳交現金'}
+                inputMode={selfMethod === '轉帳' ? 'numeric' : 'text'}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
+            </div>
+            <button onClick={submitSelfPay} disabled={selfSubmitting}
+              className="w-full bg-red-600 text-white py-4 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2 text-lg disabled:opacity-50">
+              {selfSubmitting ? '送出中…' : selfDone ? '更新繳費資訊' : '回報繳費資訊'}
+            </button>
+            <p className="text-xs text-center text-gray-400">繳費後回填此表，主辦核對後會將您標記為已付款。</p>
+            <div className="pt-3 border-t border-gray-100">
+              <button onClick={copyMyLink}
+                className="w-full border border-gray-200 text-gray-600 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                <Copy size={16} /> {linkCopied ? '已複製 ✓' : '複製此連結（之後可回來更新）'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
