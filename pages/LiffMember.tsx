@@ -1,8 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import liff from '@line/liff';
 import { supabase } from '../utils/supabaseClient';
-import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2, Share2, User } from 'lucide-react';
+import { Loader2, UserCheck, Coins, CalendarClock, ClipboardList, CreditCard, AlertCircle, CheckCircle2, Share2, User, Pencil, Camera, X, Save } from 'lucide-react';
 import { MemberCardData, buildMemberShareMessages } from '../utils/memberCard';
+import { IndustryCategories } from '../types';
+
+// 會員可自助編輯的欄位（會籍/繳費/點數/會員編號/身分欄位皆鎖定，不在此列）
+interface EditForm {
+  phone: string; home_phone: string; email: string; address: string;
+  brand_name: string; company_title: string; tax_id: string; job_title: string;
+  industry_category: string; industry_chain: string;
+  website: string; main_service: string; intro: string; picture: string;
+}
+const EMPTY_EDIT: EditForm = {
+  phone: '', home_phone: '', email: '', address: '',
+  brand_name: '', company_title: '', tax_id: '', job_title: '',
+  industry_category: '', industry_chain: '', website: '', main_service: '', intro: '', picture: '',
+};
 
 // 會員專區 LIFF（LINE 內）：綁定 LINE 身分 → 查會籍 / 點數 / 報名
 const MEMBER_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_MEMBER_ID as string) || '2010533806-E7Dmp1Mc';
@@ -33,6 +47,11 @@ export default function LiffMember() {
   const [tab, setTab] = useState<'membership' | 'points' | 'regs'>('membership');
   const [canShare, setCanShare] = useState(false);
   const [sharingCard, setSharingCard] = useState(false);
+  // 編輯資料
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>(EMPTY_EDIT);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   // 綁定表單
   const [bPhone, setBPhone] = useState('');
   const [bName, setBName] = useState('');
@@ -117,6 +136,73 @@ export default function LiffMember() {
     }
   };
 
+  // 進入編輯：載入可編輯欄位原始值
+  const openEdit = async () => {
+    if (!supabase || !userId) return;
+    try {
+      const { data } = await supabase.rpc('member_editable_by_line', { p_line_user_id: userId });
+      const row = (Array.isArray(data) ? data[0] : data) || {};
+      setEditForm({
+        phone: row.phone || '', home_phone: row.home_phone || '', email: row.email || '', address: row.address || '',
+        brand_name: row.brand_name || '', company_title: row.company_title || '', tax_id: row.tax_id || '', job_title: row.job_title || '',
+        industry_category: row.industry_category || '', industry_chain: row.industry_chain || '',
+        website: row.website || '', main_service: row.main_service || '', intro: row.intro || '', picture: row.picture || '',
+      });
+      setEditing(true);
+    } catch (e: any) {
+      alert('載入資料失敗，請稍後再試');
+    }
+  };
+
+  const setField = (k: keyof EditForm, v: string) => setEditForm(prev => ({ ...prev, [k]: v }));
+
+  // 上傳大頭照（走 member-photo Edge Function，service role 上傳並更新 picture）
+  const onPickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !supabase || !userId) return;
+    if (file.size > 6 * 1024 * 1024) { alert('圖片過大，請小於 6MB'); return; }
+    setPhotoBusy(true);
+    try {
+      const base64: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(',')[1] || '');
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const { data, error } = await supabase.functions.invoke('member-photo', {
+        body: { line_user_id: userId, file_base64: base64, ext },
+      });
+      if (error || !(data as any)?.ok) { alert('照片上傳失敗：' + (error?.message || (data as any)?.error || '')); return; }
+      setField('picture', (data as any).url);
+    } catch (err: any) {
+      alert('照片上傳失敗：' + (err?.message || String(err)));
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!supabase || !userId) return;
+    setSavingEdit(true);
+    try {
+      // picture 已由上傳當下即時寫入 DB；此處送其餘欄位（含 picture 亦無妨）
+      const { data, error } = await supabase.rpc('member_update_by_line', {
+        p_line_user_id: userId,
+        p_patch: { ...editForm },
+      });
+      if (error || data === false) throw new Error(error?.message || '更新失敗');
+      await loadPortal(userId);
+      setEditing(false);
+      alert('資料已更新 ✅');
+    } catch (e: any) {
+      alert('儲存失敗：' + (e?.message || String(e)));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const goPaySignup = (r: Reg) => { if (r.token) window.location.href = `/pay-signup/${r.ref_id}?token=${r.token}`; };
   const goPayActivity = (r: Reg) => { window.location.href = `/pay-activity/${r.ref_id}`; };
 
@@ -173,6 +259,99 @@ export default function LiffMember() {
   // portal
   const p = portal!;
   const expiryLabel = p.membership_expiry_date || '—';
+
+  // 編輯資料畫面
+  if (editing) {
+    // 注意：用函式回傳 JSX（非內嵌元件），避免每次 render 重新掛載導致輸入框失焦
+    const field = (label: string, k: keyof EditForm, type = 'text', placeholder?: string) => (
+      <div>
+        <label className="block text-sm font-bold text-gray-700 mb-1">{label}</label>
+        <input
+          type={type} value={editForm[k]} onChange={e => setField(k, e.target.value)} placeholder={placeholder}
+          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600"
+        />
+      </div>
+    );
+    return (
+      <div className="min-h-screen bg-gray-50 pb-28">
+        <div className="max-w-md mx-auto px-4 pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold text-gray-900">編輯我的資料</h1>
+            <button onClick={() => setEditing(false)} className="text-gray-400 p-1"><X size={22} /></button>
+          </div>
+
+          {/* 照片 */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+              {editForm.picture ? (
+                <img src={editForm.picture} alt="大頭照" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : <User size={32} className="text-gray-300" />}
+            </div>
+            <label className={`cursor-pointer bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 ${photoBusy ? 'opacity-60' : ''}`}>
+              <Camera size={18} /> {photoBusy ? '上傳中…' : '更換照片'}
+              <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={onPickPhoto} />
+            </label>
+          </div>
+
+          {/* 鎖定的身分/會籍欄位（唯讀提示） */}
+          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-4 mb-4 text-sm text-gray-500">
+            <p className="font-bold text-gray-600 mb-1">以下由協會維護，如需修改請聯繫管理員</p>
+            <p>姓名：{p.name}　會員編號：#{(p.member_no || '').padStart(5, '0')}</p>
+          </div>
+
+          {/* 聯絡資訊 */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 space-y-3">
+            <p className="text-xs font-bold text-gray-400">聯絡資訊</p>
+            {field('手機', 'phone', 'tel')}
+            {field('電話（市話）', 'home_phone', 'tel')}
+            {field('Email', 'email', 'email')}
+            {field('通訊地址', 'address')}
+          </div>
+
+          {/* 事業資料 */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 space-y-3">
+            <p className="text-xs font-bold text-gray-400">事業資料</p>
+            {field('品牌名稱', 'brand_name')}
+            {field('公司抬頭', 'company_title')}
+            {field('統一編號', 'tax_id')}
+            {field('職稱', 'job_title')}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">產業別</label>
+              <select value={editForm.industry_category} onChange={e => setField('industry_category', e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 bg-white">
+                <option value="">（未選擇）</option>
+                {(IndustryCategories as readonly string[]).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {field('產業鏈', 'industry_chain')}
+            {field('公司網站', 'website', 'text', 'https://')}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">主要服務/產品</label>
+              <textarea value={editForm.main_service} onChange={e => setField('main_service', e.target.value)} rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">簡介</label>
+              <textarea value={editForm.intro} onChange={e => setField('intro', e.target.value)} rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* 底部固定儲存列 */}
+        <div className="fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-gray-100">
+          <div className="max-w-md mx-auto p-4 flex gap-3">
+            <button onClick={() => setEditing(false)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold">取消</button>
+            <button onClick={saveEdit} disabled={savingEdit || photoBusy}
+              className="flex-[2] bg-red-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+              <Save size={18} /> {savingEdit ? '儲存中…' : '儲存'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="max-w-md mx-auto px-4 pt-6">
@@ -196,6 +375,12 @@ export default function LiffMember() {
           {!canShare && (
             <p className="text-center text-[11px] text-orange-100 mt-2">請從 LINE App 內開啟才能分享名片</p>
           )}
+          <button
+            onClick={openEdit}
+            className="mt-2 w-full bg-white/15 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 active:opacity-80"
+          >
+            <Pencil size={16} /> 編輯我的資料
+          </button>
         </div>
 
         {/* 分頁 */}
