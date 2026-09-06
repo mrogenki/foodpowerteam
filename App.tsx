@@ -68,6 +68,38 @@ const PageLoader = () => (
 // 定義系統擁有者 (白名單)，確保即使資料庫設定錯誤也能登入
 const SYSTEM_OWNERS = ['mr.ogenki@gmail.com'];
 
+// 手機正規化：去掉非數字、把 886 前綴換回 0。
+// 規則與 Supabase 的 member_bind_line RPC 一致，兩邊比對結果才會相同。
+const normalizePhone = (v?: string | null) =>
+  String(v ?? '').replace(/\D/g, '').replace(/^886/, '0');
+
+const translatePaymentMethod = (method?: string) => {
+  if (!method) return '-';
+  const map: Record<string, string> = {
+    'CREDIT': '信用卡',
+    'VACC': 'ATM轉帳',
+    'WEBATM': 'WebATM',
+    'CVS': '超商代碼',
+    'BARCODE': '超商條碼',
+    'LINEPAY': 'Line Pay',
+    'manual_admin': '手動標記',
+    'ALIPAY': '支付寶',
+    'WECHATPAY': '微信支付'
+  };
+  return map[method] || method;
+};
+
+// 這筆入會申請要記進 payment_records 的那一行
+const buildJoinPaymentRecord = (application: MemberApplication) => {
+  const isWaived = (application.paid_amount || 0) === 0;
+  return {
+    id: Date.now(),
+    date: application.paid_at ? application.paid_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    amount: application.paid_amount || 0,
+    note: `入會費 (${translatePaymentMethod(application.payment_method)}${isWaived ? '/會費減免' : ''}) - 訂單編號: ${application.merchant_order_no || '無'}`
+  };
+};
+
 const Header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -993,6 +1025,68 @@ const App: React.FC = () => {
     } catch (err: any) { alert(err.message); } finally { setLoading(false); }
   };
 
+  // 沿用既有會員編號，把一筆入會申請當成續會處理。
+  // 這樣舊帳號的點數、報名記錄與 LINE 綁定都留著，不會分裂成兩個編號。
+  const handleAdoptApplicationAsRenewal = async (application: MemberApplication, existing: Member) => {
+    if (!supabase) return;
+    try {
+      // 延長一年的規則與 handle_renewal_payment RPC 一致：
+      // 還沒過期就從原到期日加一年，已過期／沒日期就從今天加一年。
+      const todayTpe = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+      const current = existing.membership_expiry_date || '';
+      const base = current > todayTpe ? current : todayTpe;
+      const [by, bm, bd] = base.split('-').map(Number);
+      const next = new Date(by + 1, bm - 1, bd);
+      // 2/29 加一年會溢位到 3/1，退回該月最後一天，與 Postgres 的 +1 year 行為一致
+      if (next.getMonth() !== bm - 1) next.setDate(0);
+      const newExpiry = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+
+      // payment_records 是 text 欄位存 JSON 陣列，舊資料可能是空的或壞的，解不開就從頭來
+      let records: any[] = [];
+      try {
+        const parsed = JSON.parse(existing.payment_records || '[]');
+        if (Array.isArray(parsed)) records = parsed;
+      } catch { /* 忽略壞掉的舊值 */ }
+      records.push(buildJoinPaymentRecord(application));
+
+      // 用新申請的資料更新聯絡與事業欄位（這些通常就是他重新申請的原因），
+      // 但 member_no / points_balance / line_user_id / join_date 一律不動。
+      const { error: updErr } = await supabase.from('members').update({
+        status: 'active',
+        membership_expiry_date: newExpiry,
+        id_number: application.id_number,
+        birthday: application.birthday,
+        phone: application.phone,
+        email: application.email,
+        home_phone: application.home_phone,
+        address: application.address,
+        industry_category: application.industry_category,
+        brand_name: application.brand_name,
+        company_title: application.company_title,
+        tax_id: application.tax_id,
+        job_title: application.job_title,
+        website: application.website,
+        main_service: application.main_service,
+        payment_records: JSON.stringify(records)
+      }).eq('id', existing.id);
+      if (updErr) throw updErr;
+
+      const { error: appErr } = await supabase
+          .from('member_applications')
+          .update({ status: 'approved' })
+          .eq('id', application.id);
+      if (appErr) throw appErr;
+
+      alert(`已沿用會員編號 ${existing.member_no}\n會籍延長至 ${newExpiry}`);
+      await fetchData();
+    } catch (error: any) {
+      console.error(error);
+      alert('沿用舊會員失敗：' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleApproveMemberApplication = async (application: MemberApplication) => {
     if (!supabase) return;
     setLoading(true);
@@ -1008,6 +1102,62 @@ const App: React.FC = () => {
         }
       }
 
+      // 重複入會偵測：沒續約而是重新申請入會的人，手機／姓名／生日會跟舊會員完全一樣。
+      // 直接核准會產生第二筆 members，舊那筆的點數、報名記錄與 LINE 綁定都會跟新編號分家。
+      const applicantPhone = normalizePhone(application.phone);
+      const applicantName = (application.name || '').trim();
+      const todayTpe = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+      let existing: Member | null = null;
+      if (applicantPhone && applicantName) {
+        // 姓名前後可能有空白、手機格式也不一（有的帶 -、有的帶 +886），
+        // 所以整批撈回來在前端正規化比對，比在 SQL 端拼條件可靠。
+        const { data: allMembers, error: dupErr } = await supabase
+            .from('members')
+            .select('id, member_no, name, phone, status, membership_expiry_date, payment_records');
+        if (dupErr) throw dupErr;
+        const matches = (allMembers || []).filter(
+            (m: any) => (m.name || '').trim() === applicantName
+                && normalizePhone(m.phone) === applicantPhone
+        );
+        // 有多筆時挑目前最有效的那筆來提示（排序規則與 member_bind_line RPC 一致）
+        matches.sort((a: any, b: any) => {
+          const rank = (m: any) => [
+            m.status === 'active' ? 1 : 0,
+            (m.membership_expiry_date || '') >= todayTpe ? 1 : 0,
+          ].join('');
+          if (rank(a) !== rank(b)) return rank(b).localeCompare(rank(a));
+          return (b.membership_expiry_date || '').localeCompare(a.membership_expiry_date || '');
+        });
+        existing = (matches[0] as Member) || null;
+      }
+
+      if (existing) {
+        const expiry = existing.membership_expiry_date || '';
+        const stillValid = existing.status === 'active' && expiry >= todayTpe;
+        const stateText = stillValid ? `會籍有效，到期 ${expiry}` : `已失效${expiry ? `，到期 ${expiry}` : ''}`;
+
+        const adopt = confirm(
+            `${applicantName} 已經是會員了。\n\n` +
+            `　會員編號：${existing.member_no}（${stateText}）\n\n` +
+            `【確定】沿用這個編號，把這筆申請當成續會：延長會籍一年、更新資料、\n` +
+            `　　　　保留原有的點數／報名記錄／LINE 綁定。（建議）\n\n` +
+            `【取消】不要沿用，另外處理。`
+        );
+
+        if (adopt) {
+          await handleAdoptApplicationAsRenewal(application, existing);
+          return;
+        }
+
+        const createAnyway = confirm(
+            `仍要另外建立一筆全新的會員資料嗎？\n\n` +
+            `⚠️ 系統裡會同時存在兩筆「${applicantName}」，` +
+            `舊編號 ${existing.member_no} 的點數、報名記錄與 LINE 綁定不會轉移過來。\n\n` +
+            `只有在確定是「同名同姓的不同人」時才這樣做。`
+        );
+        if (!createAnyway) { setLoading(false); return; }
+      }
+
       const { data: members, error: fetchError } = await supabase.from('members').select('member_no');
       if (fetchError) throw fetchError;
       const maxNo = members?.reduce((max, m) => {
@@ -1016,29 +1166,7 @@ const App: React.FC = () => {
       }, 0) || 0;
       const nextNo = (maxNo + 1).toString().padStart(5, '0');
 
-      const translatePaymentMethod = (method?: string) => {
-        if (!method) return '-';
-        const map: Record<string, string> = {
-          'CREDIT': '信用卡',
-          'VACC': 'ATM轉帳',
-          'WEBATM': 'WebATM',
-          'CVS': '超商代碼',
-          'BARCODE': '超商條碼',
-          'LINEPAY': 'Line Pay',
-          'manual_admin': '手動標記',
-          'ALIPAY': '支付寶',
-          'WECHATPAY': '微信支付'
-        };
-        return map[method] || method;
-      };
-
-      const isWaived = (application.paid_amount || 0) === 0;
-      const paymentRecord = {
-        id: Date.now(),
-        date: application.paid_at ? application.paid_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
-        amount: application.paid_amount || 0,
-        note: `入會費 (${translatePaymentMethod(application.payment_method)}${isWaived ? '/會費減免' : ''}) - 訂單編號: ${application.merchant_order_no || '無'}`
-      };
+      const paymentRecord = buildJoinPaymentRecord(application);
 
       const newMember = {
         id: crypto.randomUUID(),
