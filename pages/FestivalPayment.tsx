@@ -2,8 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { submitNewebPayForm } from '../utils/newebpay';
-import emailjs from '@emailjs/browser';
-import { EMAIL_CONFIG } from '../constants';
 import { Loader2, CreditCard, Flame, Minus, Plus, AlertCircle, Crown, CheckCircle2 } from 'lucide-react';
 
 const BRAND_UNIT_PRICE = 3000;
@@ -103,25 +101,21 @@ const FestivalPayment: React.FC = () => {
       if (isFree) {
         // VIP 免費報名沒有走金流（金流成功才會由 webhook 寄信），這裡主動補寄確認信
         try {
-          if (EMAIL_CONFIG.SERVICE_ID && EMAIL_CONFIG.SERVICE_ID !== 'YOUR_NEW_SERVICE_ID') {
-            await emailjs.send(
-              EMAIL_CONFIG.SERVICE_ID,
-              EMAIL_CONFIG.TEMPLATE_ID,
-              {
-                email: contactEmail.trim(),
+          await supabase.functions.invoke('send-email', {
+            body: {
+              template: 'payment_notice',
+              params: {
+                to_email: contactEmail.trim(),
                 to_name: contactName.trim(),
-                phone: contactPhone.trim(),
-                company: invoiceTitle.trim() || brandName.trim(),
-                job_title: '',
-                activity_title: `${FESTIVAL_LABEL[festivalType]} 合作報名確認（VIP 免上架費）`,
-                activity_date: '',
-                activity_time: '',
-                activity_location: '線上報名',
-                activity_price: 'NT$ 0（VIP 免上架費）',
+                subject: `【食在力量】${FESTIVAL_LABEL[festivalType]} 合作報名確認`,
+                intro: `感謝您報名參加「${FESTIVAL_LABEL[festivalType]}」合作！我們已收到您的報名資訊（VIP 免上架費），將盡快與您聯繫後續事宜。`,
+                rows: [
+                  ['品牌名稱', brandName.trim()],
+                  ['費用', 'NT$ 0（VIP 免上架費）'],
+                ],
               },
-              EMAIL_CONFIG.PUBLIC_KEY
-            );
-          }
+            },
+          });
         } catch (mailErr) {
           console.error('VIP 免費報名確認信寄送失敗:', mailErr);
         }

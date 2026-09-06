@@ -2,10 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
-import emailjs from '@emailjs/browser';
 import { UserPlus, Save, Loader2, Building2, User, Phone, Briefcase, FileText, CreditCard, Gift, Zap, Users, Target, Globe, Award } from 'lucide-react';
 import { IndustryCategories, PaymentStatus } from '../types';
-import { EMAIL_CONFIG } from '../constants';
 import { submitNewebPayForm } from '../utils/newebpay';
 import { notifyAdmin } from '../utils/notification';
 import { supabase } from '../utils/supabaseClient';
@@ -81,15 +79,10 @@ const MemberJoin: React.FC = () => {
   }, []);
 
   const sendJoinConfirmationEmail = async (memberData: any) => {
-    // 檢查 EmailJS 設定是否存在
-    if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
-      console.warn('EmailJS 未設定，跳過發送');
-      return false;
-    }
-
     try {
-      // 構建詳細的申請資料內容 (完整欄位)
-      const details = `
+      // 申請人填寫的資料（回執echo）
+      const details = `您填寫的資料如下：
+
 【基本資料】
 姓名：${memberData.name}
 身分證字號：${memberData.id_number}
@@ -113,35 +106,25 @@ Email：${memberData.email}
 ${memberData.main_service}
 
 【備註】
-${memberData.notes || '(無)'}
-      `;
+${memberData.notes || '(無)'}`;
 
-      // 使用 Email 模板參數進行映射
-      const templateParams = {
-        to_name: memberData.name,
-        // 增加 to_email 與 reply_to 以確保模板能正確抓到收件人
-        email: memberData.email,
-        to_email: memberData.email,
-        reply_to: memberData.email,
-        
-        phone: memberData.phone,
-        company: memberData.company_title || memberData.brand_name,
-        job_title: memberData.job_title,
-        
-        // 專為會員申請設定的標題與資訊
-        activity_title: '【食在力量】會員入會申請',
-        activity_date: new Date().toISOString().slice(0, 10), // 申請日期
-        activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-        activity_location: '線上申請 (前往繳費)', 
-        activity_price: `NT$ ${ANNUAL_FEE.toLocaleString()} (入會費/年費)`,
-        
-        // 詳細資料區塊
-        message: details 
-      };
-
-      // 使用新的 MEMBER_JOIN_TEMPLATE_ID
-      await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.MEMBER_JOIN_TEMPLATE_ID, templateParams, EMAIL_CONFIG.PUBLIC_KEY);
-      console.log('Confirmation email sent successfully to:', memberData.email);
+      // 改由 Resend（send-email Edge Function）寄送
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'payment_notice',
+          params: {
+            to_email: memberData.email,
+            to_name: memberData.name,
+            subject: '【食在力量】會員入會申請確認',
+            intro: `感謝您申請加入食在力量！我們已收到您的入會申請，將盡快與您聯繫後續繳費與審核事宜。\n\n${details}`,
+            rows: [['入會費/年費', `NT$ ${ANNUAL_FEE.toLocaleString()}`]],
+          },
+        },
+      });
+      if (error || !(data as any)?.ok) {
+        console.error('入會確認信發送失敗:', error || (data as any)?.error);
+        return false;
+      }
       return true;
     } catch (error) {
       console.error('入會確認信發送失敗:', error);

@@ -3,8 +3,6 @@ import { supabase } from '../utils/supabaseClient';
 import { Member, PaymentStatus } from '../types';
 import { requestRefund } from '../utils/newebpay';
 import { Loader2, Search, CheckCircle, XCircle, Send, RefreshCcw, Ban, CreditCard } from 'lucide-react';
-import emailjs from '@emailjs/browser';
-import { EMAIL_CONFIG } from '../constants';
 import ReceiptModal, { ReceiptData } from '../components/ReceiptModal';
 
 interface MemberRenewal {
@@ -158,17 +156,19 @@ const MemberRenewalManager: React.FC<{ isSuperAdmin?: boolean }> = ({ isSuperAdm
     const renewalPaymentLink = `${window.location.origin}/pay-renewal/${renewal.id}`;
 
     try {
-      await emailjs.send(
-        EMAIL_CONFIG.SERVICE_ID,
-        EMAIL_CONFIG.MEMBER_JOIN_TEMPLATE_ID,
-        {
-          to_name: renewal.member_name,
-          email: renewal.member_email,
-          payment_link: renewalPaymentLink,
-          message: `您的會員續約訂單 (單號: ${renewal.merchant_order_no}) 尚未完成付款，請點擊連結完成繳費。`
+      await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'payment_notice',
+          params: {
+            to_email: renewal.member_email,
+            to_name: renewal.member_name,
+            subject: '【食在力量】會員續約繳費通知',
+            intro: '您的會員續約訂單尚未完成付款，請點下方按鈕完成繳費。',
+            rows: [['訂單單號', renewal.merchant_order_no]],
+            pay_link: renewalPaymentLink,
+          },
         },
-        EMAIL_CONFIG.PUBLIC_KEY
-      );
+      });
       
       // Copy to clipboard for manual sharing
       await navigator.clipboard.writeText(renewalPaymentLink);

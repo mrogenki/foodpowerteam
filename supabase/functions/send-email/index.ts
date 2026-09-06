@@ -166,6 +166,43 @@ const templates: Record<string, (p: any) => Built> = {
     `;
     return { subject: `【食在力量】電子收據 ${esc(p.order_id)}`, html: layout({ title: '電子收據', bodyHtml: body }) };
   },
+
+  // 通用繳費通知（入會、活動補寄、續費補寄…）：一段說明 + 可選明細 + 可選繳費按鈕
+  payment_notice: (p): Built => {
+    const who = esc(p.to_name || '');
+    const pairs: Array<[string, string]> = Array.isArray(p.rows)
+      ? p.rows.map((r: any[]) => [String(r[0]), esc(r[1])] as [string, string])
+      : [];
+    const detail = pairs.length
+      ? `<div style="padding:16px;background:#f9fafb;border-radius:12px;">${rows(pairs)}</div>`
+      : '';
+    const cta = p.pay_link ? button(p.button_label || '前往繳費', p.pay_link) : '';
+    const intro = esc(p.intro || '');
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;white-space:pre-wrap;">${intro}</p>
+      ${detail}
+      ${cta}
+    `;
+    return { subject: String(p.subject || '食在力量 通知'), html: layout({ title: String(p.subject || '通知'), bodyHtml: body }) };
+  },
+
+  // 會籍續約／喚醒通知（到期前提醒）
+  renewal_reminder: (p): Built => {
+    const who = esc(p.to_name || '');
+    const isWake = String(p.notice_type || '').includes('喚醒');
+    const detail = rows([['會籍到期日', esc(p.expiry_date)]]);
+    const intro = isWake
+      ? '好久不見！您的會籍已到期，誠摯邀請您回來續會，繼續與產業夥伴交流、共創商機。'
+      : '提醒您，您的會籍即將到期。為確保會員權益不中斷，敬請及早完成續費。';
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">${esc(intro)}</p>
+      <div style="padding:16px;background:#f9fafb;border-radius:12px;">${detail}</div>
+      ${button('前往續費', p.renew_link || 'https://www.foodpowerteam.com/renew')}
+    `;
+    return { subject: `【食在力量】${esc(p.notice_type || '續約通知')}`, html: layout({ title: '續約通知', bodyHtml: body }) };
+  },
 };
 
 serve(async (req: Request) => {

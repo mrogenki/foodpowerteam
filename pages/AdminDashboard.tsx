@@ -3,7 +3,6 @@ import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-r
 import { LayoutDashboard, Calendar, Users, LogOut, ChevronRight, Search, FileDown, Plus, Edit, Edit2, Trash2, CheckCircle, XCircle, Shield, UserPlus, DollarSign, TrendingUp, BarChart3, Mail, User, Clock, Image as ImageIcon, UploadCloud, Loader2, Smartphone, Building2, Briefcase, Globe, FileUp, Download, ClipboardList, CheckSquare, AlertCircle, RotateCcw, MapPin, Filter, X, Eye, EyeOff, Ticket, Cake, CreditCard, Home, Hash, Crown, ArrowLeft, RefreshCcw, Ban, UserCheck, ExternalLink, BellRing, Send, History, FileText, QrCode, Printer, Copy, Flame, Menu, ListChecks, Banknote } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
-import emailjs from '@emailjs/browser';
 import html2pdf from 'html2pdf.js';
 import { supabase } from '../utils/supabaseClient';
 import { requestRefund, RefundSource } from '../utils/newebpay';
@@ -61,7 +60,6 @@ async function runRefundOnPaid(
     onUpdateReg({ ...reg, payment_status: PaymentStatus.REFUNDED });
   }
 }
-import { EMAIL_CONFIG } from '../constants';
 
 interface AdminDashboardProps {
   currentUser: AdminUser;
@@ -788,32 +786,21 @@ const MemberApplicationManager: React.FC<{
     
     setSendingEmailId(app.id);
     const paymentLink = `${window.location.origin}/pay-application/${app.id}`;
-    
-    if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'YOUR_NEW_SERVICE_ID') {
-      alert('EmailJS 尚未設定，無法發送郵件');
-      setSendingEmailId(null);
-      return;
-    }
 
     try {
-      // 使用既有的入會通知模板，將繳費連結放入 message
-      const templateParams = {
-        to_name: app.name,
-        email: app.email,
-        to_email: app.email,
-        reply_to: app.email,
-        phone: app.phone,
-        company: app.company_title || app.brand_name || '',
-        job_title: app.job_title,
-        activity_title: '【食在力量】會員入會繳費通知',
-        activity_date: new Date().toISOString().slice(0, 10),
-        activity_time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-        activity_location: '線上繳費',
-        activity_price: `NT$ ${(app.paid_amount || 5000).toLocaleString()}`,
-        message: `親愛的 ${app.name} 您好，\n\n您的入會申請已收到，請點擊以下連結完成繳費程序以正式加入會員：\n\n${paymentLink}\n\n若您已完成繳費，請忽略此信件。`
-      };
-
-      await emailjs.send(EMAIL_CONFIG.SERVICE_ID, EMAIL_CONFIG.MEMBER_JOIN_TEMPLATE_ID, templateParams, EMAIL_CONFIG.PUBLIC_KEY);
+      await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'payment_notice',
+          params: {
+            to_email: app.email,
+            to_name: app.name,
+            subject: '【食在力量】會員入會繳費通知',
+            intro: '您的入會申請已收到，請點下方按鈕完成繳費程序以正式加入會員。若您已完成繳費，請忽略此信件。',
+            rows: [['入會費', `NT$ ${(app.paid_amount || 5000).toLocaleString()}`]],
+            pay_link: paymentLink,
+          },
+        },
+      });
       alert('繳費連結已發送！');
     } catch (error) {
       console.error(error);
@@ -2043,22 +2030,23 @@ const ActivityCheckInManager: React.FC<{
     setSendingEmail(prev => [...prev, String(reg.id)]);
 
     try {
-      await emailjs.send(
-        EMAIL_CONFIG.SERVICE_ID,
-        EMAIL_CONFIG.TEMPLATE_ID,
-        {
+      await supabase.functions.invoke('send-email', {
+        body: {
+          template: 'payment_notice',
+          params: {
+            to_email: email,
             to_name: reg.name || reg.member_name,
-            email: email,
-            phone: reg.phone || '',
-            activity_title: activity.title,
-            activity_date: activity.date,
-            activity_time: activity.time,
-            activity_location: `${activity.location} (請點擊此連結完成繳費: ${paymentLink})`,
-            activity_price: reg.paid_amount || activity.price,
-            payment_link: paymentLink
+            subject: `【活動報名】${activity.title} — 繳費通知`,
+            intro: '提醒您完成活動報名繳費以保留名額，請點下方按鈕前往繳費。',
+            rows: [
+              ['活動名稱', activity.title],
+              ['日期', activity.date],
+              ['金額', `NT$ ${Number(reg.paid_amount || activity.price || 0).toLocaleString()}`],
+            ],
+            pay_link: paymentLink,
+          },
         },
-        EMAIL_CONFIG.PUBLIC_KEY
-      );
+      });
       
       alert(`已發送付款連結至 ${email}`);
     } catch (e: any) {
@@ -2760,26 +2748,21 @@ const MemberManager: React.FC<{ members: Member[]; onAdd: (m: Member) => void; o
       alert(`會員 ${member.name} 未填寫 Email，無法發送`);
       return;
     }
-    if (!EMAIL_CONFIG.RENEWAL_TEMPLATE_ID) {
-        alert('尚未設定通知信 Template ID');
-        return;
-    }
-    
+
     setSendingRenewal(prev => [...prev, String(member.id)]);
     
     try {
-        await emailjs.send(
-            EMAIL_CONFIG.SERVICE_ID,
-            EMAIL_CONFIG.RENEWAL_TEMPLATE_ID,
-            {
-                to_name: member.name,
-                to_email: member.email,
-                expiry_date: member.membership_expiry_date,
-                phone: member.phone,
-                notice_type: type === 'renewal' ? '續約通知' : '喚醒通知',
+        await supabase.functions.invoke('send-email', {
+          body: {
+            template: 'renewal_reminder',
+            params: {
+              to_email: member.email,
+              to_name: member.name,
+              expiry_date: member.membership_expiry_date,
+              notice_type: type === 'renewal' ? '續約通知' : '喚醒通知',
             },
-            EMAIL_CONFIG.PUBLIC_KEY
-        );
+          },
+        });
         
         setRenewalSent(prev => {
            const updated = [...prev, String(member.id)];
