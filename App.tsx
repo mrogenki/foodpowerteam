@@ -35,6 +35,7 @@ const SignupPayment = lazy(() => import('./pages/SignupPayment'));
 const ArticleList = lazy(() => import('./pages/ArticleList'));
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const LiffCard = lazy(() => import('./pages/LiffCard'));
+const LiffMember = lazy(() => import('./pages/LiffMember'));
 
 import Seo from './components/Seo';
 
@@ -1243,6 +1244,11 @@ const Root: React.FC = () => {
   if (typeof window !== 'undefined') {
     const p = window.location.pathname;
     const s = window.location.search;
+    // 會員專區 LIFF（獨立全頁）
+    if (p.startsWith('/liff/member') || /liff\.state=.*(%2F|\/)liff(%2F|\/)member/i.test(s)) {
+      return (<Suspense fallback={<PageLoader />}><LiffMember /></Suspense>);
+    }
+    // 電子名片 LIFF：/liff/card，或 OAuth 重導回來時 ?member=／?ids= 包在 liff.state
     const isCardPath =
       p.startsWith('/liff/card') ||
       (s.includes('liff.state') && /(member|ids)(=|%3D)/.test(s));
