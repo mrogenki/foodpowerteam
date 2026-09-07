@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { History, Users, Briefcase, Award, Globe, Heart, Target, Calendar, Building2, ShieldCheck, Sparkles, Handshake, TrendingUp, Newspaper, X, ZoomIn } from 'lucide-react';
+import { ORG_SAME_AS as SAME_AS } from '../constants';
 
 const CERT_IMAGE = '/license-certificate.jpg';
 
@@ -30,7 +31,49 @@ const aboutJsonLd = {
     { "@type": "Person", "name": "蔣君祥", "jobTitle": "顧問", "worksFor": "創客專案顧問" },
     { "@type": "Person", "name": "簡銘", "jobTitle": "顧問", "worksFor": "愛森管理顧問" },
   ],
+  "sameAs": SAME_AS,
 };
+
+// 媒體報導依事件彙整（同一事件多方佐證，強化權威與 AI 交叉驗證）
+const mediaEvents: { event: string; date: string; reports: { source: string; title: string; url: string }[] }[] = [
+  {
+    event: '赴北美參訪・TCCNA 簽署 MOU',
+    date: '2025.06',
+    reports: [
+      { source: '經濟日報', title: '食在力量率團赴北美　九大品牌共拓美食外交', url: 'https://money.udn.com/money/story/5635/8797796' },
+      { source: '經濟日報', title: '赴 TCCNA 聯合總會年會　拓展新東向', url: 'https://money.udn.com/money/story/7843/8828069' },
+      { source: '工商時報', title: '領軍九大品牌北美布局　開拓餐飲外交新局', url: 'https://www.ctee.com.tw/news/20250610702018-431207' },
+      { source: '卓越雜誌', title: 'TCCNA 攜手食在力量簽署 MOU　推動美食國際交流', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=8295&kind=36' },
+      { source: '台灣產經新聞網', title: '餐飲代表團赴美參訪　打造文化輸出與品牌國際化雙引擎', url: 'https://n.yam.com/Article/20250624541920' },
+      { source: 'ENN 台灣電報', title: '簽署 MOU　推動美食國際交流', url: 'https://enn.tw/598641/' },
+      { source: '威傳媒', title: '餐飲代表團出席北美洲台灣商會聯合總會交流', url: 'https://www.winnews.com.tw/230557/' },
+      { source: 'Polls.com.tw', title: '深化台美食品產業鏈　TCCNA 與食在力量簽署合作備忘錄', url: 'https://polls.com.tw/cnews/109853/' },
+    ],
+  },
+  {
+    event: '燒肉祭・火鍋祭 啟動',
+    date: '2026',
+    reports: [
+      { source: '新頭條', title: '啟動燒肉火鍋祭　串聯百家品牌創造億元效益', url: 'https://www.thehubnews.net/archives/642274' },
+      { source: '夢想誌', title: '串聯百家餐飲　燒肉火鍋祭帶動新商機', url: 'https://www.twdreamlife.com/food-power-association/' },
+    ],
+  },
+  {
+    event: '結盟彰青匯',
+    date: '2026.04',
+    reports: [
+      { source: '卓越雜誌', title: '打破地域與產業邊界　結盟彰青匯共創「大食品時代」新生態', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36' },
+      { source: 'SOFU 守護台灣新聞網', title: '食在力量結盟彰青匯', url: 'http://www.sofunews.com/2026/04/0429_30.html' },
+    ],
+  },
+  {
+    event: '產業趨勢・協會理念',
+    date: '2026.03',
+    reports: [
+      { source: '卓越雜誌', title: '揭開台灣餐飲淘汰賽下半場　食在力量如何靠資源整合翻轉產業新格局', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10234' },
+    ],
+  },
+];
 
 const AboutUs: React.FC = () => {
   const [certOpen, setCertOpen] = useState(false);
@@ -426,46 +469,35 @@ const AboutUs: React.FC = () => {
                   <Newspaper size={18} className="text-red-600" />
                   <span className="text-sm font-bold">媒體報導</span>
                 </div>
-                <div className="space-y-3">
-                  {[
-                    {
-                      source: '卓越雜誌',
-                      date: '2026.03.23',
-                      title: '揭開台灣餐飲淘汰賽下半場！食在力量如何靠資源整合，聯手歐洲台商會翻轉產業新格局？',
-                      url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10234',
-                    },
-                    {
-                      source: '台灣產經新聞網',
-                      date: '2025.06.24',
-                      title: '打造文化輸出與品牌國際化雙引擎 食在力量餐飲代表團赴美參訪',
-                      url: 'https://n.yam.com/Article/20250624541920',
-                    },
-                    {
-                      source: '卓越雜誌',
-                      date: '2026.05.05',
-                      title: '打破地域與產業邊界！食在力量結盟彰青匯，百工百業鏈結共創「大食品時代」新生態',
-                      url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36',
-                    },
-                  ].map((m) => (
-                    <a
-                      key={m.url}
-                      href={m.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-red-200 hover:bg-red-50/30 transition-colors"
-                    >
-                      <Newspaper size={18} className="text-red-600 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
-                          <span className="font-bold text-red-600">{m.source}</span>
-                          <span>·</span>
-                          <span>{m.date}</span>
-                        </div>
-                        <div className="text-sm font-semibold text-gray-800 group-hover:text-red-700 leading-snug">
-                          {m.title}
-                        </div>
+                <div className="space-y-5">
+                  {mediaEvents.map((ev) => (
+                    <div key={ev.event}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                        <h4 className="text-sm font-bold text-gray-900">{ev.event}</h4>
+                        <span className="text-xs text-gray-400">{ev.date}</span>
+                        <span className="text-[11px] text-gray-400 ml-auto">{ev.reports.length} 篇報導</span>
                       </div>
-                    </a>
+                      <div className="space-y-2 pl-3.5">
+                        {ev.reports.map((m) => (
+                          <a
+                            key={m.url}
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-red-200 hover:bg-red-50/30 transition-colors"
+                          >
+                            <Newspaper size={16} className="text-red-600 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-red-600 mb-0.5">{m.source}</div>
+                              <div className="text-sm font-semibold text-gray-800 group-hover:text-red-700 leading-snug">
+                                {m.title}
+                              </div>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

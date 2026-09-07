@@ -11,6 +11,23 @@ export const POINTS_EARN_RATE = 0;    // 每消費 N 元回饋 1 點（0 = 不�
 
 // 寄信已全面改用 Resend（supabase/functions/send-email）；EmailJS 設定已移除。
 
+// 組織對外 sameAs（GEO：供生成引擎與外部權威來源交叉驗證）——官方社群 + 媒體報導
+export const ORG_SAME_AS = [
+  'https://www.facebook.com/foodpowerteam/',
+  'https://lin.ee/oIeFIMO',
+  // 媒體報導
+  'https://money.udn.com/money/story/5635/8797796',       // 經濟日報：赴北美
+  'https://money.udn.com/money/story/7843/8828069',       // 經濟日報：TCCNA 年會
+  'https://www.ctee.com.tw/news/20250610702018-431207',   // 工商時報：北美布局
+  'https://www.thehubnews.net/archives/642274',           // 新頭條：燒肉火鍋祭
+  'https://www.ecf.com.tw/tw/article/show.aspx?num=8295&kind=36',  // 卓越雜誌：MOU
+  'https://www.ecf.com.tw/tw/article/show.aspx?num=10234',         // 卓越雜誌：資源整合
+  'https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36', // 卓越雜誌：彰青匯
+  'https://n.yam.com/Article/20250624541920',             // 台灣產經新聞網：赴美
+  'https://enn.tw/598641/',                               // ENN 台灣電報：MOU
+  'https://www.winnews.com.tw/230557/',                   // 威傳媒：TCCNA 交流
+];
+
 // ==========================================
 // 收據印章（存 Supabase Storage 公開路徑，線上收據頁與後台共用）
 // ==========================================

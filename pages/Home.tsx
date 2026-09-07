@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Crown, UserPlus, Calendar, ChevronLeft, ChevronRight, MapPin, Flame, ArrowRight } from 'lucide-react';
 import { Activity, MemberActivity, ClubActivity } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { ORG_SAME_AS } from '../constants';
 
 interface HomeProps {
   activities: Activity[];
@@ -89,12 +90,7 @@ const Home: React.FC<HomeProps> = ({ activities, memberActivities }) => {
     },
     "areaServed": "TW",
     "knowsAbout": ["餐飲產業", "美食產業", "餐飲品牌", "食品供應鏈", "產業交流"],
-    "sameAs": [
-      "https://lin.ee/oIeFIMO",
-      "https://www.ecf.com.tw/tw/article/show.aspx?num=10234",
-      "https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36",
-      "https://n.yam.com/Article/20250624541920"
-    ]
+    "sameAs": ORG_SAME_AS
   };
 
   return (
