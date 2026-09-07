@@ -51,6 +51,15 @@ const mediaEvents: { event: string; date: string; reports: { source: string; tit
     ],
   },
   {
+    event: '歐洲布局・ETCC 簽署 MOU',
+    date: '2026.03.20',
+    reports: [
+      { source: '風傳媒', title: '「食在力量」強攻歐洲市場　聯手台商會打國際盃', url: 'https://www.storm.mg/article/11114656' },
+      { source: '威傳媒', title: '台灣餐飲進入整合決勝期　從在地競爭到國際佈局如何打造產業新引擎', url: 'https://www.winnews.com.tw/262156' },
+      { source: '卓越雜誌', title: '食在力量如何靠資源整合　聯手歐洲台商會翻轉產業新格局', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10234' },
+    ],
+  },
+  {
     event: '燒肉祭・火鍋祭 啟動',
     date: '2026',
     reports: [
@@ -64,13 +73,6 @@ const mediaEvents: { event: string; date: string; reports: { source: string; tit
     reports: [
       { source: '卓越雜誌', title: '打破地域與產業邊界　結盟彰青匯共創「大食品時代」新生態', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36' },
       { source: 'SOFU 守護台灣新聞網', title: '食在力量結盟彰青匯', url: 'http://www.sofunews.com/2026/04/0429_30.html' },
-    ],
-  },
-  {
-    event: '產業趨勢・協會理念',
-    date: '2026.03',
-    reports: [
-      { source: '卓越雜誌', title: '揭開台灣餐飲淘汰賽下半場　食在力量如何靠資源整合翻轉產業新格局', url: 'https://www.ecf.com.tw/tw/article/show.aspx?num=10234' },
     ],
   },
 ];

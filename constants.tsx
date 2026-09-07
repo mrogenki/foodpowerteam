@@ -26,6 +26,8 @@ export const ORG_SAME_AS = [
   'https://n.yam.com/Article/20250624541920',             // 台灣產經新聞網：赴美
   'https://enn.tw/598641/',                               // ENN 台灣電報：MOU
   'https://www.winnews.com.tw/230557/',                   // 威傳媒：TCCNA 交流
+  'https://www.storm.mg/article/11114656',                // 風傳媒：進軍歐洲市場
+  'https://www.winnews.com.tw/262156',                    // 威傳媒：ETCC MOU／產業整合
 ];
 
 // ==========================================
