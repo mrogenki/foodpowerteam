@@ -38,7 +38,7 @@ const aboutJsonLd = {
 const mediaEvents: { event: string; date: string; reports: { source: string; title: string; url: string }[] }[] = [
   {
     event: '赴北美參訪・TCCNA 簽署 MOU',
-    date: '2025.06',
+    date: '2025',
     reports: [
       { source: '經濟日報', title: '食在力量率團赴北美　九大品牌共拓美食外交', url: 'https://money.udn.com/money/story/5635/8797796' },
       { source: '經濟日報', title: '赴 TCCNA 聯合總會年會　拓展新東向', url: 'https://money.udn.com/money/story/7843/8828069' },
