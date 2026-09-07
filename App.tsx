@@ -195,9 +195,9 @@ const Footer: React.FC = () => {
               <img src="/logo.svg" alt="食在力量" className="w-full h-full object-cover" />
             </div>
             <div>
-              <span className="font-bold text-gray-900 text-base">食在力量</span>
+              <span className="font-bold text-gray-900 text-base">食在力量美食產業交流協會</span>
               <p className="text-gray-400 text-xs mt-0.5">
-                &copy; 2026 食在力量活動報名系統 v2.0.&nbsp;
+                &copy; 2026 食在力量美食產業交流協會.&nbsp;
                 <Link to="/admin" className="hover:text-red-600 transition-colors">All rights reserved.</Link>
               </p>
             </div>

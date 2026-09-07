@@ -64,14 +64,37 @@ const Home: React.FC<HomeProps> = ({ activities, memberActivities }) => {
 
   // 頁面 title / description / OG 由 App 路由層的 <Seo> 統一提供
 
-  // JSON-LD for Organization
+  // JSON-LD for Organization（GEO：讓生成引擎能定義「這是什麼組織」並與外部報導交叉驗證）
   const orgJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "食在力量",
+    "@type": ["Organization", "NGO"],
+    "name": "食在力量美食產業交流協會",
+    "alternateName": "食在力量",
     "url": "https://www.foodpowerteam.com/",
     "logo": "https://www.foodpowerteam.com/logo.svg",
-    "description": "連結產業，創造共好。匯聚各產業菁英，提供講座論壇、企業參訪、專業課程等活動報名與會員管理服務。"
+    "description": "食在力量美食產業交流協會為內政部立案之全國性人民團體，連結餐飲與美食產業經營者，提供產業交流、講座論壇、企業參訪、國際拓展與會員服務。",
+    "foundingDate": "2024-02-25",
+    "taxID": "00509918",
+    "identifier": "台內團字第1130022533號",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "羅斯福路三段126號3樓",
+      "addressLocality": "台北市",
+      "addressCountry": "TW"
+    },
+    "founder": {
+      "@type": "Person",
+      "name": "許淳凱",
+      "jobTitle": "理事長"
+    },
+    "areaServed": "TW",
+    "knowsAbout": ["餐飲產業", "美食產業", "餐飲品牌", "食品供應鏈", "產業交流"],
+    "sameAs": [
+      "https://lin.ee/oIeFIMO",
+      "https://www.ecf.com.tw/tw/article/show.aspx?num=10234",
+      "https://www.ecf.com.tw/tw/article/show.aspx?num=10324&kind=36",
+      "https://n.yam.com/Article/20250624541920"
+    ]
   };
 
   return (

@@ -2183,9 +2183,56 @@ const FestivalFooter: React.FC = () => (
 );
 
 // ====== Main ======
+// GEO 結構化資料：FAQPage（沿用既有 9 題 faqs）+ 兩檔 Event（燒肉祭/火鍋祭）
+const ORGANIZER = {
+  "@type": "Organization",
+  "name": "食在力量美食產業交流協會",
+  "url": "https://www.foodpowerteam.com/",
+};
+const festivalJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map((f) => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": { "@type": "Answer", "text": f.a },
+    })),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": "食在力量 燒肉祭",
+    "startDate": "2026-08-01",
+    "endDate": "2026-09-30",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "location": { "@type": "Place", "name": "全台合作餐廳", "address": { "@type": "PostalAddress", "addressCountry": "TW" } },
+    "organizer": ORGANIZER,
+    "description": "食在力量燒肉祭：整合網紅、媒體、官網與 App 品牌牆的餐飲品牌合作祭典，8/1–9/30 檔期。",
+    "url": "https://www.foodpowerteam.com/festival",
+    "image": "https://www.foodpowerteam.com/og-brand.jpg",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": "食在力量 火鍋祭",
+    "startDate": "2026-10-01",
+    "endDate": "2026-11-30",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "location": { "@type": "Place", "name": "全台合作餐廳", "address": { "@type": "PostalAddress", "addressCountry": "TW" } },
+    "organizer": ORGANIZER,
+    "description": "食在力量火鍋祭：整合網紅、媒體、官網與 App 品牌牆的餐飲品牌合作祭典，10/1–11/30 檔期。",
+    "url": "https://www.foodpowerteam.com/festival",
+    "image": "https://www.foodpowerteam.com/og-brand.jpg",
+  },
+];
+
 const Festival: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
+      <script type="application/ld+json">{JSON.stringify(festivalJsonLd)}</script>
       <FestivalHeader />
       <Hero />
       <LaunchEvent />
