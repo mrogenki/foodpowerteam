@@ -4,12 +4,41 @@ import { History, Users, Briefcase, Award, Globe, Heart, Target, Calendar, Build
 
 const CERT_IMAGE = '/license-certificate.jpg';
 
+const aboutJsonLd = {
+  "@context": "https://schema.org",
+  "@type": ["Organization", "NGO"],
+  "name": "食在力量美食產業交流協會",
+  "url": "https://www.foodpowerteam.com/about",
+  "foundingDate": "2024-02-25",
+  "taxID": "00509918",
+  "identifier": "台內團字第1130022533號",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "羅斯福路三段126號3樓",
+    "addressLocality": "台北市",
+    "addressCountry": "TW",
+  },
+  "founder": { "@type": "Person", "name": "許淳凱", "jobTitle": "理事長", "worksFor": "元氣先生" },
+  "employee": [
+    { "@type": "Person", "name": "許淳凱", "jobTitle": "理事長", "worksFor": "元氣先生" },
+    { "@type": "Person", "name": "俞海晴", "jobTitle": "秘書長", "worksFor": "托可生活誌" },
+  ],
+  "member": [
+    { "@type": "Person", "name": "林剛羽", "jobTitle": "顧問", "worksFor": "天帷聯合企管顧問" },
+    { "@type": "Person", "name": "周政緯", "jobTitle": "顧問", "worksFor": "美食映象" },
+    { "@type": "Person", "name": "黃景龍", "jobTitle": "顧問", "worksFor": "儂來餐廳" },
+    { "@type": "Person", "name": "蔣君祥", "jobTitle": "顧問", "worksFor": "創客專案顧問" },
+    { "@type": "Person", "name": "簡銘", "jobTitle": "顧問", "worksFor": "愛森管理顧問" },
+  ],
+};
+
 const AboutUs: React.FC = () => {
   const [certOpen, setCertOpen] = useState(false);
   const [certAvailable, setCertAvailable] = useState(true);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      <script type="application/ld+json">{JSON.stringify(aboutJsonLd)}</script>
       {/* Hero Section */}
       <div className="bg-red-600 py-20 text-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -180,16 +209,38 @@ const AboutUs: React.FC = () => {
             </div>
             <div className="space-y-6">
               <div className="border-l-4 border-red-600 pl-4">
-                <h3 className="font-bold text-gray-900">理事長、秘書長</h3>
-                <p className="text-sm text-gray-500 mt-1">核心領導團隊，統籌協會發展策略與資源對接。</p>
+                <p className="text-xs font-bold text-red-600 mb-2">核心領導團隊</p>
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="font-bold text-gray-900">許淳凱 <span className="text-gray-400 font-normal text-sm">理事長</span></h3>
+                    <p className="text-sm text-gray-500">元氣先生</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900">俞海晴 <span className="text-gray-400 font-normal text-sm">秘書長</span></h3>
+                    <p className="text-sm text-gray-500">托可生活誌</p>
+                  </div>
+                </div>
               </div>
               <div className="border-l-4 border-gray-200 pl-4">
                 <h3 className="font-bold text-gray-900">理事、監事</h3>
                 <p className="text-sm text-gray-500 mt-1">由產業精英組成，監督協會運作並提供專業諮詢。</p>
               </div>
               <div className="border-l-4 border-gray-200 pl-4">
-                <h3 className="font-bold text-gray-900">顧問團</h3>
-                <p className="text-sm text-gray-500 mt-1">邀請資深前輩與專家，為協會提供長期的智慧指導。</p>
+                <p className="text-xs font-bold text-gray-500 mb-2">顧問團</p>
+                <ul className="space-y-2">
+                  {[
+                    { name: '林剛羽', org: '天帷聯合企管顧問' },
+                    { name: '周政緯', org: '美食映象' },
+                    { name: '黃景龍', org: '儂來餐廳' },
+                    { name: '蔣君祥', org: '創客專案顧問' },
+                    { name: '簡銘', org: '愛森管理顧問' },
+                  ].map((a) => (
+                    <li key={a.name}>
+                      <span className="font-bold text-gray-900">{a.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">{a.org}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </motion.div>
