@@ -66,8 +66,20 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     image: article.cover || undefined,
     datePublished: article.published_at || article.created_at || undefined,
     dateModified: article.updated_at || article.published_at || undefined,
-    author: article.author_name ? { '@type': 'Person', name: article.author_name, jobTitle: article.author_title || undefined } : { '@type': 'Organization', name: '食在力量' },
-    publisher: { '@type': 'Organization', name: '食在力量美食產業交流協會' },
+    author: article.author_name
+      ? {
+          '@type': 'Person',
+          name: article.author_name,
+          jobTitle: article.author_title || undefined,
+          description: article.author_bio || undefined,
+          image: article.author_avatar || undefined,
+        }
+      : { '@type': 'Organization', name: '食在力量美食產業交流協會' },
+    publisher: {
+      '@type': 'Organization',
+      name: '食在力量美食產業交流協會',
+      logo: { '@type': 'ImageObject', url: 'https://www.foodpowerteam.com/logo.svg' },
+    },
     mainEntityOfPage: url,
     articleSection: article.category || undefined,
   };
