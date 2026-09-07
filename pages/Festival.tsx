@@ -926,10 +926,11 @@ const ExposureChannels: React.FC = () => (
 );
 
 // ====== 2.5 品牌牆（參加活動的合作餐廳） ======
-type BrandEntry = { name: string; category: string; logo?: string };
+// area：地區（可留空）；desc：80–120 字特色敘述（GEO 用，逐步補齊即可，不含價位）
+type BrandEntry = { name: string; category: string; logo?: string; area?: string; desc?: string };
 
 const yakinikuBrands: BrandEntry[] = [
-  { name: '屋馬燒肉', category: '燒肉名店', logo: '/festival/brand-umma.png' },
+  { name: '屋馬燒肉', category: '燒肉名店', logo: '/festival/brand-umma.png', area: '台中', desc: '源自台中的日式燒肉名店，以高品質和牛與細膩桌邊代烤服務聞名，是中部燒肉指標品牌之一。肉品從澳洲和牛到日本和牛皆備，搭配清爽小菜與專人服務，用餐體驗細緻。適合聚餐、慶生與商務宴請，假日常一位難求，堪稱台中排隊燒肉的代表。' },
   { name: '燒肉眾', category: '燒肉名店', logo: '/festival/brand-sioumazang.jpg' },
   { name: '狸小路燒肉', category: '日式燒肉', logo: '/festival/brand-tanukikoji.png' },
   { name: '延香炭食', category: '炭火燒肉', logo: '/festival/brand-yanxiang.jpg' },
@@ -946,7 +947,7 @@ const yakinikuBrands: BrandEntry[] = [
   { name: '八色烤肉mini', category: '韓式烤肉', logo: '/festival/brand-basei.png' },
   { name: '精誠壹山燒肉', category: '燒肉名店', logo: '/festival/brand-yishan.jpeg' },
   { name: '脂本燒肉', category: '燒肉名店', logo: '/festival/brand-zhiben.jpeg' },
-  { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg' },
+  { name: '知火熟成燒肉', category: '熟成燒肉', logo: '/festival/燒肉logo/知火熟成燒肉logo.jpg', desc: '主打「熟成」工藝的燒肉品牌，透過熟成提升牛肉風味與嫩度，呈現有別於一般燒肉的濃郁肉香。菜單以精選部位為核心，佐以講究的炭火與火候掌握，適合喜歡追求肉質層次的老饕。定位精緻，適合約會與講究食材的聚餐場合。' },
   { name: '吃肉肉', category: '燒肉吃到飽', logo: '/festival/燒肉logo/吃肉肉logo.png' },
   { name: '油花', category: '迴轉燒肉', logo: '/festival/燒肉logo/油花迴轉吧燒肉logo.jpg' },
   // ─── 移至最後 ───
@@ -957,9 +958,9 @@ const yakinikuBrands: BrandEntry[] = [
 const hotpotBrands: BrandEntry[] = [
   { name: '千葉火鍋', category: '涮涮鍋', logo: '/festival/brand-chiba.webp' },
   { name: '雞湯大叔', category: '雞湯鍋', logo: '/festival/brand-jitangdashu.jpg' },
-  { name: '撈王', category: '養生鍋', logo: '/festival/brand-laowang.jpeg' },
+  { name: '撈王', category: '養生鍋', logo: '/festival/brand-laowang.jpeg', area: '全台連鎖', desc: '以招牌「胡椒豬肚雞鍋」聞名的連鎖鍋物，湯頭用白胡椒與豬肚雞熬煮，溫潤暖胃、主打養生。全台百貨與商圈皆有據點，環境明亮適合家庭與朋友聚餐。除招牌鍋，另有海鮮、手工丸滑與粥品收尾，是講究湯頭與健康取向鍋物的首選之一。' },
   { name: '賴山嶼', category: '鍋物', logo: '/festival/brand-laishanyu.jpeg' },
-  { name: '築間幸福鍋物', category: '精緻鍋物', logo: '/festival/brand-zhujian.jpg' },
+  { name: '築間幸福鍋物', category: '精緻鍋物', logo: '/festival/brand-zhujian.jpg', area: '全台連鎖', desc: '築間餐飲集團旗下人氣鍋物連鎖，主打新鮮肉盤與白飯、飲料無限供應，CP 值高，深受學生與上班族喜愛。全台展店數十間，湯頭多元（昆布、麻辣、番茄等）。定位親民、氛圍熱鬧，是台灣中價位鍋物市場的代表品牌之一。' },
   { name: '二本松涮涮屋', category: '涮涮鍋', logo: '/festival/brand-nihonmatsu.jpg' },
   { name: '橋山壽喜燒', category: '壽喜燒', logo: '/festival/brand-hashiyama.jpg' },
   { name: '祇園禪院壽喜燒', category: '壽喜燒', logo: '/festival/brand-gion.jpg' },
@@ -990,26 +991,33 @@ const BrandGrid: React.FC<{ brands: BrandEntry[]; showCta?: boolean }> = ({ bran
     whileInView="visible"
     viewport={{ once: true, margin: '-50px' }}
     variants={stagger}
-    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
+    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 items-start"
   >
     {brands.map((b) => (
       <motion.div
         key={b.name}
         variants={fadeUp}
         whileHover={{ y: -4 }}
-        className="aspect-square rounded-2xl bg-white shadow-md hover:shadow-xl transition-all border border-orange-100 overflow-hidden group flex flex-col"
+        className="rounded-2xl bg-white shadow-md hover:shadow-xl transition-all border border-orange-100 overflow-hidden group flex flex-col"
       >
-        {b.logo ? (
-          <div className="w-full h-full grid place-items-center bg-gray-50/30 overflow-hidden">
-            <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain group-hover:scale-105 transition-transform" loading="lazy" />
-          </div>
-        ) : (
-          <div className="h-full grid place-items-center p-5 text-center">
-            <div className="text-xl sm:text-2xl font-black text-gray-900 group-hover:bg-gradient-to-r group-hover:from-red-600 group-hover:to-orange-500 group-hover:bg-clip-text group-hover:text-transparent transition-all">
-              {b.name}
-            </div>
-          </div>
-        )}
+        {/* logo */}
+        <div className="aspect-[4/3] w-full grid place-items-center bg-gray-50/30 overflow-hidden">
+          {b.logo ? (
+            <img src={b.logo} alt={`${b.name} logo`} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform" loading="lazy" />
+          ) : (
+            <div className="text-xl font-black text-gray-900 px-3 text-center">{b.name}</div>
+          )}
+        </div>
+        {/* 品牌名 + 品類/地區 + 敘述（可見文字，供 AI 與訪客閱讀） */}
+        <div className="p-3 flex-1 flex flex-col">
+          <h3 className="font-bold text-gray-900 text-sm leading-tight">{b.name}</h3>
+          <p className="text-[11px] text-orange-600 font-medium mt-0.5">
+            {[b.category, b.area].filter(Boolean).join('・')}
+          </p>
+          {b.desc && (
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed">{b.desc}</p>
+          )}
+        </div>
       </motion.div>
     ))}
 
@@ -2189,7 +2197,28 @@ const ORGANIZER = {
   "name": "食在力量美食產業交流協會",
   "url": "https://www.foodpowerteam.com/",
 };
+// 品牌總覽 ItemList：清單型、實體密集、有主辦方背書 —— 生成引擎最傾向引用的頁面型態
+const brandItemList = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "食在力量 燒肉祭・火鍋祭 合作品牌總覽",
+  "numberOfItems": yakinikuBrands.length + hotpotBrands.length,
+  "itemListElement": [...yakinikuBrands, ...hotpotBrands].map((b, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "item": {
+      "@type": "Restaurant",
+      "name": b.name,
+      "servesCuisine": b.category,
+      ...(b.area ? { "areaServed": b.area } : {}),
+      ...(b.desc ? { "description": b.desc } : {}),
+      "memberOf": { "@type": "Organization", "name": "食在力量美食產業交流協會" },
+    },
+  })),
+};
+
 const festivalJsonLd = [
+  brandItemList,
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
