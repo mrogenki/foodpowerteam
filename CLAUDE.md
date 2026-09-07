@@ -203,6 +203,17 @@ VITE_SUPABASE_FUNCTION_URL=
 
 ⚠️ **點數與報名記錄是掛在 member id 上的，不會跟著搬。** 目前受影響的只有 1 位（王業勳 00054 → 00333，兩筆點數都是 0，無影響）。日後若遇到舊帳號有點數餘額或報名記錄，要人工併過去。
 
+### 會員限定文章（付費牆，2026/09）
+
+專欄文章可設「會員限定」（`articles.members_only` + `preview_blocks`），非會員只看前 N 段，需用 LINE 登入驗證為**有效會員**才看全文（類天下/商周）。
+
+**架構關鍵（勿破壞）：**
+- **公開讀取一律走 `public_articles()` RPC**（前台 App.tsx、ArticleDetail fallback、`scripts/prerender.mjs` 皆是）。此 RPC 對 `members_only` 文章只回前 `preview_blocks` 段 + `locked=true`，**全文不會出現在此路徑，也不會被 prerender 進靜態頁**。
+- **RLS**：anon 直讀 `articles` 表只拿得到「`members_only=false` 的已發佈文章」；會員限定文章的全文永不從表流出。**不要為了方便改回 `from('articles').select('*')` 給前台用**，會破壞付費牆。
+- **解鎖**：`article_unlock(p_slug, p_line_user_id)`（SECURITY DEFINER）——非會員限定→全文；會員限定且 `line_user_id` 為 `_member_is_public` 有效會員→全文；否則回預覽。ArticleDetail 以 MEMBER LIFF 登入取得 userId 後呼叫。
+- **後台**：ArticleManager 編輯時**直接 `from('articles').select('*').eq('id',…)` 撈全文**（authenticated 有 RLS ALL），避免帶入公開清單的截斷內容而覆寫全文。
+- **GEO**：會員限定文章的 JSON-LD 帶 `isAccessibleForFree:false` + `hasPart`（預覽可索引、非 cloaking）。
+
 ### 核准入會時的重複偵測（根因處理）
 
 `App.tsx::handleApproveMemberApplication` 在建立新會員前，會先用**姓名 + 手機**找既有會員（姓名 `trim`、手機用 `normalizePhone` 去掉非數字並把 `886` 前綴換回 `0`——與 `member_bind_line` RPC 同一套規則；DB 裡手機格式不一，所以是整批撈回前端比對，不在 SQL 端拼條件）。找到就跳兩段確認：
