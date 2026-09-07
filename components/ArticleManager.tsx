@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Article, ARTICLE_CATEGORIES } from '../types';
+import { supabase } from '../utils/supabaseClient';
 import BlockEditor from './BlockEditor';
 import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink } from 'lucide-react';
 
@@ -15,6 +16,7 @@ const slugify = (title: string): string => {
 const emptyForm = (): any => ({
   slug: '', title: '', excerpt: '', content: '[]', cover: '', category: ARTICLE_CATEGORIES[0],
   author_name: '', author_title: '', author_bio: '', author_avatar: '', status: 'draft',
+  members_only: false, preview_blocks: 2,
 });
 
 const ArticleManager: React.FC<{
@@ -33,7 +35,15 @@ const ArticleManager: React.FC<{
     String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   const handleCreate = () => { setEditingId(null); setFormData(emptyForm()); setSlugTouched(false); setView('edit'); };
-  const handleEdit = (a: Article) => { setEditingId(a.id); setFormData({ ...a }); setSlugTouched(true); setView('edit'); };
+  const handleEdit = async (a: Article) => {
+    setEditingId(a.id); setSlugTouched(true); setView('edit');
+    // 從表撈全文（公開清單對「會員限定」文章只有預覽，避免帶入被截斷的內容而覆寫全文）
+    setFormData({ ...a });
+    if (supabase) {
+      const { data } = await supabase.from('articles').select('*').eq('id', a.id).single();
+      if (data) setFormData({ ...data });
+    }
+  };
 
   const setTitle = (title: string) => {
     setFormData((f: any) => ({ ...f, title, slug: slugTouched ? f.slug : slugify(title) }));
@@ -115,6 +125,25 @@ const ArticleManager: React.FC<{
               <option value="draft">草稿（不公開）</option>
               <option value="published">發布（公開上線）</option>
             </select>
+          </div>
+
+          <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={!!formData.members_only}
+                onChange={e => setFormData({ ...formData, members_only: e.target.checked })}
+                className="w-5 h-5 accent-red-600" />
+              <span className="font-bold text-gray-800">🔒 會員限定文章</span>
+              <span className="text-xs text-gray-500">開啟後，非會員只看得到前幾段，需用 LINE 登入驗證會員才看全文</span>
+            </label>
+            {formData.members_only && (
+              <div className="mt-3 flex items-center gap-2 pl-8">
+                <span className="text-sm text-gray-600">免費顯示前</span>
+                <input type="number" min={1} max={20} value={formData.preview_blocks ?? 2}
+                  onChange={e => setFormData({ ...formData, preview_blocks: Math.max(1, Number(e.target.value) || 1) })}
+                  className="w-20 p-2 border rounded-lg text-center outline-none focus:ring-2 focus:ring-red-500" />
+                <span className="text-sm text-gray-600">段（其餘鎖定）</span>
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2 flex justify-end gap-4 pt-6 border-t">

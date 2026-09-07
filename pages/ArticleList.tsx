@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Calendar, User, ArrowRight, Newspaper } from 'lucide-react';
+import { Calendar, User, ArrowRight, Newspaper, Lock } from 'lucide-react';
 import { Article, ARTICLE_CATEGORIES } from '../types';
 
 const fmtDate = (s?: string) => {
@@ -56,10 +56,15 @@ const ArticleList: React.FC<{ articles: Article[] }> = ({ articles }) => {
             {list.map(a => (
               <motion.div key={a.id} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }}>
                 <Link to={`/article/${a.slug}`} className="group block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all overflow-hidden h-full">
-                  <div className="aspect-[16/9] bg-gray-100 overflow-hidden">
+                  <div className="relative aspect-[16/9] bg-gray-100 overflow-hidden">
                     {a.cover
                       ? <img src={a.cover} alt={a.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                       : <div className="w-full h-full grid place-items-center text-gray-300"><Newspaper size={40} /></div>}
+                    {a.members_only && (
+                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 bg-black/70 text-white text-[11px] font-bold px-2 py-1 rounded-full">
+                        <Lock size={11} /> 會員限定
+                      </span>
+                    )}
                   </div>
                   <div className="p-5">
                     {a.category && <span className="inline-block text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full mb-2">{a.category}</span>}

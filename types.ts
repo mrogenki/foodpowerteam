@@ -192,6 +192,9 @@ export interface Article {
   published_at?: string;
   created_at?: string;
   updated_at?: string;
+  members_only?: boolean;   // 會員限定：非會員只看得到前 preview_blocks 段
+  preview_blocks?: number;  // 免費顯示的段落數（預設 2）
+  locked?: boolean;         // 公開讀取時由 public_articles() 標記：此篇為會員限定且未解鎖
 }
 
 export interface Member {

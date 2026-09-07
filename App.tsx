@@ -445,8 +445,9 @@ const App: React.FC = () => {
         });
       }
 
-      // 專欄文章：獨立抓取。RLS 讓匿名只拿到 published；登入管理員拿到全部（含草稿，供後台管理）。
-      supabase.from('articles').select('*').order('created_at', { ascending: false })
+      // 專欄文章（公開視圖）：走 public_articles() RPC —— 會員限定文章只回前幾段預覽 + locked 標記，
+      // 全文永不從此路徑流出（後台管理另有 loadArticles 直讀表，含草稿）。
+      supabase.rpc('public_articles')
         .then(({ data }) => { if (Array.isArray(data)) setArticles(data as Article[]); });
 
     } catch (err: any) {

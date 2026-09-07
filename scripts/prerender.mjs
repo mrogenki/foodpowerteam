@@ -59,8 +59,8 @@ try {
     console.warn('[prerender] 缺 Supabase 連線資訊，略過文章預渲染（非致命）');
   } else {
     const supabase = createClient(SUPA_URL, SUPA_KEY);
-    const { data: articles, error } = await supabase
-      .from('articles').select('*').eq('status', 'published').order('published_at', { ascending: false });
+    // 走公開視圖 RPC：會員限定文章只會烘出前幾段預覽（全文不進靜態頁），符合付費內容規範
+    const { data: articles, error } = await supabase.rpc('public_articles');
     if (error) throw error;
     for (const a of (articles || [])) {
       const url = `${SITE}/article/${a.slug}`;
@@ -77,9 +77,10 @@ try {
           headline: a.title, description: a.excerpt || undefined, image: a.cover || undefined,
           datePublished: a.published_at || a.created_at || undefined,
           dateModified: a.updated_at || a.published_at || undefined,
-          author: a.author_name ? { '@type': 'Person', name: a.author_name, jobTitle: a.author_title || undefined } : { '@type': 'Organization', name: '食在力量' },
-          publisher: { '@type': 'Organization', name: '食在力量美食產業交流協會' },
+          author: a.author_name ? { '@type': 'Person', name: a.author_name, jobTitle: a.author_title || undefined, description: a.author_bio || undefined, image: a.author_avatar || undefined } : { '@type': 'Organization', name: '食在力量美食產業交流協會' },
+          publisher: { '@type': 'Organization', name: '食在力量美食產業交流協會', logo: { '@type': 'ImageObject', url: 'https://www.foodpowerteam.com/logo.svg' } },
           mainEntityOfPage: url, articleSection: a.category || undefined,
+          ...(a.members_only ? { isAccessibleForFree: false, hasPart: { '@type': 'WebPageElement', isAccessibleForFree: false, cssSelector: '.members-only-content' } } : {}),
         },
       };
       try {

@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, ChevronLeft, Loader2, Newspaper } from 'lucide-react';
+import { Calendar, ChevronLeft, Loader2, Newspaper, Lock } from 'lucide-react';
+import liff from '@line/liff';
 import { Article } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import BlockRenderer from '../components/BlockRenderer';
 import Seo from '../components/Seo';
 
 const SITE = 'https://www.foodpowerteam.com';
+// 會員專區 LIFF（用來驗證會員身分解鎖全文）
+const MEMBER_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_MEMBER_ID as string) || '2010533806-E7Dmp1Mc';
 const fmtDate = (s?: string) => {
   if (!s) return '';
   try { return new Date(s).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric' }); }
@@ -24,6 +27,8 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
   );
   const [loading, setLoading] = useState(!article);
   const [notFound, setNotFound] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [notMember, setNotMember] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,15 +37,57 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
       const p = (articles || []).find(a => a.slug === slug && a.status === 'published');
       if (p) { if (!cancelled) { setArticle(p); setLoading(false); } return; }
       if (!supabase || !slug) { if (!cancelled) { setLoading(false); setNotFound(true); } return; }
-      const { data } = await supabase.from('articles').select('*').eq('slug', slug).eq('status', 'published').maybeSingle();
+      // 走公開視圖 RPC（會員限定文章只回預覽 + locked）
+      const { data } = await supabase.rpc('public_articles');
       if (cancelled) return;
-      if (data) setArticle(data as Article); else setNotFound(true);
+      const found = (Array.isArray(data) ? data : []).find((a: any) => a.slug === slug) as Article | undefined;
+      if (found) setArticle(found); else setNotFound(true);
       setLoading(false);
     };
     load();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, articles]);
+
+  // 以 LINE 身分解鎖全文（有效會員才會拿到完整內容）
+  const unlock = async () => {
+    if (!supabase || !slug) return;
+    setNotMember(false);
+    setUnlocking(true);
+    try {
+      await liff.init({ liffId: MEMBER_LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        // 記錄登入後要自動續解的文章，redirect 回來自動完成
+        try { sessionStorage.setItem('unlock_after_login', slug); } catch {}
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+      const prof = await liff.getProfile();
+      const { data, error } = await supabase.rpc('article_unlock', { p_slug: slug, p_line_user_id: prof.userId });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (error || !row) { alert('解鎖失敗，請稍後再試'); return; }
+      if (row.unlocked) {
+        setArticle(a => (a ? { ...a, content: row.content, locked: false } : a));
+      } else {
+        setNotMember(true);
+      }
+    } catch (e: any) {
+      alert('LINE 登入失敗：' + (e?.message ?? String(e)));
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  // LINE 登入 redirect 回來後，自動續解上次要看的文章
+  useEffect(() => {
+    let resume = '';
+    try { resume = sessionStorage.getItem('unlock_after_login') || ''; } catch {}
+    if (resume && resume === slug && article?.locked) {
+      try { sessionStorage.removeItem('unlock_after_login'); } catch {}
+      unlock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, article?.locked]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-red-600" size={44} /></div>;
@@ -82,6 +129,17 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     },
     mainEntityOfPage: url,
     articleSection: article.category || undefined,
+    // 會員限定：標記付費/會員牆（預覽公開可索引，全文需會員）——符合 Google 付費內容規範，非 cloaking
+    ...(article.members_only
+      ? {
+          isAccessibleForFree: false,
+          hasPart: {
+            '@type': 'WebPageElement',
+            isAccessibleForFree: false,
+            cssSelector: '.members-only-content',
+          },
+        }
+      : {}),
   };
 
   return (
@@ -114,9 +172,42 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
           <img src={article.cover} alt={article.title} className="w-full rounded-2xl mb-8 object-cover" loading="eager" />
         )}
 
-        <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed">
+        <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed members-only-content">
           <BlockRenderer value={article.content} />
         </div>
+
+        {/* 會員限定解鎖牆 */}
+        {article.locked && (
+          <div className="relative -mt-8">
+            {/* 漸層遮罩，暗示下方還有內容 */}
+            <div className="h-24 -mt-16 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+            <div className="rounded-2xl border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8 text-center">
+              <div className="w-14 h-14 rounded-full bg-white shadow grid place-items-center mx-auto mb-4 text-red-600">
+                <Lock size={26} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">會員限定・全文閱讀</h3>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                這篇文章為食在力量會員專屬。<br />用 LINE 登入驗證會員身分，即可閱讀全文。
+              </p>
+              {notMember && (
+                <p className="text-sm text-red-600 font-medium mt-3">
+                  您目前不是有效會員（或會籍已到期）。
+                </p>
+              )}
+              <button
+                onClick={unlock}
+                disabled={unlocking}
+                className="mt-5 w-full sm:w-auto sm:px-10 bg-red-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-red-200 disabled:opacity-50"
+              >
+                {unlocking ? '驗證中…' : '用 LINE 登入看全文'}
+              </button>
+              <div className="mt-4 text-sm text-gray-500">
+                還不是會員？
+                <Link to="/join" className="text-red-600 font-bold ml-1 hover:underline">加入食在力量 →</Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {article.author_bio && (
           <div className="mt-12 bg-gray-50 rounded-2xl p-6 flex items-start gap-4">
