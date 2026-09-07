@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Article, ARTICLE_CATEGORIES } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import BlockEditor from './BlockEditor';
-import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink, RefreshCw } from 'lucide-react';
 
 const slugify = (title: string): string => {
   const base = (title || '').toLowerCase().trim()
@@ -33,6 +33,25 @@ const ArticleManager: React.FC<{
 
   const sorted = [...(articles || [])].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+  const [rebuilding, setRebuilding] = useState(false);
+  const triggerRebuild = async () => {
+    if (!supabase) return;
+    if (!confirm('要重新產生網站靜態頁嗎？\n\n發佈/修改文章（尤其會員限定）後執行，讓搜尋引擎與 AI 讀到最新內容。約 1–2 分鐘完成。')) return;
+    setRebuilding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('trigger-rebuild');
+      if (error || !(data as any)?.ok) {
+        alert('觸發失敗：' + (error?.message || (data as any)?.error || '未知錯誤') + '\n（請確認 Vercel Deploy Hook 已設定）');
+        return;
+      }
+      alert('已送出更新！網站約 1–2 分鐘後完成重新部署。');
+    } catch (e: any) {
+      alert('觸發失敗：' + (e?.message ?? String(e)));
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   const handleCreate = () => { setEditingId(null); setFormData(emptyForm()); setSlugTouched(false); setView('edit'); };
   const handleEdit = async (a: Article) => {
@@ -159,7 +178,13 @@ const ArticleManager: React.FC<{
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">專欄管理</h2>
-        <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold shadow-lg shadow-red-200"><Plus size={20} /> 新增文章</button>
+        <div className="flex items-center gap-2">
+          <button onClick={triggerRebuild} disabled={rebuilding} title="發佈/修改文章後，讓網站重新產生靜態頁供搜尋引擎與 AI 讀取"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold disabled:opacity-50">
+            <RefreshCw size={18} className={rebuilding ? 'animate-spin' : ''} /> {rebuilding ? '更新中…' : '更新網站'}
+          </button>
+          <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold shadow-lg shadow-red-200"><Plus size={20} /> 新增文章</button>
+        </div>
       </div>
 
       {sorted.length === 0 ? (
