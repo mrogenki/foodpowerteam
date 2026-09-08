@@ -8,9 +8,8 @@ import BlockRenderer from '../components/BlockRenderer';
 import Seo from '../components/Seo';
 
 const SITE = 'https://www.foodpowerteam.com';
-// 網站登入專用 LIFF（Endpoint 需設為網站根目錄，站上任何頁面都可登入解鎖）
-// ⚠️ 待建立 root-endpoint LIFF 後，把下方 fallback 換成新的 LIFF ID（或設 env VITE_LIFF_WEBLOGIN_ID）
-const WEBLOGIN_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_WEBLOGIN_ID as string) || '2010533806-E7Dmp1Mc';
+// 網站登入專用 LIFF（Endpoint = 網站根目錄 https://www.foodpowerteam.com/，站上任何頁面都可登入解鎖）
+const WEBLOGIN_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_WEBLOGIN_ID as string) || '2010533806-Qoq00FsJ';
 const fmtDate = (s?: string) => {
   if (!s) return '';
   try { return new Date(s).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric' }); }
