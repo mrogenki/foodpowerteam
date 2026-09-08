@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { StaticRouter } from 'react-router';
-import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle, Flame } from 'lucide-react';
+import { Menu, X, Loader2, UserPlus, MessageCircle, XCircle, Flame, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // 使用 React.lazy 進行程式碼分割，減少初始載入體積
@@ -135,6 +135,10 @@ const Header: React.FC = () => {
               <Flame size={16} className="animate-pulse" />
               <span>燒肉祭・火鍋祭</span>
             </Link>
+            <a href="/liff/member" className="flex items-center gap-2 border border-red-200 text-red-600 px-5 py-2.5 rounded-full text-lg font-bold hover:bg-red-50 transition-all" title="會員專區（以 LINE 登入）">
+              <UserCircle size={20} />
+              <span>會員專區</span>
+            </a>
             <Link to="/join" className="flex items-center gap-2 bg-red-600 text-white px-6 py-2.5 rounded-full text-lg font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all hover:-translate-y-0.5 active:translate-y-0">
               <UserPlus size={20} />
               <span>加入會員</span>
@@ -173,6 +177,7 @@ const Header: React.FC = () => {
               <Flame size={20} className="animate-pulse" />
               燒肉祭・火鍋祭
             </Link>
+            <a href="/liff/member" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"><UserCircle size={22} /> 會員專區</a>
             <Link to="/join" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-red-600 px-4 py-2 bg-red-50 rounded-xl transition-all">加入會員</Link>
           </motion.div>
         )}
