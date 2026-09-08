@@ -8,8 +8,9 @@ import BlockRenderer from '../components/BlockRenderer';
 import Seo from '../components/Seo';
 
 const SITE = 'https://www.foodpowerteam.com';
-// 會員專區 LIFF（用來驗證會員身分解鎖全文）
-const MEMBER_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_MEMBER_ID as string) || '2010533806-E7Dmp1Mc';
+// 網站登入專用 LIFF（Endpoint 需設為網站根目錄，站上任何頁面都可登入解鎖）
+// ⚠️ 待建立 root-endpoint LIFF 後，把下方 fallback 換成新的 LIFF ID（或設 env VITE_LIFF_WEBLOGIN_ID）
+const WEBLOGIN_LIFF_ID = ((import.meta as any)?.env?.VITE_LIFF_WEBLOGIN_ID as string) || '2010533806-E7Dmp1Mc';
 const fmtDate = (s?: string) => {
   if (!s) return '';
   try { return new Date(s).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric' }); }
@@ -28,7 +29,13 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
   const [loading, setLoading] = useState(!article);
   const [notFound, setNotFound] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
-  const [notMember, setNotMember] = useState(false);
+  // 解鎖牆狀態：idle=只顯示登入鈕；bind=顯示綁定表單；expired=會籍過期；notmember=查無會員
+  const [gateStep, setGateStep] = useState<'idle' | 'bind' | 'expired' | 'notmember'>('idle');
+  const [lineUserId, setLineUserId] = useState('');
+  const [binding, setBinding] = useState(false);
+  const [bPhone, setBPhone] = useState('');
+  const [bName, setBName] = useState('');
+  const [bBirthday, setBBirthday] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -49,32 +56,65 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, articles]);
 
+  // 呼叫解鎖 RPC：成功→展開全文；否則→引導綁定
+  const doUnlock = async (uid: string): Promise<boolean> => {
+    if (!supabase || !slug) return false;
+    const { data, error } = await supabase.rpc('article_unlock', { p_slug: slug, p_line_user_id: uid });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) { alert('解鎖失敗，請稍後再試'); return false; }
+    if (row.unlocked) {
+      setArticle(a => (a ? { ...a, content: row.content, locked: false } : a));
+      setGateStep('idle');
+      return true;
+    }
+    // 未解鎖（多半是「還沒綁定 LINE」）→ 引導綁定
+    setGateStep('bind');
+    return false;
+  };
+
   // 以 LINE 身分解鎖全文（有效會員才會拿到完整內容）
   const unlock = async () => {
     if (!supabase || !slug) return;
-    setNotMember(false);
     setUnlocking(true);
     try {
-      await liff.init({ liffId: MEMBER_LIFF_ID });
+      await liff.init({ liffId: WEBLOGIN_LIFF_ID });
       if (!liff.isLoggedIn()) {
-        // 記錄登入後要自動續解的文章，redirect 回來自動完成
         try { sessionStorage.setItem('unlock_after_login', slug); } catch {}
         liff.login({ redirectUri: window.location.href });
         return;
       }
       const prof = await liff.getProfile();
-      const { data, error } = await supabase.rpc('article_unlock', { p_slug: slug, p_line_user_id: prof.userId });
-      const row = Array.isArray(data) ? data[0] : data;
-      if (error || !row) { alert('解鎖失敗，請稍後再試'); return; }
-      if (row.unlocked) {
-        setArticle(a => (a ? { ...a, content: row.content, locked: false } : a));
-      } else {
-        setNotMember(true);
-      }
+      setLineUserId(prof.userId);
+      setBName(prev => prev || prof.displayName || '');
+      await doUnlock(prof.userId);
     } catch (e: any) {
       alert('LINE 登入失敗：' + (e?.message ?? String(e)));
     } finally {
       setUnlocking(false);
+    }
+  };
+
+  // 未綁定會員 → 當場以手機+姓名+生日綁定（同會員專區），綁定後自動解鎖
+  const submitBind = async () => {
+    if (!supabase || !lineUserId) return;
+    if (!bPhone.trim() || !bName.trim() || !bBirthday.trim()) { alert('請填寫手機、姓名、生日'); return; }
+    setBinding(true);
+    try {
+      const { error } = await supabase.rpc('member_bind_line', {
+        p_line_user_id: lineUserId, p_phone: bPhone.trim(), p_name: bName.trim(), p_birthday: bBirthday.trim(),
+      });
+      if (error) {
+        // 查無會員 / 資料不符 → 引導加入會員（member_bind_line 會 raise）
+        setGateStep('notmember');
+        return;
+      }
+      // 綁定成功，再解鎖一次：仍鎖住代表會籍過期
+      const ok = await doUnlock(lineUserId);
+      if (!ok) setGateStep('expired');
+    } catch {
+      setGateStep('notmember');
+    } finally {
+      setBinding(false);
     }
   };
 
@@ -185,26 +225,65 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
               <div className="w-14 h-14 rounded-full bg-white shadow grid place-items-center mx-auto mb-4 text-red-600">
                 <Lock size={26} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">會員限定・全文閱讀</h3>
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                這篇文章為食在力量會員專屬。<br />用 LINE 登入驗證會員身分，即可閱讀全文。
-              </p>
-              {notMember && (
-                <p className="text-sm text-red-600 font-medium mt-3">
-                  您目前不是有效會員（或會籍已到期）。
-                </p>
+
+              {/* 步驟一：登入 */}
+              {gateStep === 'idle' && (
+                <>
+                  <h3 className="text-xl font-bold text-gray-900">會員限定・全文閱讀</h3>
+                  <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                    這篇文章為食在力量會員專屬。<br />用 LINE 登入驗證會員身分，即可閱讀全文。
+                  </p>
+                  <button onClick={unlock} disabled={unlocking}
+                    className="mt-5 w-full sm:w-auto sm:px-10 bg-red-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-red-200 disabled:opacity-50">
+                    {unlocking ? '驗證中…' : '用 LINE 登入看全文'}
+                  </button>
+                  <div className="mt-4 text-sm text-gray-500">
+                    還不是會員？<Link to="/join" className="text-red-600 font-bold ml-1 hover:underline">加入食在力量 →</Link>
+                  </div>
+                </>
               )}
-              <button
-                onClick={unlock}
-                disabled={unlocking}
-                className="mt-5 w-full sm:w-auto sm:px-10 bg-red-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-red-200 disabled:opacity-50"
-              >
-                {unlocking ? '驗證中…' : '用 LINE 登入看全文'}
-              </button>
-              <div className="mt-4 text-sm text-gray-500">
-                還不是會員？
-                <Link to="/join" className="text-red-600 font-bold ml-1 hover:underline">加入食在力量 →</Link>
-              </div>
+
+              {/* 步驟二：未綁定 → 當場綁定（手機+姓名+生日，同會員專區） */}
+              {gateStep === 'bind' && (
+                <div className="max-w-sm mx-auto text-left">
+                  <h3 className="text-xl font-bold text-gray-900 text-center">綁定會員身分</h3>
+                  <p className="text-sm text-gray-500 mt-2 mb-4 text-center">你的 LINE 尚未綁定會員。輸入入會時的資料驗證，之後免再輸入。</p>
+                  <div className="space-y-3">
+                    <input value={bPhone} onChange={e => setBPhone(e.target.value)} inputMode="tel" placeholder="手機號碼"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
+                    <input value={bName} onChange={e => setBName(e.target.value)} placeholder="姓名（真實姓名）"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
+                    <input type="date" value={bBirthday} onChange={e => setBBirthday(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600" />
+                    <button onClick={submitBind} disabled={binding}
+                      className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-red-200 disabled:opacity-50">
+                      {binding ? '驗證中…' : '綁定並閱讀全文'}
+                    </button>
+                    <p className="text-xs text-center text-gray-400">需與入會登記的手機、姓名、生日一致</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 會籍過期 */}
+              {gateStep === 'expired' && (
+                <>
+                  <h3 className="text-xl font-bold text-gray-900">會籍已到期</h3>
+                  <p className="text-sm text-gray-500 mt-2">您的會籍目前非有效狀態，續費後即可閱讀會員限定文章。</p>
+                  <a href="/renew" className="mt-5 inline-block sm:px-10 bg-red-600 text-white py-3.5 px-8 rounded-xl font-bold text-lg shadow-lg shadow-red-200">前往續費</a>
+                </>
+              )}
+
+              {/* 查無會員 */}
+              {gateStep === 'notmember' && (
+                <>
+                  <h3 className="text-xl font-bold text-gray-900">查不到你的會員資料</h3>
+                  <p className="text-sm text-gray-500 mt-2">手機／姓名／生日需與入會登記一致。若你還不是會員，歡迎加入食在力量。</p>
+                  <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onClick={() => setGateStep('bind')} className="bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-bold">重新輸入</button>
+                    <Link to="/join" className="bg-red-600 text-white py-3 px-8 rounded-xl font-bold">加入食在力量 →</Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
