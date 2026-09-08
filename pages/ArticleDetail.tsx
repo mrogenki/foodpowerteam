@@ -119,14 +119,24 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     }
   };
 
-  // LINE 登入 redirect 回來後，自動續解上次要看的文章
+  // LINE 登入 redirect 回來後，自動續解上次要看的文章。
+  // 重點：只在「已經登入」時自動完成解鎖；若未登入則停在預覽，等使用者自己點按鈕，
+  // 不主動跳轉登入（避免一進文章就被彈到 LINE）。
   useEffect(() => {
     let resume = '';
     try { resume = sessionStorage.getItem('unlock_after_login') || ''; } catch {}
-    if (resume && resume === slug && article?.locked) {
-      try { sessionStorage.removeItem('unlock_after_login'); } catch {}
-      unlock();
-    }
+    if (!(resume && resume === slug && article?.locked)) return;
+    try { sessionStorage.removeItem('unlock_after_login'); } catch {}
+    (async () => {
+      try {
+        await liff.init({ liffId: WEBLOGIN_LIFF_ID });
+        if (!liff.isLoggedIn()) return; // 未登入就維持預覽，不自動跳轉
+        const prof = await liff.getProfile();
+        setLineUserId(prof.userId);
+        setBName(prev => prev || prof.displayName || '');
+        await doUnlock(prof.userId);
+      } catch { /* 靜默，維持預覽 */ }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, article?.locked]);
 
