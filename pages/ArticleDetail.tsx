@@ -78,8 +78,10 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     try {
       await liff.init({ liffId: WEBLOGIN_LIFF_ID });
       if (!liff.isLoggedIn()) {
+        // 導去登入中繼頁完成 LINE 握手（LINE 會落在 LIFF endpoint /liff/login），完成後送回本文章自動續解
         try { sessionStorage.setItem('unlock_after_login', slug); } catch {}
-        liff.login({ redirectUri: window.location.href });
+        const ret = window.location.pathname + window.location.search;
+        window.location.href = '/liff/login?return=' + encodeURIComponent(ret);
         return;
       }
       const prof = await liff.getProfile();

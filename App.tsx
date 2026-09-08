@@ -36,6 +36,7 @@ const ArticleList = lazy(() => import('./pages/ArticleList'));
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const LiffCard = lazy(() => import('./pages/LiffCard'));
 const LiffMember = lazy(() => import('./pages/LiffMember'));
+const LiffLogin = lazy(() => import('./pages/LiffLogin'));
 
 import Seo from './components/Seo';
 
@@ -1377,6 +1378,10 @@ const Root: React.FC = () => {
   if (typeof window !== 'undefined') {
     const p = window.location.pathname;
     const s = window.location.search;
+    // 網站登入中繼頁（獨立全頁）：完成 LINE 登入握手後送回原頁
+    if (p.startsWith('/liff/login')) {
+      return (<Suspense fallback={<PageLoader />}><LiffLogin /></Suspense>);
+    }
     // 會員專區 LIFF（獨立全頁）
     if (p.startsWith('/liff/member') || /liff\.state=.*(%2F|\/)liff(%2F|\/)member/i.test(s)) {
       return (<Suspense fallback={<PageLoader />}><LiffMember /></Suspense>);
