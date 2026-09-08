@@ -120,33 +120,32 @@ const Header: React.FC = () => {
               <span className="text-2xl font-bold tracking-tight text-gray-900 whitespace-nowrap">食在力量</span>
             </Link>
           </div>
-          <div className="hidden lg:flex items-center space-x-10">
-            <Link to="/about" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">關於我們</Link>
-            <Link to="/milestones" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">大事記</Link>
-            <Link to="/activities" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">協會活動</Link>
-            <Link to="/members" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">會員列表</Link>
-            <Link to="/articles" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">專欄</Link>
-            <a href="https://www.foodpowerclub.com/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-lg uppercase tracking-widest">食在俱樂部</a>
+          <div className="hidden xl:flex items-center gap-x-6">
+            <Link to="/about" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">關於我們</Link>
+            <Link to="/milestones" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">大事記</Link>
+            <Link to="/activities" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">協會活動</Link>
+            <Link to="/members" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">會員列表</Link>
+            <Link to="/articles" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">專欄</Link>
+            <a href="https://www.foodpowerclub.com/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap">食在俱樂部</a>
+            <a href="/liff/member" className="flex items-center gap-1.5 text-gray-600 hover:text-red-600 transition-colors font-bold text-base whitespace-nowrap" title="會員專區（以 LINE 登入）">
+              <UserCircle size={18} /> 會員專區
+            </a>
             <Link
               to="/festival"
-              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full text-base font-bold shadow-md shadow-orange-100 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md shadow-orange-100 hover:shadow-lg hover:-translate-y-0.5 transition-all whitespace-nowrap"
               title="燒肉祭・火鍋祭 招商頁"
             >
-              <Flame size={16} className="animate-pulse" />
+              <Flame size={15} className="animate-pulse" />
               <span>燒肉祭・火鍋祭</span>
             </Link>
-            <a href="/liff/member" className="flex items-center gap-2 border border-red-200 text-red-600 px-5 py-2.5 rounded-full text-lg font-bold hover:bg-red-50 transition-all" title="會員專區（以 LINE 登入）">
-              <UserCircle size={20} />
-              <span>會員專區</span>
-            </a>
-            <Link to="/join" className="flex items-center gap-2 bg-red-600 text-white px-6 py-2.5 rounded-full text-lg font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all hover:-translate-y-0.5 active:translate-y-0">
-              <UserPlus size={20} />
+            <Link to="/join" className="flex items-center gap-1.5 bg-red-600 text-white px-5 py-2.5 rounded-full text-base font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap">
+              <UserPlus size={18} />
               <span>加入會員</span>
             </Link>
           </div>
-          <div className="lg:hidden flex items-center">
-            <button 
-              onClick={() => setIsOpen(!isOpen)} 
+          <div className="xl:hidden flex items-center">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
               className="text-gray-500 hover:text-red-600 p-2 rounded-lg hover:bg-gray-50 transition-all"
               aria-label="切換選單"
             >
@@ -161,7 +160,7 @@ const Header: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden bg-white border-t px-4 py-6 space-y-4 shadow-2xl absolute top-full left-0 w-full"
+            className="xl:hidden bg-white border-t px-4 py-6 space-y-4 shadow-2xl absolute top-full left-0 w-full"
           >
             <Link to="/about" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">關於我們</Link>
             <Link to="/milestones" onClick={() => setIsOpen(false)} className="block text-xl font-bold text-gray-900 px-4 py-2 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all">大事記</Link>
