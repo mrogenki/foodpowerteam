@@ -188,7 +188,7 @@ export interface Article {
   author_title?: string;
   author_bio?: string;
   author_avatar?: string;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'scheduled';  // scheduled=排程發佈（到 published_at 由 cron 自動轉 published）
   published_at?: string;
   created_at?: string;
   updated_at?: string;

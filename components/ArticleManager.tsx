@@ -4,6 +4,20 @@ import { supabase } from '../utils/supabaseClient';
 import BlockEditor from './BlockEditor';
 import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink, RefreshCw } from 'lucide-react';
 
+// ISO ⇄ datetime-local（datetime-local 以本地時間顯示/解讀）
+const toLocalInput = (iso?: string): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const fromLocalInput = (v: string): string => {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
+};
+
 const slugify = (title: string): string => {
   const base = (title || '').toLowerCase().trim()
     .replace(/[^\w一-鿿\s-]/g, '')  // 去標點（保留中英數/中文/空白/-）
@@ -142,8 +156,21 @@ const ArticleManager: React.FC<{
             <label className="block text-sm font-bold text-gray-700 mb-2">狀態</label>
             <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">
               <option value="draft">草稿（不公開）</option>
-              <option value="published">發布（公開上線）</option>
+              <option value="published">發布（立即公開上線）</option>
+              <option value="scheduled">排程發佈（到時間自動上線）</option>
             </select>
+            {formData.status === 'scheduled' && (
+              <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">發佈時間（台北時間）</label>
+                <input
+                  type="datetime-local"
+                  value={toLocalInput(formData.published_at)}
+                  onChange={e => setFormData({ ...formData, published_at: fromLocalInput(e.target.value) })}
+                  className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <p className="text-xs text-gray-500 mt-2">到此時間後約 10 分鐘內會自動上線並更新網站，無需手動按「更新網站」。上線前完全不公開（含預覽）。</p>
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
@@ -199,9 +226,15 @@ const ArticleManager: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-gray-900 truncate flex items-center gap-2">
                   {a.title}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${a.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{a.status === 'published' ? '已發布' : '草稿'}</span>
+                  {a.members_only && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700">🔒 會員</span>}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${a.status === 'published' ? 'bg-green-100 text-green-700' : a.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {a.status === 'published' ? '已發布' : a.status === 'scheduled' ? '排程' : '草稿'}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">{a.category || '—'}　·　/article/{a.slug}</div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {a.category || '—'}　·　/article/{a.slug}
+                  {a.status === 'scheduled' && a.published_at && `　·　預定 ${new Date(a.published_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {a.status === 'published' && <a href={`/article/${a.slug}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-700 p-2" title="檢視"><ExternalLink size={16} /></a>}

@@ -705,7 +705,14 @@ const App: React.FC = () => {
   const handleAddArticle = async (art: any) => {
     if (!supabase) return;
     const now = new Date().toISOString();
-    const payload = { ...art, published_at: art.status === 'published' ? (art.published_at || now) : null, updated_at: now };
+    // published→用 published_at 或現在；scheduled→用選定的未來時間；draft→清空
+    const payload = {
+      ...art,
+      published_at: art.status === 'published' ? (art.published_at || now)
+                  : art.status === 'scheduled' ? (art.published_at || now)
+                  : null,
+      updated_at: now,
+    };
     const { data, error } = await supabase.from('articles').insert(payload).select().single();
     if (error) { console.error(error); alert('新增文章失敗：' + (error.message || '未知錯誤')); return; }
     if (data) setArticles(prev => [data as Article, ...prev]);
@@ -714,7 +721,14 @@ const App: React.FC = () => {
   const handleUpdateArticle = async (art: any) => {
     if (!supabase) return;
     const now = new Date().toISOString();
-    const payload = { ...art, published_at: art.status === 'published' ? (art.published_at || now) : null, updated_at: now };
+    // published→用 published_at 或現在；scheduled→用選定的未來時間；draft→清空
+    const payload = {
+      ...art,
+      published_at: art.status === 'published' ? (art.published_at || now)
+                  : art.status === 'scheduled' ? (art.published_at || now)
+                  : null,
+      updated_at: now,
+    };
     setArticles(prev => prev.map(a => a.id === art.id ? { ...a, ...payload } : a));
     const { error } = await supabase.from('articles').update(payload).eq('id', art.id);
     if (error) { console.error(error); alert('更新文章失敗'); refreshArticles(); }
