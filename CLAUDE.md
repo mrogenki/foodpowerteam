@@ -214,6 +214,17 @@ VITE_SUPABASE_FUNCTION_URL=
 - **後台**：ArticleManager 編輯時**直接 `from('articles').select('*').eq('id',…)` 撈全文**（authenticated 有 RLS ALL），避免帶入公開清單的截斷內容而覆寫全文。
 - **GEO**：會員限定文章的 JSON-LD 帶 `isAccessibleForFree:false` + `hasPart`（預覽可索引、非 cloaking）。
 
+### 專欄排程發佈（2026/09）
+
+文章 `status` 有三態：`draft` / `published` / `scheduled`（CHECK 約束 `articles_status_check` 已含這三值——**新增狀態時記得一起改約束**）。排程文章存 `status='scheduled'` + `published_at`=未來時間。
+
+- **隱藏**：`scheduled` 不是 `published`，所以 `public_articles()` RPC 與 anon RLS 都讀不到（連預覽都沒有），上線前完全不公開。
+- **自動上線**：`pg_cron` 每 10 分鐘跑 `public.publish_due_articles()`（jobname `publish-due-articles`）：把 `status='scheduled' 且 published_at<=now()` 的文章翻成 `published`；**若有翻動**，用 `pg_net` POST Vercel Deploy Hook 觸發重建（靜態頁/AI 才會出現）。
+- **Deploy Hook 存放**：在 Supabase **Vault**，`name='vercel_deploy_hook'`（`publish_due_articles` 以 `vault.decrypted_secrets` 讀取）。**這是與後台「更新網站」按鈕（Edge Function `trigger-rebuild` 的 `VERCEL_DEPLOY_HOOK_URL` secret）各自獨立的一份**——兩邊都要是同一條真實 hook。
+- **需要的擴充**：`pg_cron`、`pg_net`（已啟用）；`supabase_vault`。
+- 改頻率：`select cron.unschedule('publish-due-articles');` 後重新 `cron.schedule(...)`。
+- 前端：ArticleManager 狀態選「排程發佈」+ `datetime-local`（台北時間，ISO⇄local 轉換）；App `handleAdd/UpdateArticle` 對 scheduled 保留選定 `published_at`。
+
 ### 核准入會時的重複偵測（根因處理）
 
 `App.tsx::handleApproveMemberApplication` 在建立新會員前，會先用**姓名 + 手機**找既有會員（姓名 `trim`、手機用 `normalizePhone` 去掉非數字並把 `886` 前綴換回 `0`——與 `member_bind_line` RPC 同一套規則；DB 裡手機格式不一，所以是整批撈回前端比對，不在 SQL 端拼條件）。找到就跳兩段確認：
