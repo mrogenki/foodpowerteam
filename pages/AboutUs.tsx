@@ -25,7 +25,7 @@ const aboutJsonLd = {
     { "@type": "Person", "name": "俞海晴", "jobTitle": "秘書長", "worksFor": "托可生活誌" },
   ],
   "member": [
-    { "@type": "Person", "name": "林剛羽", "jobTitle": "顧問", "worksFor": "天帷聯合企管顧問" },
+    { "@type": "Person", "name": "林剛羽", "jobTitle": "展店顧問", "worksFor": "天帷企管顧問工作室" },
     { "@type": "Person", "name": "周政緯", "jobTitle": "顧問", "worksFor": "美食映象" },
     { "@type": "Person", "name": "黃景龍", "jobTitle": "顧問", "worksFor": "儂來餐廳" },
     { "@type": "Person", "name": "蔣君祥", "jobTitle": "顧問", "worksFor": "創客專案顧問" },
@@ -274,7 +274,7 @@ const AboutUs: React.FC = () => {
                 <p className="text-xs font-bold text-gray-500 mb-2">顧問團</p>
                 <ul className="space-y-2">
                   {[
-                    { name: '林剛羽', org: '天帷聯合企管顧問' },
+                    { name: '林剛羽', org: '天帷企管顧問工作室／展店顧問' },
                     { name: '周政緯', org: '美食映象' },
                     { name: '黃景龍', org: '儂來餐廳' },
                     { name: '蔣君祥', org: '創客專案顧問' },
