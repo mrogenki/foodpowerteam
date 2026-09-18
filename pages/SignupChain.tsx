@@ -465,7 +465,7 @@ const SignupChain: React.FC = () => {
               )}
               <button type="submit" disabled={submitting}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-lg shadow-lg shadow-orange-200 hover:opacity-90 transition-all disabled:opacity-50">
-                {submitting ? '送出中...' : isFull ? '排候補報名 ⏳' : selfCollect ? '送出報名 🍢' : '送出報名並付款 🍢'}
+                {submitting ? '送出中...' : isFull ? '排候補報名 ⏳' : (isFree || selfCollect) ? '送出報名 🍢' : '送出報名並付款 🍢'}
               </button>
             </form>
           )}
