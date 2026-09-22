@@ -1295,6 +1295,7 @@ const ActivityManager: React.FC<{
         '付款金額': r.paid_amount,
         '金流單號': r.merchant_order_no,
         '折扣碼': r.coupon_code,
+        '引薦人': r.referrer || '',
         '備註': r.notes
       };
     });
@@ -1316,6 +1317,7 @@ const ActivityManager: React.FC<{
         '付款金額': s.paid_amount ?? s.fee_amount ?? '',
         '金流單號': s.merchant_order_no || '',
         '折扣碼': '',
+        '引薦人': s.referrer || '',
         '備註': `${s.status === 'waitlist' ? '候補 ' : ''}${s.notes || ''}`.trim(),
       };
     });
