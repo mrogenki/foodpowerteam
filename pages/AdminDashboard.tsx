@@ -1220,28 +1220,38 @@ const ActivityManager: React.FC<{
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const url = await onUploadImage(e.target.files[0]); if (url) setFormData({ ...formData, picture: url }); } };
 
   const sendToTelegram = async () => {
-    if (!currentActivity || currentRegistrations.length === 0) {
+    if (!currentActivity || (currentRegistrations.length + activeSignups.length) === 0) {
       alert('目前沒有報名資料');
       return;
     }
-    
+
     setIsSendingTelegram(true);
     try {
       let message = `【${currentActivity.title}】\n`;
-      
-      // 依據報名時間排序 (越早報名排在越上面)
-      const sortedRegs = [...currentRegistrations].sort((a: any, b: any) => {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      });
 
-      sortedRegs.forEach((r: any, index: number) => {
-        const member = members?.find(m => String(m.id) === String(r.memberId));
-        const name = r.name || r.member_name || member?.name || '';
-        const company = r.company_title || r.company || member?.company_title || member?.company || '';
-        const isPaid = r.payment_status === PaymentStatus.PAID;
-        const statusText = isPaid ? '✅已付款' : '❌待付款';
-        
-        message += `${index + 1}. ${name} / ${company}${company ? ' ' : ''}${statusText}\n`;
+      // 合併系統報名 + 接龍報名，依報名時間排序（越早越上面）
+      const combined = [
+        ...currentRegistrations.map((r: any) => {
+          const member = members?.find(m => String(m.id) === String(r.memberId));
+          return {
+            name: r.name || r.member_name || member?.name || '',
+            company: r.company_title || r.company || member?.company_title || member?.company || '',
+            paid: r.payment_status === PaymentStatus.PAID,
+            src: '', created_at: r.created_at,
+          };
+        }),
+        ...activeSignups.map((s: any) => ({
+          name: s.name || '',
+          company: s.company || s.company_title || '',
+          paid: s.payment_status === 'paid',
+          src: '接龍', created_at: s.created_at,
+        })),
+      ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      combined.forEach((r, index) => {
+        const statusText = r.paid ? '✅已付款' : '❌待付款';
+        const tag = r.src ? `（${r.src}）` : '';
+        message += `${index + 1}. ${r.name}${r.company ? ' / ' + r.company : ''} ${statusText}${tag}\n`;
       });
 
       // 改由後端 notify-admin 送出（Telegram token 只存後端 secret，前端不再持有）
@@ -1262,17 +1272,18 @@ const ActivityManager: React.FC<{
   };
 
   const exportCSV = () => {
-    const data = currentRegistrations.map((r: any) => {
+    const regRows = currentRegistrations.map((r: any) => {
       const member = members?.find(m => String(m.id) === String(r.memberId));
       const name = r.name || r.member_name || member?.name || '';
       const phone = r.phone || member?.phone || '';
       const email = r.email || member?.email || '';
-      
+
       const company = r.company_title || r.company || member?.company_title || member?.company || '';
       const title = r.title || member?.job_title || '';
       const companyTitle = company && title ? `${company}/${title}` : (company || title || '');
 
       return {
+        '報名來源': '系統報名',
         '報名時間': new Date(r.created_at).toLocaleString(),
         '姓名': name,
         '電話': phone,
@@ -1287,6 +1298,29 @@ const ActivityManager: React.FC<{
         '備註': r.notes
       };
     });
+    // 接龍報名一併匯出
+    const signupRows = activeSignups.map((s: any) => {
+      const company = s.company || s.company_title || '';
+      const title = s.title || '';
+      const companyTitle = company && title ? `${company}/${title}` : (company || title || '');
+      return {
+        '報名來源': '接龍報名',
+        '報名時間': new Date(s.created_at).toLocaleString(),
+        '姓名': s.name || '',
+        '電話': s.phone || '',
+        'Email': s.email || '',
+        '單位/職稱': companyTitle,
+        '統一編號': s.tax_id || '',
+        '報到狀態': s.check_in_status ? '已報到' : '未報到',
+        '付款狀態': s.payment_status === 'paid' ? '已付款' : (s.payment_status === 'refunded' ? '已退費' : '待付款'),
+        '付款金額': s.paid_amount ?? s.fee_amount ?? '',
+        '金流單號': s.merchant_order_no || '',
+        '折扣碼': '',
+        '備註': `${s.status === 'waitlist' ? '候補 ' : ''}${s.notes || ''}`.trim(),
+      };
+    });
+    const data = [...regRows, ...signupRows].sort((a, b) =>
+      new Date(a['報名時間']).getTime() - new Date(b['報名時間']).getTime());
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "報名名單");
