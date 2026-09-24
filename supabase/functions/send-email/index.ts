@@ -207,6 +207,28 @@ const templates: Record<string, (p: any) => Built> = {
     return { subject: `【${esc(kind)}】${title} — 繳費成功`, html: layout({ title, bodyHtml: body }) };
   },
 
+  // 燒肉祭／火鍋祭 合作報名「已收到」確認信（festival-apply 寫入成功後寄給餐廳）
+  festival_apply_received: (p): Built => {
+    const who = esc(p.to_name || p.company_name || '');
+    const brandList = Array.isArray(p.brands) ? p.brands : [];
+    const brandRows = brandList.length
+      ? `<div style="padding:16px;background:#f9fafb;border-radius:12px;">${rows(
+          brandList.map((b: any) => [
+            String(b.festival || '場次'),
+            `${esc(b.name || '')}${b.plan ? `（${esc(b.plan)}）` : ''}`,
+          ])
+        )}</div>`
+      : '';
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">我們已收到您報名「食在力量 燒肉祭・火鍋祭」的合作申請。協會專員將於 1 個工作天內與您聯繫，確認方案與後續事宜。以下為您的報名摘要：</p>
+      ${p.company_name ? `<p style="margin:0 0 10px;font-size:14px;color:#1f2937;"><strong>公司：</strong>${esc(p.company_name)}</p>` : ''}
+      ${brandRows}
+      <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;line-height:1.8;">若資訊有誤或需補充，歡迎直接回覆本信，或透過官方 LINE 與我們聯繫。</p>
+    `;
+    return { subject: `【食在力量】已收到您的合作報名${p.company_name ? ` — ${esc(p.company_name)}` : ''}`, html: layout({ title: '合作報名確認', bodyHtml: body }) };
+  },
+
   // 會籍續約／喚醒通知（到期前提醒）
   renewal_reminder: (p): Built => {
     const who = esc(p.to_name || '');

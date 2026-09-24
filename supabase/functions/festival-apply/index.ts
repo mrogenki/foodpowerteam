@@ -149,6 +149,33 @@ serve(async (req) => {
       console.error('[festival-apply] telegram error:', e)
     }
 
+    // 寄「已收到合作報名」確認信給餐廳（透過 send-email / Resend；失敗不影響報名結果）
+    try {
+      await fetch(`${SupabaseUrl}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SupabaseKey}`,
+          'apikey': SupabaseKey as string,
+        },
+        body: JSON.stringify({
+          template: 'festival_apply_received',
+          params: {
+            to_email: body.contact_email,
+            to_name: body.representative || body.company_name,
+            company_name: body.company_name,
+            brands: brands.map((b: any) => ({
+              name: b.brand_name,
+              festival: FESTIVAL_LABEL[b.festival_type] || b.festival_type,
+              plan: b.sponsor_plan === 'B' ? '方案 B' : '方案 A',
+            })),
+          },
+        }),
+      })
+    } catch (e) {
+      console.error('[festival-apply] confirm email error:', e)
+    }
+
     return new Response(JSON.stringify({ ok: true, id: data.id }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     console.error('[festival-apply] error:', e)
