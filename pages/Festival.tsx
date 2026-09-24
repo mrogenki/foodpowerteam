@@ -31,7 +31,7 @@ const scrollTo = (id: string) => {
 };
 
 // ====== 報名入口（站內網頁報名表，HashRouter 路由）======
-const APPLY_FORM_URL = '#/festival/apply';
+const APPLY_FORM_URL = '/festival/apply';
 
 // ====== Mini Header (活潑風格) ======
 const FestivalHeader: React.FC = () => (
@@ -1796,7 +1796,7 @@ const joinSteps = [
     title: '填寫合作申請表',
     desc: '線上填寫公司與品牌資料，閱讀並同意合作合約，由協會專員確認',
     color: 'from-red-500 to-rose-500',
-    cta: { label: '填寫報名表單', href: '#/festival/apply', external: false }
+    cta: { label: '填寫報名表單', href: '/festival/apply', external: false }
   },
   {
     no: '02',
