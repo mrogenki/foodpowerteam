@@ -20,6 +20,7 @@
     "@line/liff": "^2.29.2",
     "@supabase/supabase-js": "2.48.1",
     "@tailwindcss/vite": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "crypto-js": "4.2.0",
     "editorjs-html": "^4.0.5",
     "html2pdf.js": "^0.14.0",
