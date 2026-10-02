@@ -45,11 +45,14 @@ const ArticleManager: React.FC<{
   const [formData, setFormData] = useState<any>(emptyForm());
   const [slugTouched, setSlugTouched] = useState(false);
 
-  const sorted = [...(articles || [])].sort((a, b) =>
-    String(b.created_at || '').localeCompare(String(a.created_at || '')));
-
   // 各文章瀏覽次數（slug → views），由 article_views 表載入
   const [views, setViews] = useState<Record<string, number>>({});
+  const [sortBy, setSortBy] = useState<'new' | 'views'>('new');
+
+  const sorted = [...(articles || [])].sort((a, b) =>
+    sortBy === 'views'
+      ? (views[b.slug] ?? 0) - (views[a.slug] ?? 0)
+      : String(b.created_at || '').localeCompare(String(a.created_at || '')));
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
@@ -217,8 +220,14 @@ const ArticleManager: React.FC<{
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">專欄管理</h2>
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">專欄管理</h2>
+          <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+            <button onClick={() => setSortBy('new')} className={`px-3 py-1.5 font-bold ${sortBy === 'new' ? 'bg-red-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>最新</button>
+            <button onClick={() => setSortBy('views')} className={`px-3 py-1.5 font-bold ${sortBy === 'views' ? 'bg-red-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>最熱門</button>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={triggerRebuild} disabled={rebuilding} title="發佈/修改文章後，讓網站重新產生靜態頁供搜尋引擎與 AI 讀取"
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold disabled:opacity-50">
