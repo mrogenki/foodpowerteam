@@ -140,6 +140,17 @@ const ArticleDetail: React.FC<{ articles?: Article[] }> = ({ articles }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, article?.locked]);
 
+  // 瀏覽計數：每個瀏覽器 session 每篇只計一次；SSR／預渲染（無 window）不計。
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!supabase || !slug || !article || notFound) return;
+    const key = 'av:' + slug;
+    try { if (sessionStorage.getItem(key)) return; } catch {}
+    try { sessionStorage.setItem(key, '1'); } catch {}
+    supabase.rpc('bump_article_view', { p_slug: slug }).then(() => {}, () => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, article, notFound]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-red-600" size={44} /></div>;
   }

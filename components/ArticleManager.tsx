@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Article, ARTICLE_CATEGORIES } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import BlockEditor from './BlockEditor';
-import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, UploadCloud, Newspaper, ArrowLeft, Eye, EyeOff, ExternalLink, RefreshCw, BarChart3 } from 'lucide-react';
 
 // ISO ⇄ datetime-local（datetime-local 以本地時間顯示/解讀）
 const toLocalInput = (iso?: string): string => {
@@ -47,6 +47,20 @@ const ArticleManager: React.FC<{
 
   const sorted = [...(articles || [])].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+  // 各文章瀏覽次數（slug → views），由 article_views 表載入
+  const [views, setViews] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    supabase.from('article_views').select('slug, views').then(({ data }) => {
+      if (cancelled || !data) return;
+      const map: Record<string, number> = {};
+      for (const r of data as any[]) map[r.slug] = Number(r.views) || 0;
+      setViews(map);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const [rebuilding, setRebuilding] = useState(false);
   const triggerRebuild = async () => {
@@ -231,9 +245,10 @@ const ArticleManager: React.FC<{
                     {a.status === 'published' ? '已發布' : a.status === 'scheduled' ? '排程' : '草稿'}
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {a.category || '—'}　·　/article/{a.slug}
-                  {a.status === 'scheduled' && a.published_at && `　·　預定 ${new Date(a.published_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+                <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-1">
+                  <span>{a.category || '—'}　·　/article/{a.slug}</span>
+                  <span className="inline-flex items-center gap-1 text-gray-500">　·　<BarChart3 size={12} /> {(views[a.slug] ?? 0).toLocaleString()} 次瀏覽</span>
+                  {a.status === 'scheduled' && a.published_at && <span>　·　預定 {new Date(a.published_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
