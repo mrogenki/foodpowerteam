@@ -232,18 +232,20 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             ) : (
               <span className="ml-1 font-bold text-emerald-600">免費</span>
             )}
-            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格；要修改金額或方案，請到「活動管理 → 編輯活動」。</p>
+            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格{hasPlans ? '與名額（各方案容量）' : ''}；要修改金額{hasPlans ? '、名額' : ''}或方案，請到「活動管理 → 編輯活動」。</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
               開放報名
             </label>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">正取容量</label>
-              <input type="number" min={0} value={capacity} onChange={e => setCapacity(parseInt(e.target.value, 10) || 0)}
-                className="w-full p-2 border rounded" />
-            </div>
+            {!hasPlans && (
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">正取容量</label>
+                <input type="number" min={0} value={capacity} onChange={e => setCapacity(parseInt(e.target.value, 10) || 0)}
+                  className="w-full p-2 border rounded" />
+              </div>
+            )}
             {paymentMode === 'online' && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
