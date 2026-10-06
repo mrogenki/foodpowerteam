@@ -1882,7 +1882,7 @@ const ActivityManager: React.FC<{
                    <label className="block text-xs font-bold text-gray-600 mb-2">收款方式</label>
                    <div className="flex flex-wrap gap-2">
                      <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'online' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${(formData.payment_mode || 'online') === 'online' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>線上金流（藍新）</button>
-                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
+                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self', payment_deadline_hours: null })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
                    </div>
                    <p className="text-xs text-gray-400 mt-1">{formData.payment_mode === 'self' ? '報名後不走線上金流，顯示繳費方式，由主辦收款、後台再標記已付。' : '報名後導向藍新繳費；可設逾時未付款自動釋位。'}</p>
                  </div>
