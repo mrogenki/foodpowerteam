@@ -31,6 +31,13 @@ const fromLocalDT = (v: string): string | null => {
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d.toISOString();
 };
+// 預設繳費截止＝活動開始前 N 小時（date+time 以本地/台北時間解讀）
+const deadlineBeforeStart = (date?: string, time?: string, hoursBefore = 24): string | null => {
+  if (!date || !time) return null;
+  const start = new Date(`${date}T${time}`);
+  if (isNaN(start.getTime())) return null;
+  return new Date(start.getTime() - hoursBefore * 3600 * 1000).toISOString();
+};
 
 // ==========================================
 // 共用：對「已付款」訂單執行退費
@@ -1828,8 +1835,8 @@ const ActivityManager: React.FC<{
                )}
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動標題</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動類型</label><select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">{Object.values(ActivityType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-               <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
-               <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" lang="en-GB" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+               <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => { const date = e.target.value; setFormData((f: any) => ({ ...f, date, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(date, f.time)) })); }} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+               <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" lang="en-GB" value={formData.time} onChange={e => { const time = e.target.value; setFormData((f: any) => ({ ...f, time, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(f.date, time)) })); }} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">地點</label><input required type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                {!(formData.price_options && formData.price_options.length > 0) && (
                  <>
@@ -1895,7 +1902,7 @@ const ActivityManager: React.FC<{
                  <div>
                    <label className="block text-xs font-bold text-gray-600 mb-2">收款方式</label>
                    <div className="flex flex-wrap gap-2">
-                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'online' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${(formData.payment_mode || 'online') === 'online' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>線上金流（藍新）</button>
+                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'online', payment_deadline: formData.payment_deadline || deadlineBeforeStart(formData.date, formData.time) })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${(formData.payment_mode || 'online') === 'online' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>線上金流（藍新）</button>
                      <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self', payment_deadline: null })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
                    </div>
                    <p className="text-xs text-gray-400 mt-1">{formData.payment_mode === 'self' ? '報名後不走線上金流，顯示繳費方式，由主辦收款、後台再標記已付。' : '報名後導向藍新繳費；可設逾時未付款自動釋位。'}</p>
@@ -1907,8 +1914,11 @@ const ActivityManager: React.FC<{
                    </div>
                  ) : (
                    <div>
-                     <label className="block text-xs font-bold text-gray-600 mb-1">繳費截止時間（空＝不自動釋放）</label>
-                     <input type="datetime-local" value={toLocalDT(formData.payment_deadline)} onChange={e => setFormData({ ...formData, payment_deadline: fromLocalDT(e.target.value) })} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                     <label className="block text-xs font-bold text-gray-600 mb-1">繳費截止時間（預設為活動開始前 24 小時，可自行調整；空＝不自動釋放）</label>
+                     <div className="flex flex-wrap items-center gap-2">
+                       <input type="datetime-local" value={toLocalDT(formData.payment_deadline)} onChange={e => setFormData({ ...formData, payment_deadline: fromLocalDT(e.target.value) })} className="flex-1 min-w-[220px] p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                       <button type="button" disabled={!formData.date || !formData.time} onClick={() => setFormData({ ...formData, payment_deadline: deadlineBeforeStart(formData.date, formData.time) })} className="px-3 py-2 rounded-lg text-sm font-bold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40">設為活動前 24 小時</button>
+                     </div>
                      <p className="text-xs text-gray-400 mt-1">此時間前未完成繳費，名額自動釋出（一般報名與接龍皆適用）；並於截止前 24 小時寄 Email 提醒。</p>
                    </div>
                  )}
