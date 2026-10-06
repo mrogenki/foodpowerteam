@@ -18,6 +18,20 @@ import CashRegistrationModal from '../components/CashRegistrationModal';
 import ArticleManager from '../components/ArticleManager';
 import { Activity, MemberActivity, Registration, MemberRegistration, ActivityType, AdminUser, UserRole, Member, AttendanceRecord, AttendanceStatus, Coupon, IndustryCategories, PaymentStatus, MemberApplication, ClubActivity, Milestone, FinancialType, FinancialRecord, PointsLedgerEntry, SignupEntry, Article, ARTICLE_CATEGORIES } from '../types';
 
+// datetime-local ⇄ ISO（以本地時間顯示/解讀）
+const toLocalDT = (iso?: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const fromLocalDT = (v: string): string | null => {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+};
+
 // ==========================================
 // 共用：對「已付款」訂單執行退費
 // 總管理員 + 信用卡 + 有金流單號 → 呼叫 newebpay-refund 真實向藍新刷退
@@ -1882,7 +1896,7 @@ const ActivityManager: React.FC<{
                    <label className="block text-xs font-bold text-gray-600 mb-2">收款方式</label>
                    <div className="flex flex-wrap gap-2">
                      <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'online' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${(formData.payment_mode || 'online') === 'online' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>線上金流（藍新）</button>
-                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self', payment_deadline_hours: null })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
+                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self', payment_deadline: null })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
                    </div>
                    <p className="text-xs text-gray-400 mt-1">{formData.payment_mode === 'self' ? '報名後不走線上金流，顯示繳費方式，由主辦收款、後台再標記已付。' : '報名後導向藍新繳費；可設逾時未付款自動釋位。'}</p>
                  </div>
@@ -1893,9 +1907,9 @@ const ActivityManager: React.FC<{
                    </div>
                  ) : (
                    <div>
-                     <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空＝不自動釋放）</label>
-                     <input type="number" min={1} value={formData.payment_deadline_hours ?? ''} onChange={e => setFormData({ ...formData, payment_deadline_hours: e.target.value === '' ? null : Math.max(1, Number(e.target.value)) })} placeholder="例如 24" className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
-                     <p className="text-xs text-gray-400 mt-1">報名後超過此時數未付款，自動釋出名額（一般報名與接龍皆適用）。</p>
+                     <label className="block text-xs font-bold text-gray-600 mb-1">繳費截止時間（空＝不自動釋放）</label>
+                     <input type="datetime-local" value={toLocalDT(formData.payment_deadline)} onChange={e => setFormData({ ...formData, payment_deadline: fromLocalDT(e.target.value) })} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                     <p className="text-xs text-gray-400 mt-1">此時間前未完成繳費，名額自動釋出（一般報名與接龍皆適用）；並於截止前 24 小時寄 Email 提醒。</p>
                    </div>
                  )}
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

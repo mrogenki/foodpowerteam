@@ -18,11 +18,6 @@ serve(async (req) => {
   const ServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const sb = createClient(SupabaseUrl, ServiceKey)
 
-  const fmtDeadline = (createdAt: string, hours: number) => {
-    const d = new Date(new Date(createdAt).getTime() + hours * 3600 * 1000)
-    return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-  }
-
   const sendEmail = async (template: string, params: Record<string, unknown>) => {
     if (!params.to_email) return
     try {
@@ -35,79 +30,73 @@ serve(async (req) => {
   }
 
   const summary = { cancelled: 0, reminded: 0, activities: 0 }
+  const REMIND_LEAD_MS = 24 * 3600 * 1000 // 逾時前 24 小時提醒
 
-  // 只處理：線上收款 + 有設逾時時數 + 活動日期尚未過（避免對已結束活動的舊報名寄取消信）
+  // 只處理：線上收款 + 有設繳費截止 + 活動日期尚未過（避免對已結束活動的舊報名寄取消信）
   const todayTPE = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }) // YYYY-MM-DD
   const { data: acts } = await sb.from('activities')
-    .select('id,title,date,time,location,payment_deadline_hours,payment_mode')
-    .not('payment_deadline_hours', 'is', null)
+    .select('id,title,date,time,location,payment_deadline,payment_mode')
+    .not('payment_deadline', 'is', null)
     .eq('payment_mode', 'online')
     .gte('date', todayTPE)
 
   for (const a of (acts || [])) {
-    const H = Number(a.payment_deadline_hours)
-    if (!H || H <= 0) continue
+    const deadlineMs = a.payment_deadline ? new Date(a.payment_deadline).getTime() : NaN
+    if (!deadlineMs || isNaN(deadlineMs)) continue
     summary.activities++
-    const lead = Math.max(1, Math.round(H * 0.3))
     const nowMs = Date.now()
-    const cutoffCancel = new Date(nowMs - H * 3600 * 1000).toISOString()        // created_at 早於此 → 逾時
-    const cutoffRemind = new Date(nowMs - (H - lead) * 3600 * 1000).toISOString() // created_at 早於此 → 進入提醒窗
+    const deadlineText = new Date(deadlineMs).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     const meta = { activity_title: a.title, activity_date: a.date, activity_time: a.time, activity_location: a.location }
 
-    // ── 取消：接龍正取逾時未付 ──
-    const { data: expEntries } = await sb.from('signup_entries')
-      .select('id,name,email,activity_id').eq('activity_id', a.id)
-      .eq('status', 'confirmed').eq('payment_status', 'unpaid').lt('created_at', cutoffCancel)
-    for (const e of (expEntries || [])) {
-      await sendEmail('registration_cancelled', { to_name: e.name, to_email: e.email, ...meta })
-      await sb.from('signup_entries').delete().eq('id', e.id)
-      summary.cancelled++
-    }
-
-    // ── 取消：一般報名逾時未付（先退凍結點數） ──
-    const { data: expRegs } = await sb.from('registrations')
-      .select('id,name,email,merchant_order_no,points_status').eq('activityId', a.id)
-      .eq('payment_status', 'pending').lt('created_at', cutoffCancel)
-    for (const r of (expRegs || [])) {
-      await sendEmail('registration_cancelled', { to_name: r.name, to_email: r.email, ...meta })
-      if (r.points_status === 'frozen' && r.merchant_order_no) {
-        try { await sb.rpc('points_refund', { p_order_no: r.merchant_order_no }) } catch (_) { /* ignore */ }
+    // ── 逾時取消（現在已超過截止時間）──
+    if (nowMs >= deadlineMs) {
+      const { data: expEntries } = await sb.from('signup_entries')
+        .select('id,name,email').eq('activity_id', a.id)
+        .eq('status', 'confirmed').eq('payment_status', 'unpaid')
+      for (const e of (expEntries || [])) {
+        await sendEmail('registration_cancelled', { to_name: e.name, to_email: e.email, ...meta })
+        await sb.from('signup_entries').delete().eq('id', e.id)
+        summary.cancelled++
       }
-      await sb.from('registrations').delete().eq('id', r.id)
-      summary.cancelled++
+      const { data: expRegs } = await sb.from('registrations')
+        .select('id,name,email,merchant_order_no,points_status').eq('activityId', a.id)
+        .eq('payment_status', 'pending')
+      for (const r of (expRegs || [])) {
+        await sendEmail('registration_cancelled', { to_name: r.name, to_email: r.email, ...meta })
+        if (r.points_status === 'frozen' && r.merchant_order_no) {
+          try { await sb.rpc('points_refund', { p_order_no: r.merchant_order_no }) } catch (_) { /* ignore */ }
+        }
+        await sb.from('registrations').delete().eq('id', r.id)
+        summary.cancelled++
+      }
+      try { await sb.rpc('signup_fill', { p_activity_id: a.id }) } catch (_) { /* ignore */ }
+      continue // 已截止就不再寄提醒
     }
 
-    // 釋位後遞補候補
-    try { await sb.rpc('signup_fill', { p_activity_id: a.id }) } catch (_) { /* ignore */ }
-
-    // ── 提醒：接龍正取，進入提醒窗、尚未提醒、尚未逾時 ──
-    const { data: remEntries } = await sb.from('signup_entries')
-      .select('id,name,email,fee_amount,cancel_token,created_at').eq('activity_id', a.id)
-      .eq('status', 'confirmed').eq('payment_status', 'unpaid')
-      .is('reminder_sent_at', null).lt('created_at', cutoffRemind).gte('created_at', cutoffCancel)
-    for (const e of (remEntries || [])) {
-      await sendEmail('payment_reminder', {
-        to_name: e.name, to_email: e.email, ...meta, fee: e.fee_amount,
-        pay_link: `${SITE}/pay-signup/${e.id}?token=${e.cancel_token}`,
-        deadline_text: fmtDeadline(e.created_at, H),
-      })
-      await sb.from('signup_entries').update({ reminder_sent_at: new Date().toISOString() }).eq('id', e.id)
-      summary.reminded++
-    }
-
-    // ── 提醒：一般報名 ──
-    const { data: remRegs } = await sb.from('registrations')
-      .select('id,name,email,paid_amount,created_at').eq('activityId', a.id)
-      .eq('payment_status', 'pending')
-      .is('reminder_sent_at', null).lt('created_at', cutoffRemind).gte('created_at', cutoffCancel)
-    for (const r of (remRegs || [])) {
-      await sendEmail('payment_reminder', {
-        to_name: r.name, to_email: r.email, ...meta, fee: r.paid_amount,
-        pay_link: `${SITE}/pay-activity/${r.id}`,
-        deadline_text: fmtDeadline(r.created_at, H),
-      })
-      await sb.from('registrations').update({ reminder_sent_at: new Date().toISOString() }).eq('id', r.id)
-      summary.reminded++
+    // ── 繳費提醒（逾時前 24 小時內、尚未提醒）──
+    if (nowMs >= deadlineMs - REMIND_LEAD_MS) {
+      const { data: remEntries } = await sb.from('signup_entries')
+        .select('id,name,email,fee_amount,cancel_token').eq('activity_id', a.id)
+        .eq('status', 'confirmed').eq('payment_status', 'unpaid').is('reminder_sent_at', null)
+      for (const e of (remEntries || [])) {
+        await sendEmail('payment_reminder', {
+          to_name: e.name, to_email: e.email, ...meta, fee: e.fee_amount,
+          pay_link: `${SITE}/pay-signup/${e.id}?token=${e.cancel_token}`, deadline_text: deadlineText,
+        })
+        await sb.from('signup_entries').update({ reminder_sent_at: new Date().toISOString() }).eq('id', e.id)
+        summary.reminded++
+      }
+      const { data: remRegs } = await sb.from('registrations')
+        .select('id,name,email,paid_amount').eq('activityId', a.id)
+        .eq('payment_status', 'pending').is('reminder_sent_at', null)
+      for (const r of (remRegs || [])) {
+        await sendEmail('payment_reminder', {
+          to_name: r.name, to_email: r.email, ...meta, fee: r.paid_amount,
+          pay_link: `${SITE}/pay-activity/${r.id}`, deadline_text: deadlineText,
+        })
+        await sb.from('registrations').update({ reminder_sent_at: new Date().toISOString() }).eq('id', r.id)
+        summary.reminded++
+      }
     }
   }
 

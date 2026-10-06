@@ -736,6 +736,9 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                       </div>
                     </div>
                   )}
+                  {!selfCollect && finalPrice > 0 && activity.payment_deadline && (
+                    <p className="text-xs text-amber-600">⏰ 請於 {new Date(activity.payment_deadline).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 前完成繳費，逾時名額將自動釋出。</p>
+                  )}
 
                   <button type="submit" disabled={isSubmitting || (props.type === 'member' && !formData.name)} className="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-[0.98] transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2 shadow-lg shadow-red-200">
                     {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> 處理中...</> : <><span>{(!selfCollect && payNow && finalPrice > 0) ? '送出並前往付款' : (props.type === 'member' ? '確認會員資料並報名' : '送出報名')}</span><span className="bg-red-800/30 px-2 py-0.5 rounded text-sm">NT$ {finalPrice.toLocaleString()}</span></>}

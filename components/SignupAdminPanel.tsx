@@ -13,7 +13,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [capacity, setCapacity] = useState(0);
   const [feeAmount, setFeeAmount] = useState(0);
   const [memberFeeAmount, setMemberFeeAmount] = useState<string>(''); // 空 = 會員同一般價
-  const [deadlineHours, setDeadlineHours] = useState<string>(''); // 空 = 不自動釋放
+  const [deadline, setDeadline] = useState<string>(''); // 繳費截止 ISO（空 = 不自動釋放）
   const [paymentMode, setPaymentMode] = useState<'online' | 'self'>('online');
   const [collectNote, setCollectNote] = useState('');
   const [hostName, setHostName] = useState('');
@@ -32,7 +32,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity,status,payment_mode,collect_note,host_name,host_phone,payment_deadline_hours').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity,status,payment_mode,collect_note,host_name,host_phone,payment_deadline').eq('id', activityId).maybeSingle(),
     ]);
     if (act) {
       setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
@@ -48,7 +48,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       setCollectNote(act.collect_note || '');
       setHostName(act.host_name || '');
       setHostPhone(act.host_phone || '');
-      setDeadlineHours(act.payment_deadline_hours != null ? String(act.payment_deadline_hours) : '');
+      setDeadline(act.payment_deadline || '');
     }
     setEnabled(!!s);
     setEntries((e as SignupEntry[]) || []);
@@ -61,7 +61,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     if (!supabase) return;
     setSaving(true);
     try {
-      const dh = deadlineHours.trim() === '' ? null : Math.max(1, parseInt(deadlineHours, 10) || 0);
+      const dh = null; // 繳費截止改以活動 payment_deadline 為準，signup_settings.payment_deadline_hours 不再使用
       const mfa = memberFeeAmount.trim() === '' ? null : Math.max(0, parseInt(memberFeeAmount, 10) || 0);
       const { error } = await supabase.rpc('signup_admin_update', {
         p_activity_id: activityId,
@@ -219,7 +219,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             <div>
               <span className="font-bold">💳 收款：</span>
               <span className="ml-1">{paymentMode === 'self' ? '主辦自主收款' : '線上金流（藍新）'}</span>
-              {paymentMode === 'online' && deadlineHours.trim() !== '' && <span className="ml-3 text-gray-600">逾時釋放：{deadlineHours} 小時</span>}
+              {paymentMode === 'online' && deadline && <span className="ml-3 text-gray-600">繳費截止：{new Date(deadline).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
             </div>
             <div>
               <span className="font-bold">📣 開放狀態：</span>
