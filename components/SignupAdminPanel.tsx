@@ -31,19 +31,20 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location,price_options').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options,price,member_price').eq('id', activityId).maybeSingle(),
     ]);
     if (act) {
       setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
       setPlanOptions(Array.isArray(act.price_options) ? act.price_options.filter((o: any) => o && String(o.name || '').trim() !== '') : []);
+      // 價格一律以活動為唯一來源（與一般報名一致）
+      setFeeAmount(Number(act.price) || 0);
+      setMemberFeeAmount(act.member_price != null ? String(act.member_price) : '');
     }
     if (s) {
       const ss = s as SignupSettings;
       setEnabled(true);
       setOpen(ss.registration_open);
       setCapacity(ss.capacity);
-      setFeeAmount(ss.fee_amount);
-      setMemberFeeAmount(ss.member_fee_amount != null ? String(ss.member_fee_amount) : '');
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
       setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
       setCollectNote(ss.collect_note || '');
@@ -175,7 +176,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     }
     if (lines.length) lines.push('———————');
     // 正取（有費用時標示已付款；自主收款可手動標記，線上走藍新）
-    const showPaid = feeAmount > 0;
+    const showPaid = hasPlans || feeAmount > 0;
     confirmed.forEach((r, i) => {
       const paid = showPaid && r.payment_status === 'paid' ? ' ✅已付' : '';
       lines.push(`${i + 1}.${r.name}${r.company ? '/' + r.company : ''}${paid}`);
@@ -222,13 +223,17 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             </p>
           </div>
 
-          {hasPlans && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-              <span className="font-bold">🎫 此活動已設定報名方案：</span>
-              {planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{i < planOptions.length - 1 ? '、' : ''}</span>)}
-              <p className="text-xs text-red-600/80 mt-1">接龍與一般報名都會依此方案收費，下方「報名費用／會員價」將不套用（如需改回單一價格，請到活動設定清空方案）。</p>
-            </div>
-          )}
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+            <span className="font-bold">💰 報名費用（與一般報名一致，於「活動設定」管理）：</span>
+            {hasPlans ? (
+              planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{i < planOptions.length - 1 ? '、' : ''}</span>)
+            ) : feeAmount > 0 ? (
+              <span className="ml-1">一般 NT${feeAmount.toLocaleString()}{memberFeeAmount.trim() !== '' && Number(memberFeeAmount) !== feeAmount && <>　/　會員 NT${Number(memberFeeAmount).toLocaleString()}</>}</span>
+            ) : (
+              <span className="ml-1 font-bold text-emerald-600">免費</span>
+            )}
+            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格；要修改金額或方案，請到「活動管理 → 編輯活動」。</p>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
@@ -239,21 +244,6 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
               <input type="number" min={0} value={capacity} onChange={e => setCapacity(parseInt(e.target.value, 10) || 0)}
                 className="w-full p-2 border rounded" />
             </div>
-            {!hasPlans && (
-              <>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">報名費用 / 一般價 (NT$)</label>
-                  <input type="number" min={0} value={feeAmount} onChange={e => setFeeAmount(parseInt(e.target.value, 10) || 0)}
-                    className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">會員價 (NT$，空 = 同一般價)</label>
-                  <input type="number" min={0} value={memberFeeAmount} onChange={e => setMemberFeeAmount(e.target.value)} placeholder="例如 500"
-                    className="w-full p-2 border rounded" />
-                  <p className="text-[11px] text-gray-400 mt-1">報名者填寫的手機若對應在會會員，自動套用此價。</p>
-                </div>
-              </>
-            )}
             {paymentMode === 'online' && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
@@ -352,7 +342,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              {paymentMode === 'online' && feeAmount > 0 && r.status === 'confirmed' && r.payment_status === 'unpaid' && (
+                              {paymentMode === 'online' && (hasPlans || feeAmount > 0) && r.status === 'confirmed' && r.payment_status === 'unpaid' && (
                                 <button type="button" onClick={() => copyPayLink(r)}
                                   className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold inline-flex items-center gap-1 hover:bg-amber-100"
                                   title="複製此人的專屬繳費連結，可私訊給他補繳">

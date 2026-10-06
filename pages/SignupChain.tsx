@@ -160,10 +160,13 @@ const SignupChain: React.FC = () => {
   const hasPlans = planOptions.length > 0;
   const selectedPlan = hasPlans ? (planOptions[selectedPlanIdx] || planOptions[0]) : null;
 
+  // 價格一律以「活動」為唯一來源（與一般報名一致）：方案 → 活動會員價 → 活動一般價
+  const actPrice = Number(activity?.price || 0);
+  const actMemberPrice = activity?.member_price != null ? Number(activity.member_price) : null;
   const selfCollect = settings?.payment_mode === 'self';
-  const effectiveFee = hasPlans ? Number(selectedPlan?.price || 0) : (settings?.fee_amount || 0);
+  const effectiveFee = hasPlans ? Number(selectedPlan?.price || 0) : actPrice;
   const isFree = effectiveFee <= 0;   // 免費活動：無需繳費
-  const hasMemberPrice = !hasPlans && settings?.member_fee_amount != null && settings.member_fee_amount !== settings.fee_amount;
+  const hasMemberPrice = !hasPlans && actMemberPrice != null && actMemberPrice !== actPrice;
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
   const applyCoupon = async () => {
@@ -338,17 +341,17 @@ const SignupChain: React.FC = () => {
                   {planOptions.map((o, i) => <span key={i}>{o.name} NT$ {Number(o.price || 0).toLocaleString()}</span>)}
                   {selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
                 </div>
-              ) : settings.fee_amount > 0 && (
+              ) : actPrice > 0 && (
                 hasMemberPrice ? (
                   <div className="sm:col-span-2 font-bold flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>一般 NT$ {settings.fee_amount.toLocaleString()}</span>
-                    <span className="text-amber-200">會員 NT$ {settings.member_fee_amount!.toLocaleString()}</span>
+                    <span>一般 NT$ {actPrice.toLocaleString()}</span>
+                    <span className="text-amber-200">會員 NT$ {actMemberPrice!.toLocaleString()}</span>
                     {selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
                     <span className="w-full font-normal text-orange-100 text-xs">📱 報名填會員手機自動套用會員價</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 font-bold">
-                    費用 NT$ {settings.fee_amount.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+                    費用 NT$ {actPrice.toLocaleString()}{selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
                   </div>
                 )
               )}
