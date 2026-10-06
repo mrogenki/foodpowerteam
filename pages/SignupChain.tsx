@@ -425,7 +425,7 @@ const SignupChain: React.FC = () => {
               <span className="text-base">🟢</span> 已透過 LINE 連結：{lineName}（報名會記住你，換裝置也找得回）
             </div>
           )}
-          {!settings.registration_open ? (
+          {activity.status === 'closed' ? (
             <div className="bg-red-50 border border-red-100 text-red-500 rounded-2xl px-5 py-4 text-center text-sm font-medium">報名目前已關閉</div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">

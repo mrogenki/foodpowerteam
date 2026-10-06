@@ -21,6 +21,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [activityInfo, setActivityInfo] = useState<{ title?: string; date?: string; location?: string }>({});
   const [planOptions, setPlanOptions] = useState<Array<{ name: string; price: number }>>([]);
+  const [actStatus, setActStatus] = useState<string>('active');
   const hasPlans = planOptions.length > 0;
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -31,20 +32,21 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity,status').eq('id', activityId).maybeSingle(),
     ]);
     if (act) {
       setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
       setPlanOptions(Array.isArray(act.price_options) ? act.price_options.filter((o: any) => o && String(o.name || '').trim() !== '') : []);
-      // 價格與名額一律以活動為唯一來源（與一般報名一致）
+      // 價格、名額、開放狀態一律以活動為唯一來源（與一般報名一致）
       setFeeAmount(Number(act.price) || 0);
       setMemberFeeAmount(act.member_price != null ? String(act.member_price) : '');
       setCapacity(Number(act.capacity) || 0);
+      setActStatus(act.status || 'active');
+      setOpen((act.status || 'active') !== 'closed');
     }
     if (s) {
       const ss = s as SignupSettings;
       setEnabled(true);
-      setOpen(ss.registration_open);
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
       setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
       setCollectNote(ss.collect_note || '');
@@ -236,10 +238,10 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格與名額；要修改金額、名額或方案，請到「活動管理 → 編輯活動」。</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
-              開放報名
-            </label>
+            <div className="sm:col-span-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">
+              開放／截止請在上方活動的「報名狀態」設定（接龍與一般報名共用一個開關）。目前：
+              <span className={`font-bold ${actStatus === 'closed' ? 'text-gray-500' : 'text-emerald-600'}`}>{actStatus === 'closed' ? '報名截止' : '開放報名'}</span>
+            </div>
             {paymentMode === 'online' && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
