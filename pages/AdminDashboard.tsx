@@ -1221,7 +1221,11 @@ const ActivityManager: React.FC<{
     // 清理報名方案：去除空白名稱、數字化價格；全空則存 null（回到單一價格模式）
     const cleanOptions = Array.isArray(formData.price_options)
       ? formData.price_options
-          .map((o: any) => ({ name: String(o?.name || '').trim(), price: Number(o?.price) || 0 }))
+          .map((o: any) => ({
+            name: String(o?.name || '').trim(),
+            price: Number(o?.price) || 0,
+            capacity: (o?.capacity === null || o?.capacity === undefined || o?.capacity === '') ? null : Math.max(0, Number(o.capacity) || 0),
+          }))
           .filter((o: any) => o.name !== '')
       : null;
     const payload = { ...formData, price_options: (cleanOptions && cleanOptions.length) ? cleanOptions : null };
@@ -1840,15 +1844,19 @@ const ActivityManager: React.FC<{
                        {formData.price_options.map((opt: any, idx: number) => (
                          <div key={idx} className="flex items-center gap-2">
                            <input type="text" value={opt.name || ''} placeholder="方案名稱（例：團體包車）" onChange={e => { const arr = [...formData.price_options]; arr[idx] = { ...arr[idx], name: e.target.value }; setFormData({ ...formData, price_options: arr }); }} className="flex-1 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
-                           <div className="relative w-36">
+                           <div className="relative w-32">
                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">NT$</span>
                              <input type="number" value={opt.price ?? 0} onChange={e => { const arr = [...formData.price_options]; arr[idx] = { ...arr[idx], price: Number(e.target.value) }; setFormData({ ...formData, price_options: arr }); }} className="w-full pl-11 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                           </div>
+                           <div className="relative w-28">
+                             <input type="number" min={0} value={opt.capacity ?? ''} placeholder="容量" onChange={e => { const arr = [...formData.price_options]; arr[idx] = { ...arr[idx], capacity: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) }; setFormData({ ...formData, price_options: arr }); }} className="w-full pr-7 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" title="名額上限（留空＝不限）" />
+                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">名</span>
                            </div>
                            <button type="button" onClick={() => { const arr = formData.price_options.filter((_: any, i: number) => i !== idx); setFormData({ ...formData, price_options: arr.length ? arr : null }); }} className="p-2 text-red-400 hover:text-red-600" title="刪除方案"><Trash2 size={16} /></button>
                          </div>
                        ))}
                      </div>
-                     <p className="text-xs text-amber-700 mt-2">⚠️ 設定方案後，報名者須擇一，付款金額＝所選方案價；此時上方「費用／會員價」將不套用。</p>
+                     <p className="text-xs text-amber-700 mt-2">⚠️ 設定方案後，報名者須擇一，付款金額＝所選方案價；此時上方「費用／會員價」將不套用。「容量」為各方案獨立名額（留空＝不限），額滿後該方案鎖住、其他照常，接龍走候補。</p>
                    </>
                  ) : (
                    <p className="text-xs text-gray-400">需要「團體包車 / 自行前往」這類多種收費時才設定；一般單一價格留空即可。</p>

@@ -226,7 +226,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
           <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
             <span className="font-bold">💰 報名費用（與一般報名一致，於「活動設定」管理）：</span>
             {hasPlans ? (
-              planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{i < planOptions.length - 1 ? '、' : ''}</span>)
+              planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{(o as any).capacity != null ? `（${(o as any).capacity} 名）` : ''}{i < planOptions.length - 1 ? '、' : ''}</span>)
             ) : feeAmount > 0 ? (
               <span className="ml-1">一般 NT${feeAmount.toLocaleString()}{memberFeeAmount.trim() !== '' && Number(memberFeeAmount) !== feeAmount && <>　/　會員 NT${Number(memberFeeAmount).toLocaleString()}</>}</span>
             ) : (

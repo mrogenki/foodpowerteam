@@ -62,6 +62,7 @@ const SignupChain: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   // 多方案收費（與一般報名同一套，來源：activities.price_options）
   const [selectedPlanIdx, setSelectedPlanIdx] = useState(0);
+  const [planCaps, setPlanCaps] = useState<Record<string, { capacity: number | null; taken: number; is_full: boolean }>>({});
   // 折扣券
   const [couponCode, setCouponCode] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
@@ -77,12 +78,18 @@ const SignupChain: React.FC = () => {
 
   const fetchList = async (id: string) => {
     if (!supabase) return;
-    const [{ data: settingsData }, { data: rosterData, error: rosterError }] = await Promise.all([
+    const [{ data: settingsData }, { data: rosterData, error: rosterError }, { data: capData }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', id).maybeSingle(),
       // 合併名單：接龍 + 一般活動報名（伺服端 RPC，只回公開欄位，不含 phone/email）
       supabase.rpc('public_activity_roster', { p_activity_id: id }),
+      supabase.rpc('activity_plan_capacity', { p_activity_id: id }),
     ]);
     setSettings((settingsData as SignupSettings) || null);
+    {
+      const m: Record<string, { capacity: number | null; taken: number; is_full: boolean }> = {};
+      (Array.isArray(capData) ? capData : []).forEach((r: any) => { m[r.plan_name] = { capacity: r.capacity, taken: r.taken, is_full: r.is_full }; });
+      setPlanCaps(m);
+    }
     if (!rosterError && rosterData) {
       const mapped = (rosterData as any[]).map(r => ({
         id: r.entry_id, name: r.name, company: r.company,
@@ -462,16 +469,24 @@ const SignupChain: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">報名方案 <span className="text-red-600">*</span></label>
                   <div className="space-y-2">
-                    {planOptions.map((opt, idx) => (
-                      <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedPlanIdx === idx ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
-                        <span className="flex items-center gap-2">
-                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
-                          <input type="radio" name="signup-plan" className="hidden" checked={selectedPlanIdx === idx} onChange={() => setSelectedPlanIdx(idx)} />
-                          <span className="font-medium text-gray-800">{opt.name}</span>
-                        </span>
-                        <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
-                      </label>
-                    ))}
+                    {planOptions.map((opt, idx) => {
+                      const cap = planCaps[opt.name];
+                      const full = !!cap?.is_full;
+                      const remain = (cap && cap.capacity != null) ? Math.max(0, cap.capacity - cap.taken) : null;
+                      return (
+                        <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedPlanIdx === idx ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                          <span className="flex items-center gap-2">
+                            <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
+                            <input type="radio" name="signup-plan" className="hidden" checked={selectedPlanIdx === idx} onChange={() => setSelectedPlanIdx(idx)} />
+                            <span className="font-medium text-gray-800">{opt.name}
+                              {full ? <span className="ml-2 text-xs font-bold text-amber-600">已滿・排候補</span>
+                                : remain != null ? <span className="ml-2 text-xs text-gray-400">剩 {remain} 位</span> : null}
+                            </span>
+                          </span>
+                          <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

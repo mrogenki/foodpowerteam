@@ -48,6 +48,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
   const [pointsApplied, setPointsApplied] = useState(0);
   // 多方案收費：報名者選擇的方案 index（預設第一個）
   const [selectedPlanIdx, setSelectedPlanIdx] = useState(0);
+  // 各方案容量/已佔用（name → {capacity, taken, is_full}）
+  const [planCaps, setPlanCaps] = useState<Record<string, { capacity: number | null; taken: number; is_full: boolean }>>({});
   // 名額合併：此活動若有開接龍且已額滿（接龍+一般報名合計），前台直接擋下並引導去接龍候補
   const [signupFull, setSignupFull] = useState(false);
   // 稍後付款：報名成功畫面顯示補繳連結
@@ -60,6 +62,23 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
       setSignupFull(!!(c?.enabled && c?.is_full));
     });
   }, [id]);
+
+  // 各方案容量：有設方案時載入每個方案的剩餘/額滿，並預設選到第一個未滿方案
+  useEffect(() => {
+    if (!id || !supabase || !activity) return;
+    const opts = Array.isArray(activity.price_options)
+      ? activity.price_options.filter(o => o && String(o.name || '').trim() !== '')
+      : [];
+    if (opts.length === 0) return;
+    supabase.rpc('activity_plan_capacity', { p_activity_id: String(id) }).then(({ data }) => {
+      const m: Record<string, { capacity: number | null; taken: number; is_full: boolean }> = {};
+      (Array.isArray(data) ? data : []).forEach((r: any) => { m[r.plan_name] = { capacity: r.capacity, taken: r.taken, is_full: r.is_full }; });
+      setPlanCaps(m);
+      const firstOpen = opts.findIndex(o => !m[o.name]?.is_full);
+      if (firstOpen >= 0) setSelectedPlanIdx(firstOpen);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, activity]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -291,6 +310,11 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
        return;
     }
 
+    if (hasPlans && selectedPlan && planCaps[selectedPlan.name]?.is_full) {
+      alert('您選擇的方案已額滿，請改選其他方案，或前往接龍候補');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // 產生訂單編號 (格式: 活動ID後3碼 + 時間戳)
@@ -486,7 +510,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                   查看其他活動
                 </button>
               </div>
-            ) : signupFull ? (
+            ) : (signupFull && !hasPlans) ? (
               // 名額已滿：引導去接龍報名候補
               <div className="text-center py-8">
                 <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -579,17 +603,31 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                     <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
                       <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1"><Ticket size={16} /> 報名方案（請擇一）</label>
                       <div className="space-y-2">
-                        {planOptions.map((opt, idx) => (
-                          <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedPlanIdx === idx ? 'bg-red-50 border-red-300 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
-                            <span className="flex items-center gap-2">
-                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
-                              <input type="radio" name="plan" className="hidden" checked={selectedPlanIdx === idx} onChange={() => setSelectedPlanIdx(idx)} />
-                              <span className="font-medium text-gray-800">{opt.name}</span>
-                            </span>
-                            <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
-                          </label>
-                        ))}
+                        {planOptions.map((opt, idx) => {
+                          const cap = planCaps[opt.name];
+                          const full = !!cap?.is_full;
+                          const remain = (cap && cap.capacity != null) ? Math.max(0, cap.capacity - cap.taken) : null;
+                          return (
+                            <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-lg border transition-all ${full ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed' : selectedPlanIdx === idx ? 'bg-red-50 border-red-300 shadow-sm cursor-pointer' : 'bg-white border-gray-200 hover:border-gray-300 cursor-pointer'}`}>
+                              <span className="flex items-center gap-2">
+                                <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx && !full ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && !full && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
+                                <input type="radio" name="plan" className="hidden" disabled={full} checked={selectedPlanIdx === idx} onChange={() => { if (!full) setSelectedPlanIdx(idx); }} />
+                                <span className="font-medium text-gray-800">{opt.name}
+                                  {full ? <span className="ml-2 text-xs font-bold text-red-500">已額滿</span>
+                                    : remain != null ? <span className="ml-2 text-xs text-gray-400">剩 {remain} 位</span> : null}
+                                </span>
+                              </span>
+                              <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
+                            </label>
+                          );
+                        })}
                       </div>
+                      {planOptions.every(o => planCaps[o.name]?.is_full) && (
+                        <p className="text-xs text-amber-600 mt-2">所有方案皆已額滿，可
+                          <button type="button" onClick={() => navigate(`/signup/${activity.id}`)} className="text-red-600 font-bold underline mx-1">前往接龍候補</button>
+                          ，有人取消將自動遞補。
+                        </p>
+                      )}
                     </div>
                   )}
 

@@ -28,10 +28,11 @@ export enum PaymentStatus {
 
 export type ActivityAudience = 'public' | 'member_only' | 'club';
 
-// 活動報名方案（票種）：名稱 + 價格
+// 活動報名方案（票種）：名稱 + 價格 + 容量（選填，空＝不限）
 export interface PriceOption {
   name: string;
   price: number;
+  capacity?: number | null;
 }
 
 // 統一活動型別 — Phase 3 後三表合一，以 audience 區分對象
