@@ -31,8 +31,11 @@
 # 安裝依賴
 npm install
 
-# 本機開發（port 3000）
+# 本機開發（Claude 預覽用 .claude/launch.json 固定 port 3004；npm run dev 為 Vite 預設）
 npm run dev
+
+# 設定 Edge Function secret（例如排程密鑰）
+supabase secrets set CRON_SECRET=xxxx --project-ref igowitmbnlvzznqgfpfl
 
 # TypeScript 型別檢查（改完一定要跑）
 npx tsc --noEmit
@@ -63,12 +66,13 @@ supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmb
 | `festival-apply` | 燒肉/火鍋祭合作報名寫入 + Telegram 通知 |
 | `create-admin` | 總管理員新增後台帳號（verify_jwt=true）|
 | `send-email` | **共用寄信（Resend）**。所有信件 HTML 版型寫在此函式（`templates` map），前端 `supabase.functions.invoke('send-email',{body:{template,params}})`、Edge Function 以 service role JWT POST 呼叫。verify_jwt=true。|
+| `release-expired` | **排程：繳費提醒＋逾時釋位**（詳見下方專節）。cron 每 10 分鐘以 pg_net 呼叫，靠 `x-cron-secret` 保護（verify_jwt=false）。|
 
 付款相關 RPC（SECURITY DEFINER）：`handle_festival_payment`、`handle_renewal_payment`（含自動延長會籍、冪等）、`confirm_payment_paid`（後備跨表補寫）、`points_commit`/`points_refund`、`check_payment_status`。
 
 ### 📧 寄信（2026-09 由 EmailJS 全面改為 Resend）
 - **統一走 `send-email` Edge Function（Resend）**，前端已移除 `@emailjs/browser`；信件版型全部在 `supabase/functions/send-email/index.ts` 的 `templates`：
-  `signup_confirm`(接龍)、`activity_confirm`(一般活動)、`receipt`(收據)、`payment_notice`(通用繳費/入會/續費補寄)、`paid_confirm`(付款成功)、`renewal_reminder`(續約/喚醒)。
+  `signup_confirm`(接龍)、`activity_confirm`(一般活動；含自主收款繳費方式)、`receipt`(收據)、`payment_notice`(通用繳費/入會/續費補寄)、`paid_confirm`(付款成功)、`renewal_reminder`(續約/喚醒)、`festival_apply_received`(燒肉/火鍋祭合作報名已收到)、`payment_reminder`(報名後未繳費提醒)、`registration_cancelled`(逾時未繳費已取消)、`application_payment_reminder`(入會費未繳提醒)。
 - 需要的 Supabase secrets：`RESEND_API_KEY`（必要）、`RESEND_FROM`（預設 `食在力量 <noreply@foodpowerteam.com>`，網域已在 Resend 驗證）、`RESEND_REPLY_TO`（選填）。
 - 新增一種信：在 `send-email` 的 `templates` 加一個 builder → `deploy` → 呼叫端傳 `{template,params}`。**勿再用 EmailJS**。
 - 舊的 `EMAILJS_*` secrets 已無用，可自行於後台刪除。
@@ -93,6 +97,10 @@ supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmb
 | ApplicationPayment | `/pay-application/:id` | 入會費付款 |
 | ActivityPayment | `/pay-activity/:id` | 活動報名付款 |
 | RenewalPayment | `/pay-renewal/:id` | 續費付款 |
+| SignupChain | `/signup/:id` | 接龍報名（名單即時公開、候補遞補）|
+| SignupPayment | `/pay-signup/:id?token=` | 接龍報名付款 |
+| FestivalApply | `/festival/apply` | 燒肉/火鍋祭合作報名表 |
+| ArticleDetail | `/article/:slug` | 專欄文章（含會員付費牆）|
 
 ---
 
@@ -121,13 +129,16 @@ supabase functions deploy newebpay-notify --no-verify-jwt --project-ref igowitmb
 ## 資料庫主要資料表（Supabase）
 
 ```
-activities          協會活動
-member_activities   會員專屬活動
+activities          協會活動（報名所有條件的唯一來源，見「報名條件統一」節）
+member_activities   會員專屬活動（舊表，前台已改用 activities + audience）
 club_activities     俱樂部活動
-registrations       協會活動報名
-member_registrations 會員活動報名
+registrations       協會活動報名（含 plan_name、reminder_sent_at）
+member_registrations 會員活動報名（舊表）
+signup_settings     接龍設定（僅存「接龍是否開啟」+ 自主收款模式等；價格/名額/狀態已移到 activities）
+signup_entries      接龍報名記錄（含 plan_name、reminder_sent_at、fee_amount 鎖定值）
 members             會員資料
-member_applications 入會申請
+member_applications 入會申請（含 reminder_sent_at）
+article_views       文章瀏覽計數（slug → views）
 admins              後台管理員
 coupons             折扣券
 milestones          大事記
@@ -235,6 +246,55 @@ VITE_SUPABASE_FUNCTION_URL=
 延長一年的規則與 `handle_renewal_payment` RPC 一致：未過期從原到期日 +1 年，已過期／無日期從台北今天 +1 年。2/29 加一年會溢位到 3/1，程式會退回該月最後一天，與 Postgres 的 `INTERVAL '1 year'` 行為對齊。
 
 有多筆符合時，提示的是「目前最有效」那筆（排序規則同 `member_bind_line`）。
+
+### 🧱 報名條件統一到「活動」（2026-10，重要架構）
+
+**核心原則：一般報名（活動頁）與接龍報名共用同一套條件，全部存在 `activities` 表，接龍不再重複設定。** 之前條件散在 `signup_settings`（接龍）與 `activities`（一般），會各自為政、互相衝突；已全部收斂到 `activities`：
+
+| 條件 | activities 欄位 | 說明 |
+|------|----------------|------|
+| 一般價/會員價 | `price` / `member_price` | 有設方案時不套用 |
+| 報名方案（票種） | `price_options` jsonb `[{name,price,capacity}]` | 見下節 |
+| 總名額 | `capacity` int（null/0＝不限） | 無方案時用 |
+| 開放/截止 | `status`（active/closed） | 同時控制一般報名與接龍 |
+| 收款方式 | `payment_mode`（online/self） | self＝主辦自主收款，不走藍新 |
+| 自主收款說明 | `collect_note` | 報名成功頁/信件顯示 |
+| 主辦人 | `host_name` / `host_phone` | 一般報名頁與接龍頁都顯示聯絡框 |
+| 繳費截止 | `payment_deadline` timestamptz | **絕對時間**；預設活動開始前 24h（表單可調） |
+
+- **`signup_settings` 只剩「接龍是否開啟」這件事**（row 存在＝有開接龍入口）＋若干 vestigial 鏡像欄位（`capacity/fee_amount/member_fee_amount/registration_open/payment_mode/collect_note/host_*/payment_deadline_hours` 皆已不是真相來源，沒有任何邏輯讀它們做決策；`signup_admin_update` 仍寫入當無害鏡像）。
+- **接龍面板（`SignupAdminPanel`）只剩「開啟接龍入口 + 名單管理」**，條件區改為唯讀彙總，提示到活動設定修改。
+- 相關 RPC 一律改讀 `activities`：`signup_register`、`activity_signup_capacity`、`get_signup_payment_info`、`signup_fill`、`signup_release_expired`。
+- **一般報名新增自主收款流程**：`activity.payment_mode='self'` 時 ActivityDetail 不走藍新、顯示繳費方式＋主辦人、報名維持未付款、後台標記已付。
+
+### 🎫 報名方案/票種 + 各方案獨立容量（2026-10）
+
+- `activities.price_options` = `[{name, price, capacity?}]`（容量選填，null＝不限）。有設方案時報名者**擇一**，付款金額＝所選方案價（會員價不套用）。
+- 報名記錄存選擇的方案：`registrations.plan_name`、`signup_entries.plan_name`。
+- **各方案容量獨立**：已佔用＝該方案的（一般報名＋接龍正取，排除退費）。RPC `activity_plan_capacity(p_activity_id)` 回每方案 `capacity/taken/is_full`。
+- 額滿行為：一般報名該方案鎖住不可選、其他照常、全滿導向接龍候補；接龍該方案標「已滿・排候補」仍可報名候補。
+- `signup_fill`（候補遞補）已重寫為**支援各方案**並計入一般報名人數（讀 `activities` 容量）；`signup_register` 依方案容量判定正取/候補。
+
+### ⏰ 繳費提醒與逾時釋位（`release-expired` Edge Function，2026-10）
+
+**唯一一條提醒規則，避免雙重提醒：**
+- **提醒**：報名/申請後**滿 24 小時仍未付款** → 寄一次繳費提醒（`reminder_sent_at` 去重）。適用：活動報名（含稍後付款）、接龍、新會員入會費（`member_applications`）。
+- **逾時取消**：活動有設 `payment_deadline` 且**已過** → 寄「報名已取消」信 → 刪除（一般報名先 `points_refund` 退凍結點數）→ `signup_fill` 遞補候補。入會申請只提醒、不自動取消。
+- 同一次 cron 對一個活動：已過截止走取消（跳過提醒），否則走提醒 → 兩者不會同時觸發。
+- **只處理線上收款（`payment_mode='online'`）且活動日期未過**；自主收款不自動提醒/釋位（由主辦人工處理）。
+- **cron**：jobname `signup-release-expired`，每 10 分鐘以 `pg_net` POST 到 `release-expired`，帶 `x-cron-secret`（= Supabase secret `CRON_SECRET`）。切換規則前已把「既有超過 24h 的未付款」backfill 成已提醒，避免一次性補寄。
+- 去重欄位：`registrations/signup_entries/member_applications` 的 `reminder_sent_at`。
+- 新增/改提醒信：改 `send-email` 的 `payment_reminder` / `application_payment_reminder` / `registration_cancelled`。
+
+### 📊 文章瀏覽計數 + Vercel Analytics（2026-10）
+
+- **全站流量**：`@vercel/analytics/react` 的 `<Analytics />`（在 `index.tsx`）→ Vercel 專案 Analytics 分頁看（含 SPA 分路徑）。
+- **單篇瀏覽計數**：`article_views` 表 + `bump_article_view(p_slug)` RPC（anon 可呼叫、SECURITY DEFINER）。ArticleDetail 每瀏覽器 session 每篇計一次（SSR/預渲染不計）；ArticleManager 顯示每篇次數並可「最新/最熱門」排序。
+
+### 🎂 會員生日資料品質（2026-10 排查結論）
+
+- 部分會員生日不正確，根因是**創始會員批次匯入**（2026-02-10 匯 200 筆、02-13 匯 58 筆，從舊名冊）沿用了舊資料的錯誤，**非程式 bug**（`members.birthday` 是 text、前端 `type=date` 直接存字串、顯示用 `.split('-')`，皆無時區位移；匯入批次日期分布正常、無系統性轉換）。
+- ⚠️ 生日存錯會導致 `member_bind_line`（手機+姓名+生日比對）綁定失敗 → 進不了會員專區。要修需人工對正確名冊批次更新。
 
 ---
 
