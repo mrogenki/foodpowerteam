@@ -29,27 +29,26 @@ serve(async (req) => {
     } catch (e) { console.error('[release-expired] email error', template, e) }
   }
 
-  const summary = { cancelled: 0, reminded: 0, activities: 0 }
-  const REMIND_LEAD_MS = 24 * 3600 * 1000 // 逾時前 24 小時提醒
+  const summary = { cancelled: 0, reminded: 0, apps_reminded: 0, activities: 0 }
+  const REMIND_AFTER_MS = 24 * 3600 * 1000 // 報名/申請後 24 小時提醒
+  const nowMs = Date.now()
+  const reminderCutoff = new Date(nowMs - REMIND_AFTER_MS).toISOString() // created_at 早於此＝已滿 24h
 
-  // 只處理：線上收款 + 有設繳費截止 + 活動日期尚未過（避免對已結束活動的舊報名寄取消信）
+  // 線上收款 + 活動日期尚未過（有無截止都處理：有截止→到時取消；提醒一律報名後 24h）
   const todayTPE = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' }) // YYYY-MM-DD
   const { data: acts } = await sb.from('activities')
     .select('id,title,date,time,location,payment_deadline,payment_mode')
-    .not('payment_deadline', 'is', null)
     .eq('payment_mode', 'online')
     .gte('date', todayTPE)
 
   for (const a of (acts || [])) {
-    const deadlineMs = a.payment_deadline ? new Date(a.payment_deadline).getTime() : NaN
-    if (!deadlineMs || isNaN(deadlineMs)) continue
     summary.activities++
-    const nowMs = Date.now()
-    const deadlineText = new Date(deadlineMs).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const deadlineMs = a.payment_deadline ? new Date(a.payment_deadline).getTime() : null
+    const deadlineText = deadlineMs ? new Date(deadlineMs).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
     const meta = { activity_title: a.title, activity_date: a.date, activity_time: a.time, activity_location: a.location }
 
-    // ── 逾時取消（現在已超過截止時間）──
-    if (nowMs >= deadlineMs) {
+    // ── 逾時取消（有設截止且已超過）──
+    if (deadlineMs && nowMs >= deadlineMs) {
       const { data: expEntries } = await sb.from('signup_entries')
         .select('id,name,email').eq('activity_id', a.id)
         .eq('status', 'confirmed').eq('payment_status', 'unpaid')
@@ -73,31 +72,45 @@ serve(async (req) => {
       continue // 已截止就不再寄提醒
     }
 
-    // ── 繳費提醒（逾時前 24 小時內、尚未提醒）──
-    if (nowMs >= deadlineMs - REMIND_LEAD_MS) {
-      const { data: remEntries } = await sb.from('signup_entries')
-        .select('id,name,email,fee_amount,cancel_token').eq('activity_id', a.id)
-        .eq('status', 'confirmed').eq('payment_status', 'unpaid').is('reminder_sent_at', null)
-      for (const e of (remEntries || [])) {
-        await sendEmail('payment_reminder', {
-          to_name: e.name, to_email: e.email, ...meta, fee: e.fee_amount,
-          pay_link: `${SITE}/pay-signup/${e.id}?token=${e.cancel_token}`, deadline_text: deadlineText,
-        })
-        await sb.from('signup_entries').update({ reminder_sent_at: new Date().toISOString() }).eq('id', e.id)
-        summary.reminded++
-      }
-      const { data: remRegs } = await sb.from('registrations')
-        .select('id,name,email,paid_amount').eq('activityId', a.id)
-        .eq('payment_status', 'pending').is('reminder_sent_at', null)
-      for (const r of (remRegs || [])) {
-        await sendEmail('payment_reminder', {
-          to_name: r.name, to_email: r.email, ...meta, fee: r.paid_amount,
-          pay_link: `${SITE}/pay-activity/${r.id}`, deadline_text: deadlineText,
-        })
-        await sb.from('registrations').update({ reminder_sent_at: new Date().toISOString() }).eq('id', r.id)
-        summary.reminded++
-      }
+    // ── 繳費提醒（報名後滿 24h、尚未提醒、尚未付款）──
+    const { data: remEntries } = await sb.from('signup_entries')
+      .select('id,name,email,fee_amount,cancel_token').eq('activity_id', a.id)
+      .eq('status', 'confirmed').eq('payment_status', 'unpaid')
+      .is('reminder_sent_at', null).lt('created_at', reminderCutoff)
+    for (const e of (remEntries || [])) {
+      await sendEmail('payment_reminder', {
+        to_name: e.name, to_email: e.email, ...meta, fee: e.fee_amount,
+        pay_link: `${SITE}/pay-signup/${e.id}?token=${e.cancel_token}`, deadline_text: deadlineText,
+      })
+      await sb.from('signup_entries').update({ reminder_sent_at: new Date().toISOString() }).eq('id', e.id)
+      summary.reminded++
     }
+    const { data: remRegs } = await sb.from('registrations')
+      .select('id,name,email,paid_amount').eq('activityId', a.id)
+      .eq('payment_status', 'pending')
+      .is('reminder_sent_at', null).lt('created_at', reminderCutoff)
+    for (const r of (remRegs || [])) {
+      await sendEmail('payment_reminder', {
+        to_name: r.name, to_email: r.email, ...meta, fee: r.paid_amount,
+        pay_link: `${SITE}/pay-activity/${r.id}`, deadline_text: deadlineText,
+      })
+      await sb.from('registrations').update({ reminder_sent_at: new Date().toISOString() }).eq('id', r.id)
+      summary.reminded++
+    }
+  }
+
+  // ── 新會員申請：入會費逾 24h 未繳 → 提醒一次 ──
+  const { data: apps } = await sb.from('member_applications')
+    .select('id,name,email,paid_amount')
+    .eq('payment_status', 'pending')
+    .is('reminder_sent_at', null).lt('created_at', reminderCutoff)
+  for (const ap of (apps || [])) {
+    await sendEmail('application_payment_reminder', {
+      to_name: ap.name, to_email: ap.email, fee: ap.paid_amount || 5000,
+      pay_link: `${SITE}/pay-application/${ap.id}`,
+    })
+    await sb.from('member_applications').update({ reminder_sent_at: new Date().toISOString() }).eq('id', ap.id)
+    summary.apps_reminded++
   }
 
   return new Response(JSON.stringify({ ok: true, ...summary }), { headers: { 'Content-Type': 'application/json' } })

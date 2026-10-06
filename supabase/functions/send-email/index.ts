@@ -155,26 +155,47 @@ const templates: Record<string, (p: any) => Built> = {
     return { subject: `【活動報名】${title} — 報名確認`, html: layout({ title, bodyHtml: body }) };
   },
 
-  // 繳費提醒（逾時自動釋位前提醒）
+  // 繳費提醒（報名後尚未繳費）
   payment_reminder: (p): Built => {
     const title = String(p.activity_title || '活動');
     const who = esc(p.to_name || '');
+    const hasDeadline = !!(p.deadline_text && String(p.deadline_text).trim());
     const detail = rows([
       ['活動名稱', esc(title)],
       ['日期', esc(p.activity_date)],
       ['時間', esc(p.activity_time)],
       ['地點', esc(p.activity_location)],
       ['應繳金額', money(p.fee)],
-      ['繳費期限', esc(p.deadline_text)],
+      ...(hasDeadline ? [['繳費期限', esc(p.deadline_text)]] : []),
     ]);
     const cta = p.pay_link ? button('立即前往繳費', p.pay_link) : '';
+    const notice = hasDeadline
+      ? `請於 <strong>${esc(p.deadline_text)}</strong> 前完成，逾時名額將自動釋出給候補。`
+      : `請儘快完成繳費以保留名額。`;
     const body = `
       <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
-      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">提醒您，您報名的活動<strong>尚未完成繳費</strong>。請於 <strong>${esc(p.deadline_text)}</strong> 前完成，逾時名額將自動釋出給候補。</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">提醒您，您報名的活動<strong>尚未完成繳費</strong>。${notice}</p>
       <div style="padding:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">${detail}</div>
       ${cta}
     `;
     return { subject: `【繳費提醒】${title} — 請儘快完成繳費`, html: layout({ title, bodyHtml: body }) };
+  },
+
+  // 入會費繳納提醒（新會員申請後尚未繳費）
+  application_payment_reminder: (p): Built => {
+    const who = esc(p.to_name || '');
+    const detail = rows([
+      ['項目', '入會費'],
+      ['應繳金額', money(p.fee)],
+    ]);
+    const cta = p.pay_link ? button('立即完成繳費', p.pay_link) : '';
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">感謝您申請加入「食在力量」！您的入會申請<strong>尚未完成入會費繳納</strong>，請點下方按鈕完成繳費，以利後續審核作業。</p>
+      <div style="padding:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">${detail}</div>
+      ${cta}
+    `;
+    return { subject: `【入會費繳納提醒】食在力量 — 請完成繳費`, html: layout({ title: '入會費繳納提醒', bodyHtml: body }) };
   },
 
   // 報名已取消（逾時未付款自動釋位）
