@@ -60,6 +60,8 @@ const SignupChain: React.FC = () => {
   const [referrer, setReferrer] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 多方案收費（與一般報名同一套，來源：activities.price_options）
+  const [selectedPlanIdx, setSelectedPlanIdx] = useState(0);
   // 折扣券
   const [couponCode, setCouponCode] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
@@ -151,9 +153,17 @@ const SignupChain: React.FC = () => {
   const isFull = remain <= 0;
   const myIds = new Set(mySignups.map(m => m.id));
 
+  // 報名方案（票種）：活動若設定 price_options，接龍費用改依所選方案（不套用會員價）
+  const planOptions = Array.isArray(activity?.price_options)
+    ? activity!.price_options!.filter(o => o && String(o.name || '').trim() !== '')
+    : [];
+  const hasPlans = planOptions.length > 0;
+  const selectedPlan = hasPlans ? (planOptions[selectedPlanIdx] || planOptions[0]) : null;
+
   const selfCollect = settings?.payment_mode === 'self';
-  const isFree = (settings?.fee_amount || 0) <= 0;   // 免費活動：無需繳費
-  const hasMemberPrice = settings?.member_fee_amount != null && settings.member_fee_amount !== settings.fee_amount;
+  const effectiveFee = hasPlans ? Number(selectedPlan?.price || 0) : (settings?.fee_amount || 0);
+  const isFree = effectiveFee <= 0;   // 免費活動：無需繳費
+  const hasMemberPrice = !hasPlans && settings?.member_fee_amount != null && settings.member_fee_amount !== settings.fee_amount;
   const goPay = (id: string, token: string) => navigate(`/pay-signup/${id}?token=${token}`);
 
   const applyCoupon = async () => {
@@ -191,6 +201,7 @@ const SignupChain: React.FC = () => {
         p_company_title: companyTitle, p_tax_id: taxId, p_title: jobTitle, p_referrer: referrer, p_notes: notes,
         p_coupon_code: couponStatus === 'valid' ? couponCode.trim() : '',
         p_line_user_id: lineUserIdRef.current || null,
+        p_plan_name: hasPlans ? (selectedPlan?.name || null) : null,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -322,7 +333,12 @@ const SignupChain: React.FC = () => {
               {activity.date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 shrink-0 opacity-80" />{activity.date}</div>}
               {activity.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 shrink-0 opacity-80" />{activity.time}</div>}
               {activity.location && <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4 shrink-0 opacity-80" />{activity.location}</div>}
-              {settings.fee_amount > 0 && (
+              {hasPlans ? (
+                <div className="sm:col-span-2 font-bold flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {planOptions.map((o, i) => <span key={i}>{o.name} NT$ {Number(o.price || 0).toLocaleString()}</span>)}
+                  {selfCollect && <span className="font-normal text-orange-100">（向主辦繳交）</span>}
+                </div>
+              ) : settings.fee_amount > 0 && (
                 hasMemberPrice ? (
                   <div className="sm:col-span-2 font-bold flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span>一般 NT$ {settings.fee_amount.toLocaleString()}</span>
@@ -439,6 +455,23 @@ const SignupChain: React.FC = () => {
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={300} rows={2} placeholder="若有特殊需求請在此說明"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent" />
               </div>
+              {hasPlans && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">報名方案 <span className="text-red-600">*</span></label>
+                  <div className="space-y-2">
+                    {planOptions.map((opt, idx) => (
+                      <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedPlanIdx === idx ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                        <span className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
+                          <input type="radio" name="signup-plan" className="hidden" checked={selectedPlanIdx === idx} onChange={() => setSelectedPlanIdx(idx)} />
+                          <span className="font-medium text-gray-800">{opt.name}</span>
+                        </span>
+                        <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               {!isFree && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">折扣碼（選填）</label>

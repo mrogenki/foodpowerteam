@@ -144,6 +144,7 @@ export interface SignupEntry {
   paid_amount?: number;
   member_id?: string | null;  // 報名當下命中的在會會員（有值＝套用會員價）
   fee_amount?: number | null; // 報名當下鎖定的應付價
+  plan_name?: string | null;  // 報名者選擇的方案名稱（活動有設定 price_options 時）
   coupon_id?: string | null;  // 報名時套用的折扣券
   self_pay_method?: string | null;      // 自主收款：報名者回報的繳費方式
   self_pay_ref?: string | null;         // 自主收款：轉帳末五碼／備註

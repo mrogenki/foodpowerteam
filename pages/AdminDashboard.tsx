@@ -1326,6 +1326,7 @@ const ActivityManager: React.FC<{
         '統一編號': s.tax_id || '',
         '報到狀態': s.check_in_status ? '已報到' : '未報到',
         '付款狀態': s.payment_status === 'paid' ? '已付款' : (s.payment_status === 'refunded' ? '已退費' : '待付款'),
+        '報名方案': s.plan_name || '',
         '付款金額': s.paid_amount ?? s.fee_amount ?? '',
         '金流單號': s.merchant_order_no || '',
         '折扣碼': '',

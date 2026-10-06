@@ -20,6 +20,8 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
   const [hostPhone, setHostPhone] = useState('');
   const [entries, setEntries] = useState<SignupEntry[]>([]);
   const [activityInfo, setActivityInfo] = useState<{ title?: string; date?: string; location?: string }>({});
+  const [planOptions, setPlanOptions] = useState<Array<{ name: string; price: number }>>([]);
+  const hasPlans = planOptions.length > 0;
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -29,9 +31,12 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options').eq('id', activityId).maybeSingle(),
     ]);
-    if (act) setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
+    if (act) {
+      setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
+      setPlanOptions(Array.isArray(act.price_options) ? act.price_options.filter((o: any) => o && String(o.name || '').trim() !== '') : []);
+    }
     if (s) {
       const ss = s as SignupSettings;
       setEnabled(true);
@@ -155,8 +160,11 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     // 開頭：活動標題 + 日期 + 地點
     const header = [activityInfo.title, activityInfo.date, activityInfo.location].filter(Boolean).join('　');
     if (header) lines.push(header);
-    // 費用（含會員價）
-    if (feeAmount > 0) {
+    // 費用（含會員價 / 多方案）
+    if (hasPlans) {
+      const suffix = paymentMode === 'self' ? '（向主辦繳交）' : '';
+      lines.push('費用｜' + planOptions.map(o => `${o.name} NT$${Number(o.price || 0).toLocaleString()}`).join('・') + suffix);
+    } else if (feeAmount > 0) {
       const mfa = memberFeeAmount.trim() === '' ? null : (parseInt(memberFeeAmount, 10) || 0);
       const suffix = paymentMode === 'self' ? '（向主辦繳交）' : '';
       if (mfa != null && mfa !== feeAmount) {
@@ -214,6 +222,13 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             </p>
           </div>
 
+          {hasPlans && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+              <span className="font-bold">🎫 此活動已設定報名方案：</span>
+              {planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{i < planOptions.length - 1 ? '、' : ''}</span>)}
+              <p className="text-xs text-red-600/80 mt-1">接龍與一般報名都會依此方案收費，下方「報名費用／會員價」將不套用（如需改回單一價格，請到活動設定清空方案）。</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
@@ -307,7 +322,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
                       {entries.map((r, i) => (
                         <tr key={r.id} className="border-t">
                           <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                          <td className="px-3 py-2 font-medium">{r.name}</td>
+                          <td className="px-3 py-2 font-medium">{r.name}{r.plan_name && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">{r.plan_name}</span>}</td>
                           <td className="px-3 py-2">{r.company || '—'}</td>
                           <td className="px-3 py-2">{r.title || '—'}</td>
                           <td className="px-3 py-2">{r.phone || '—'}</td>
