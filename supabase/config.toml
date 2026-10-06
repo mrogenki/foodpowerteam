@@ -12,3 +12,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.newebpay-refund]
 verify_jwt = false
+[functions.release-expired]
+verify_jwt = false

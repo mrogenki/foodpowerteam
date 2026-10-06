@@ -155,6 +155,40 @@ const templates: Record<string, (p: any) => Built> = {
     return { subject: `【活動報名】${title} — 報名確認`, html: layout({ title, bodyHtml: body }) };
   },
 
+  // 繳費提醒（逾時自動釋位前提醒）
+  payment_reminder: (p): Built => {
+    const title = String(p.activity_title || '活動');
+    const who = esc(p.to_name || '');
+    const detail = rows([
+      ['活動名稱', esc(title)],
+      ['日期', esc(p.activity_date)],
+      ['時間', esc(p.activity_time)],
+      ['地點', esc(p.activity_location)],
+      ['應繳金額', money(p.fee)],
+      ['繳費期限', esc(p.deadline_text)],
+    ]);
+    const cta = p.pay_link ? button('立即前往繳費', p.pay_link) : '';
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">提醒您，您報名的活動<strong>尚未完成繳費</strong>。請於 <strong>${esc(p.deadline_text)}</strong> 前完成，逾時名額將自動釋出給候補。</p>
+      <div style="padding:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">${detail}</div>
+      ${cta}
+    `;
+    return { subject: `【繳費提醒】${title} — 請儘快完成繳費`, html: layout({ title, bodyHtml: body }) };
+  },
+
+  // 報名已取消（逾時未付款自動釋位）
+  registration_cancelled: (p): Built => {
+    const title = String(p.activity_title || '活動');
+    const who = esc(p.to_name || '');
+    const body = `
+      <p style="margin:0 0 4px;font-size:15px;">親愛的 <strong>${who}</strong> 您好：</p>
+      <p style="margin:0 0 18px;font-size:14px;color:#4b5563;line-height:1.8;">您報名的「<strong>${esc(title)}</strong>」因<strong>逾時未完成繳費</strong>，名額已自動釋出。<br>若仍想參加，歡迎重新報名；如有疑問請與主辦單位聯繫。造成不便敬請見諒。</p>
+      <div style="padding:16px;background:#f9fafb;border-radius:12px;font-size:14px;color:#6b7280;">活動：${esc(title)}</div>
+    `;
+    return { subject: `【報名已取消】${title} — 逾時未繳費`, html: layout({ title, bodyHtml: body }) };
+  },
+
   // 線上收據信（附線上收據連結）
   receipt: (p): Built => {
     const who = esc(p.to_name || '');
