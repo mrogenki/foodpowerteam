@@ -28,6 +28,12 @@ export enum PaymentStatus {
 
 export type ActivityAudience = 'public' | 'member_only' | 'club';
 
+// 活動報名方案（票種）：名稱 + 價格
+export interface PriceOption {
+  name: string;
+  price: number;
+}
+
 // 統一活動型別 — Phase 3 後三表合一，以 audience 區分對象
 export interface Activity {
   id: string | number;
@@ -45,6 +51,8 @@ export interface Activity {
   location?: string;
   price?: number;
   member_price?: number;
+  // 多方案收費（選填）：有設定時，報名者需從中擇一，付款金額＝所選方案價（此時 price/member_price 不套用）
+  price_options?: PriceOption[] | null;
 
   // club 類專用
   link?: string;
@@ -73,6 +81,7 @@ export interface Registration {
   check_in_status?: boolean;
   paid_amount?: number;
   coupon_code?: string;
+  plan_name?: string | null; // 報名者選擇的方案名稱（多方案活動）
 
   // 點數抵扣
   points_used?: number;

@@ -1216,7 +1216,18 @@ const ActivityManager: React.FC<{
     setFormData({ audience: defaultAudience, type: ActivityType.GATHERING, title: '', date: '', time: '', location: '', price: 0, picture: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1', description: '', status: 'active' });
     setView('edit');
   };
-  const handleSave = async (e: React.FormEvent) => { e.preventDefault(); if (editingId) onUpdate(formData); else onAdd(formData); setView('list'); };
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // 清理報名方案：去除空白名稱、數字化價格；全空則存 null（回到單一價格模式）
+    const cleanOptions = Array.isArray(formData.price_options)
+      ? formData.price_options
+          .map((o: any) => ({ name: String(o?.name || '').trim(), price: Number(o?.price) || 0 }))
+          .filter((o: any) => o.name !== '')
+      : null;
+    const payload = { ...formData, price_options: (cleanOptions && cleanOptions.length) ? cleanOptions : null };
+    if (editingId) onUpdate(payload); else onAdd(payload);
+    setView('list');
+  };
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const url = await onUploadImage(e.target.files[0]); if (url) setFormData({ ...formData, picture: url }); } };
 
   const sendToTelegram = async () => {
@@ -1292,6 +1303,7 @@ const ActivityManager: React.FC<{
         '統一編號': r.tax_id || member?.tax_id || '',
         '報到狀態': r.check_in_status ? '已報到' : '未報到',
         '付款狀態': r.payment_status === PaymentStatus.PAID ? '已付款' : (r.payment_status === 'refunded' ? '已退費' : '待付款'),
+        '報名方案': r.plan_name || '',
         '付款金額': r.paid_amount,
         '金流單號': r.merchant_order_no,
         '折扣碼': r.coupon_code,
@@ -1605,6 +1617,7 @@ const ActivityManager: React.FC<{
                     <td className="p-4">
                       <div className={`font-bold flex items-center gap-2 ${reg.payment_status === 'refunded' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                         {name}
+                        {reg.plan_name && <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold no-underline">{reg.plan_name}</span>}
                         {reg.payment_status === 'refunded' && <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-bold no-underline">已退費</span>}
                       </div>
                       <div className="text-xs text-gray-400">{phone}</div>
@@ -1811,6 +1824,31 @@ const ActivityManager: React.FC<{
                  />
                  <p className="text-xs text-gray-400 mt-1">設定後，會員報名自動套用此價格</p>
                </div>
+               <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+                 <div className="flex items-center justify-between mb-2">
+                   <label className="text-sm font-bold text-gray-700 flex items-center gap-1"><Ticket size={16} /> 報名方案（多種價格，選填）</label>
+                   <button type="button" onClick={() => setFormData({ ...formData, price_options: [...(formData.price_options || []), { name: '', price: 0 }] })} className="text-sm font-bold text-red-600 hover:text-red-700 flex items-center gap-1"><Plus size={14} /> 新增方案</button>
+                 </div>
+                 {(formData.price_options && formData.price_options.length > 0) ? (
+                   <>
+                     <div className="space-y-2">
+                       {formData.price_options.map((opt: any, idx: number) => (
+                         <div key={idx} className="flex items-center gap-2">
+                           <input type="text" value={opt.name || ''} placeholder="方案名稱（例：團體包車）" onChange={e => { const arr = [...formData.price_options]; arr[idx] = { ...arr[idx], name: e.target.value }; setFormData({ ...formData, price_options: arr }); }} className="flex-1 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                           <div className="relative w-36">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">NT$</span>
+                             <input type="number" value={opt.price ?? 0} onChange={e => { const arr = [...formData.price_options]; arr[idx] = { ...arr[idx], price: Number(e.target.value) }; setFormData({ ...formData, price_options: arr }); }} className="w-full pl-11 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                           </div>
+                           <button type="button" onClick={() => { const arr = formData.price_options.filter((_: any, i: number) => i !== idx); setFormData({ ...formData, price_options: arr.length ? arr : null }); }} className="p-2 text-red-400 hover:text-red-600" title="刪除方案"><Trash2 size={16} /></button>
+                         </div>
+                       ))}
+                     </div>
+                     <p className="text-xs text-amber-700 mt-2">⚠️ 設定方案後，報名者須擇一，付款金額＝所選方案價；此時上方「費用／會員價」將不套用。</p>
+                   </>
+                 ) : (
+                   <p className="text-xs text-gray-400">需要「團體包車 / 自行前往」這類多種收費時才設定；一般單一價格留空即可。</p>
+                 )}
+               </div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">報名狀態</label><select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"><option value="active">開放報名</option><option value="closed">報名截止</option></select></div>
                <div className="md:col-span-2"><label className="block text-sm font-bold text-gray-700 mb-2">活動封面圖片</label><div className="flex items-center gap-4"><img src={formData.picture} alt="Preview" className="w-32 h-20 object-cover rounded-lg border bg-gray-50"/><label className="cursor-pointer bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2"><UploadCloud size={18} /> 上傳圖片<input type="file" className="hidden" accept="image/*" onChange={handleImageChange} /></label></div></div>
                <div className="md:col-span-2">
@@ -1862,7 +1900,7 @@ const ActivityManager: React.FC<{
               <div className="space-y-2 mb-6">
                 <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar size={16} /> {act.date} {act.time}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><MapPin size={16} /> {act.location}</div>
-                <div className="flex items-center gap-2 text-sm text-gray-500"><DollarSign size={16} /> NT$ {(act.price ?? 0).toLocaleString()}{(act as any).member_price != null && <span className="text-red-600 font-bold ml-1">/ 會員 NT$ {(act as any).member_price.toLocaleString()}</span>}</div>
+                <div className="flex items-center gap-2 text-sm text-gray-500"><DollarSign size={16} /> {Array.isArray((act as any).price_options) && (act as any).price_options.length ? (act as any).price_options.map((o: any) => `${o.name} NT$${Number(o.price || 0).toLocaleString()}`).join('、') : (<>NT$ {(act.price ?? 0).toLocaleString()}{(act as any).member_price != null && <span className="text-red-600 font-bold ml-1">/ 會員 NT$ {(act as any).member_price.toLocaleString()}</span>}</>)}</div>
                 <div className="flex items-center gap-2 text-sm text-gray-500"><Users size={16} /> {registrations.filter(r => String(r.activityId) === String(act.id)).length + (signupEntries || []).filter(s => String(s.activity_id) === String(act.id) && s.payment_status !== 'refunded').length} 人已報名</div>
               </div>
               <button onClick={() => { setEditingId(act.id); setView('registrations'); }} className="w-full py-3 bg-gray-50 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">管理報名名單 <ChevronRight size={18} /></button>

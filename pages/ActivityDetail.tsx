@@ -46,6 +46,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
 
   // 點數抵扣
   const [pointsApplied, setPointsApplied] = useState(0);
+  // 多方案收費：報名者選擇的方案 index（預設第一個）
+  const [selectedPlanIdx, setSelectedPlanIdx] = useState(0);
   // 名額合併：此活動若有開接龍且已額滿（接龍+一般報名合計），前台直接擋下並引導去接龍候補
   const [signupFull, setSignupFull] = useState(false);
   // 稍後付款：報名成功畫面顯示補繳連結
@@ -131,10 +133,19 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     ).length;
   }
 
-  // 會員價判定：當會員已選且活動有設定 member_price 時，自動套用
-  const hasMemberPrice = activity.member_price !== undefined && activity.member_price !== null;
+  // 多方案收費：有設定方案時，改由報名者擇一，付款金額＝所選方案價（此時 member_price 不套用）
+  const planOptions = Array.isArray(activity.price_options)
+    ? activity.price_options.filter(o => o && String(o.name || '').trim() !== '')
+    : [];
+  const hasPlans = planOptions.length > 0;
+  const selectedPlan = hasPlans ? (planOptions[selectedPlanIdx] || planOptions[0]) : null;
+
+  // 會員價判定：當會員已選且活動有設定 member_price 時，自動套用（方案模式下停用）
+  const hasMemberPrice = !hasPlans && activity.member_price !== undefined && activity.member_price !== null;
   const isUsingMemberPrice = !!formData.memberId && hasMemberPrice;
-  const basePrice = isUsingMemberPrice ? activity.member_price! : (activity.price || 0);
+  const basePrice = hasPlans
+    ? Number(selectedPlan?.price || 0)
+    : (isUsingMemberPrice ? activity.member_price! : (activity.price || 0));
 
   // 點數抵扣：須先驗證會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
   const selectedMember = verifiedMember;
@@ -301,6 +312,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
         referrer: formData.referrer,
         notes: formData.notes,
         paid_amount: finalPrice,
+        plan_name: hasPlans ? (selectedPlan?.name || null) : null,
         coupon_code: validCouponId ? couponCode : undefined,
         points_used: pointsApplied,
         created_at: new Date().toISOString(),
@@ -436,7 +448,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 rounded-2xl border border-gray-100 mb-8">
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><Calendar size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">日期時間</p><p className="font-medium">{activity.date}</p><p className="text-sm text-gray-500 font-bold">{activity.time}</p></div></div>
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><MapPin size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">地點</p><p className="font-medium">{activity.location}</p></div></div>
-              <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><DollarSign size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">活動費用</p><p className="font-medium">NT$ {(activity.price ?? 0).toLocaleString()}</p>{hasMemberPrice && <p className="text-xs text-red-600 font-bold mt-0.5">會員價 NT$ {activity.member_price!.toLocaleString()}</p>}</div></div>
+              <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><DollarSign size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">活動費用</p>{hasPlans ? (<div className="font-medium text-sm space-y-0.5">{planOptions.map((o, i) => <p key={i}>{o.name}：NT$ {Number(o.price || 0).toLocaleString()}</p>)}</div>) : (<><p className="font-medium">NT$ {(activity.price ?? 0).toLocaleString()}</p>{hasMemberPrice && <p className="text-xs text-red-600 font-bold mt-0.5">會員價 NT$ {activity.member_price!.toLocaleString()}</p>}</>)}</div></div>
             </div>
 
             <div className="prose prose-red max-w-none mb-10 overflow-hidden">
@@ -561,6 +573,25 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                   <div><label className="block text-sm font-bold text-gray-700 mb-2">引薦人 (選填)</label><input type="text" value={formData.referrer} onChange={e => setFormData({...formData, referrer: e.target.value})} className={`w-full px-4 py-3 rounded-xl border transition-all outline-none bg-white border-gray-200 focus:ring-2 focus:ring-red-500`} placeholder="引薦您的夥伴姓名" /></div>
                   
                   <div><label className="block text-sm font-bold text-gray-700 mb-2">備註 (選填)</label><textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 outline-none transition-all" placeholder="若有特殊需求請在此說明" rows={2} /></div>
+
+                  {/* 多方案收費：報名者擇一 */}
+                  {hasPlans && (
+                    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                      <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1"><Ticket size={16} /> 報名方案（請擇一）</label>
+                      <div className="space-y-2">
+                        {planOptions.map((opt, idx) => (
+                          <label key={idx} className={`flex items-center justify-between gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedPlanIdx === idx ? 'bg-red-50 border-red-300 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                            <span className="flex items-center gap-2">
+                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlanIdx === idx ? 'border-red-600' : 'border-gray-300'}`}>{selectedPlanIdx === idx && <span className="w-2 h-2 rounded-full bg-red-600" />}</span>
+                              <input type="radio" name="plan" className="hidden" checked={selectedPlanIdx === idx} onChange={() => setSelectedPlanIdx(idx)} />
+                              <span className="font-medium text-gray-800">{opt.name}</span>
+                            </span>
+                            <span className="font-bold text-gray-900">NT$ {Number(opt.price || 0).toLocaleString()}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className={`p-4 rounded-xl border ${couponFree ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
                     <label className={`block text-sm font-bold mb-2 flex items-center gap-1 ${couponFree ? 'text-amber-800' : 'text-gray-700'}`}>{couponFree ? <Crown size={16} /> : <Ticket size={16} />} {couponFree ? 'VIP 免費邀請' : '活動折扣券'}</label>

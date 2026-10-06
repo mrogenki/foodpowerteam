@@ -16,7 +16,13 @@ const CashRegistrationModal: React.FC<{
   const [email, setEmail] = useState('');
   const [companyTitle, setCompanyTitle] = useState('');
   const [taxId, setTaxId] = useState('');
-  const [amount, setAmount] = useState<number>(Number((activity as any).price) || 0);
+  // 多方案活動：現場收款也可擇一，金額自動帶入所選方案價
+  const planOptions: Array<{ name: string; price: number }> = Array.isArray((activity as any).price_options)
+    ? (activity as any).price_options.filter((o: any) => o && String(o.name || '').trim() !== '')
+    : [];
+  const hasPlans = planOptions.length > 0;
+  const [planIdx, setPlanIdx] = useState(0);
+  const [amount, setAmount] = useState<number>(hasPlans ? (Number(planOptions[0]?.price) || 0) : (Number((activity as any).price) || 0));
   const [issueReceipt, setIssueReceipt] = useState(false);
   const [checkIn, setCheckIn] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,6 +40,7 @@ const CashRegistrationModal: React.FC<{
         p_amount: Math.max(0, Math.round(amount) || 0),
         p_issue_receipt: issueReceipt,
         p_check_in: checkIn,
+        p_plan_name: hasPlans ? (planOptions[planIdx]?.name || null) : null,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -103,6 +110,14 @@ const CashRegistrationModal: React.FC<{
               <label className="block text-xs font-bold text-gray-600 mb-1">職務</label>
               <input value={title} onChange={e => setTitle(e.target.value)} className={inputCls} />
             </div>
+            {hasPlans && (
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-600 mb-1">報名方案</label>
+                <select value={planIdx} onChange={e => { const i = Number(e.target.value); setPlanIdx(i); setAmount(Number(planOptions[i]?.price) || 0); }} className={inputCls}>
+                  {planOptions.map((o, i) => <option key={i} value={i}>{o.name}（NT$ {Number(o.price || 0).toLocaleString()}）</option>)}
+                </select>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-gray-600 mb-1">收款金額 (NT$) <span className="text-red-600">*</span></label>
               <input type="number" min={0} value={amount} onChange={e => setAmount(parseInt(e.target.value, 10) || 0)} className={inputCls} />
