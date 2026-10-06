@@ -31,20 +31,20 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location,price_options,price,member_price').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity').eq('id', activityId).maybeSingle(),
     ]);
     if (act) {
       setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
       setPlanOptions(Array.isArray(act.price_options) ? act.price_options.filter((o: any) => o && String(o.name || '').trim() !== '') : []);
-      // 價格一律以活動為唯一來源（與一般報名一致）
+      // 價格與名額一律以活動為唯一來源（與一般報名一致）
       setFeeAmount(Number(act.price) || 0);
       setMemberFeeAmount(act.member_price != null ? String(act.member_price) : '');
+      setCapacity(Number(act.capacity) || 0);
     }
     if (s) {
       const ss = s as SignupSettings;
       setEnabled(true);
       setOpen(ss.registration_open);
-      setCapacity(ss.capacity);
       setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
       setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
       setCollectNote(ss.collect_note || '');
@@ -232,20 +232,14 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
             ) : (
               <span className="ml-1 font-bold text-emerald-600">免費</span>
             )}
-            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格{hasPlans ? '與名額（各方案容量）' : ''}；要修改金額{hasPlans ? '、名額' : ''}或方案，請到「活動管理 → 編輯活動」。</p>
+            {!hasPlans && <span className="ml-3 text-gray-600">名額：{capacity > 0 ? `${capacity} 名` : '不限'}</span>}
+            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格與名額；要修改金額、名額或方案，請到「活動管理 → 編輯活動」。</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} className="w-4 h-4" />
               開放報名
             </label>
-            {!hasPlans && (
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">正取容量</label>
-                <input type="number" min={0} value={capacity} onChange={e => setCapacity(parseInt(e.target.value, 10) || 0)}
-                  className="w-full p-2 border rounded" />
-              </div>
-            )}
             {paymentMode === 'online' && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>

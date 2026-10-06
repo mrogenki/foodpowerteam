@@ -170,12 +170,13 @@ const SignupChain: React.FC = () => {
   const plansTotalCap = planOptions.reduce((s, o) => s + (planCaps[o.name]?.capacity || 0), 0);
   const plansTotalTaken = planOptions.reduce((s, o) => s + (planCaps[o.name]?.taken || 0), 0);
   const selectedPlanFull = hasPlans && !!planCaps[selectedPlan?.name || '']?.is_full;
-  const capacity = hasPlans ? plansTotalCap : (settings?.capacity ?? 0);
+  const actCapacity = Number(activity?.capacity) || 0; // 0＝不限
+  const capacity = hasPlans ? plansTotalCap : actCapacity;
   const takenForBar = hasPlans ? plansTotalTaken : confirmed.length;
   const remain = hasPlans
     ? (hasUncappedPlan ? Infinity : Math.max(0, plansTotalCap - plansTotalTaken))
-    : Math.max(0, (settings?.capacity ?? 0) - confirmed.length);
-  const isFull = hasPlans ? allPlansFull : (remain <= 0);
+    : (actCapacity > 0 ? Math.max(0, actCapacity - confirmed.length) : Infinity);
+  const isFull = hasPlans ? allPlansFull : (actCapacity > 0 ? remain <= 0 : false);
   // 送出後是否會進候補：有方案看「所選方案」是否額滿；否則看整場
   const willWaitlist = hasPlans ? selectedPlanFull : isFull;
 

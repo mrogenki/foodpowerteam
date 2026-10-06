@@ -1831,6 +1831,18 @@ const ActivityManager: React.FC<{
                      />
                      <p className="text-xs text-gray-400 mt-1">設定後，會員報名自動套用此價格</p>
                    </div>
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-2">報名名額（容量）</label>
+                     <input
+                       type="number"
+                       min={0}
+                       placeholder="留空或 0 ＝不限"
+                       value={formData.capacity ?? ''}
+                       onChange={e => setFormData({ ...formData, capacity: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+                       className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                     />
+                     <p className="text-xs text-gray-400 mt-1">接龍與一般報名共用此名額；額滿後一般報名擋下、接龍自動轉候補。</p>
+                   </div>
                  </>
                )}
                <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50/40 p-4">

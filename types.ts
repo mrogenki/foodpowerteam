@@ -52,6 +52,7 @@ export interface Activity {
   location?: string;
   price?: number;
   member_price?: number;
+  capacity?: number | null; // 報名總名額（無方案時用；null/0＝不限）。接龍與一般報名共用
   // 多方案收費（選填）：有設定時，報名者需從中擇一，付款金額＝所選方案價（此時 price/member_price 不套用）
   price_options?: PriceOption[] | null;
 
