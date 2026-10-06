@@ -239,17 +239,21 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
               <input type="number" min={0} value={capacity} onChange={e => setCapacity(parseInt(e.target.value, 10) || 0)}
                 className="w-full p-2 border rounded" />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">報名費用 / 一般價 (NT$)</label>
-              <input type="number" min={0} value={feeAmount} onChange={e => setFeeAmount(parseInt(e.target.value, 10) || 0)}
-                className="w-full p-2 border rounded" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">會員價 (NT$，空 = 同一般價)</label>
-              <input type="number" min={0} value={memberFeeAmount} onChange={e => setMemberFeeAmount(e.target.value)} placeholder="例如 500"
-                className="w-full p-2 border rounded" />
-              <p className="text-[11px] text-gray-400 mt-1">報名者填寫的手機若對應在會會員，自動套用此價。</p>
-            </div>
+            {!hasPlans && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">報名費用 / 一般價 (NT$)</label>
+                  <input type="number" min={0} value={feeAmount} onChange={e => setFeeAmount(parseInt(e.target.value, 10) || 0)}
+                    className="w-full p-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">會員價 (NT$，空 = 同一般價)</label>
+                  <input type="number" min={0} value={memberFeeAmount} onChange={e => setMemberFeeAmount(e.target.value)} placeholder="例如 500"
+                    className="w-full p-2 border rounded" />
+                  <p className="text-[11px] text-gray-400 mt-1">報名者填寫的手機若對應在會會員，自動套用此價。</p>
+                </div>
+              </>
+            )}
             {paymentMode === 'online' && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>

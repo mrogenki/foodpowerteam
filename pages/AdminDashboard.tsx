@@ -1813,18 +1813,22 @@ const ActivityManager: React.FC<{
                <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" lang="en-GB" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">地點</label><input required type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
-               <div><label className="block text-sm font-bold text-gray-700 mb-2">費用</label><input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
-               <div>
-                 <label className="block text-sm font-bold text-gray-700 mb-2">會員價 (選填)</label>
-                 <input
-                   type="number"
-                   placeholder="留空表示無會員優惠"
-                   value={formData.member_price ?? ''}
-                   onChange={e => setFormData({...formData, member_price: e.target.value === '' ? null : Number(e.target.value)})}
-                   className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"
-                 />
-                 <p className="text-xs text-gray-400 mt-1">設定後，會員報名自動套用此價格</p>
-               </div>
+               {!(formData.price_options && formData.price_options.length > 0) && (
+                 <>
+                   <div><label className="block text-sm font-bold text-gray-700 mb-2">費用</label><input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+                   <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-2">會員價 (選填)</label>
+                     <input
+                       type="number"
+                       placeholder="留空表示無會員優惠"
+                       value={formData.member_price ?? ''}
+                       onChange={e => setFormData({...formData, member_price: e.target.value === '' ? null : Number(e.target.value)})}
+                       className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"
+                     />
+                     <p className="text-xs text-gray-400 mt-1">設定後，會員報名自動套用此價格</p>
+                   </div>
+                 </>
+               )}
                <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
                  <div className="flex items-center justify-between mb-2">
                    <label className="text-sm font-bold text-gray-700 flex items-center gap-1"><Ticket size={16} /> 報名方案（多種價格，選填）</label>
