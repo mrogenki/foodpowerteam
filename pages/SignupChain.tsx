@@ -155,9 +155,6 @@ const SignupChain: React.FC = () => {
 
   const confirmed = entries.filter(e => e.status === 'confirmed');
   const waitlist = entries.filter(e => e.status === 'waitlist');
-  const capacity = settings?.capacity ?? 0;
-  const remain = Math.max(0, capacity - confirmed.length);
-  const isFull = remain <= 0;
   const myIds = new Set(mySignups.map(m => m.id));
 
   // 報名方案（票種）：活動若設定 price_options，接龍費用改依所選方案（不套用會員價）
@@ -166,6 +163,21 @@ const SignupChain: React.FC = () => {
     : [];
   const hasPlans = planOptions.length > 0;
   const selectedPlan = hasPlans ? (planOptions[selectedPlanIdx] || planOptions[0]) : null;
+
+  // 容量/額滿：有方案→依各方案容量彙總（未設容量的方案＝不限）；否則→接龍整場總容量
+  const hasUncappedPlan = hasPlans && planOptions.some(o => (planCaps[o.name]?.capacity ?? null) == null);
+  const allPlansFull = hasPlans && planOptions.every(o => !!planCaps[o.name]?.is_full);
+  const plansTotalCap = planOptions.reduce((s, o) => s + (planCaps[o.name]?.capacity || 0), 0);
+  const plansTotalTaken = planOptions.reduce((s, o) => s + (planCaps[o.name]?.taken || 0), 0);
+  const selectedPlanFull = hasPlans && !!planCaps[selectedPlan?.name || '']?.is_full;
+  const capacity = hasPlans ? plansTotalCap : (settings?.capacity ?? 0);
+  const takenForBar = hasPlans ? plansTotalTaken : confirmed.length;
+  const remain = hasPlans
+    ? (hasUncappedPlan ? Infinity : Math.max(0, plansTotalCap - plansTotalTaken))
+    : Math.max(0, (settings?.capacity ?? 0) - confirmed.length);
+  const isFull = hasPlans ? allPlansFull : (remain <= 0);
+  // 送出後是否會進候補：有方案看「所選方案」是否額滿；否則看整場
+  const willWaitlist = hasPlans ? selectedPlanFull : isFull;
 
   // 價格一律以「活動」為唯一來源（與一般報名一致）：方案 → 活動會員價 → 活動一般價
   const actPrice = Number(activity?.price || 0);
@@ -391,7 +403,7 @@ const SignupChain: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">正取</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center shadow-sm">
-            <p className={`text-2xl font-bold ${isFull ? 'text-orange-500' : 'text-emerald-500'}`}>{isFull ? '滿' : remain}</p>
+            <p className={`text-2xl font-bold ${isFull ? 'text-orange-500' : 'text-emerald-500'}`}>{isFull ? '滿' : (remain === Infinity ? '不限' : remain)}</p>
             <p className="text-xs text-gray-400 mt-1">{isFull ? '已額滿' : '剩餘名額'}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center shadow-sm">
@@ -401,7 +413,7 @@ const SignupChain: React.FC = () => {
         </div>
         <div className="h-2.5 bg-orange-100 rounded-full overflow-hidden mt-3">
           <div className="h-full bg-gradient-to-r from-emerald-400 to-orange-500 rounded-full transition-all duration-500"
-            style={{ width: `${capacity > 0 ? Math.min(100, (confirmed.length / capacity) * 100) : 0}%` }} />
+            style={{ width: `${capacity > 0 ? Math.min(100, (takenForBar / capacity) * 100) : 0}%` }} />
         </div>
 
         {/* 報名表單 */}
@@ -509,14 +521,14 @@ const SignupChain: React.FC = () => {
                 </div>
               )}
               <p className="text-xs text-gray-400">🔒 電話與 Email 不會公開，只有主辦看得到。名單僅顯示姓名與公司/品牌。</p>
-              {isFull && (
+              {willWaitlist && (
                 <div className="bg-amber-50 border border-amber-100 text-amber-600 rounded-2xl px-4 py-3 text-xs">
-                  ⚠️ 正取名額已滿，送出後將排入候補，若有人取消會自動遞補。
+                  ⚠️ {hasPlans ? '此方案正取名額已滿' : '正取名額已滿'}，送出後將排入候補，若有人取消會自動遞補。
                 </div>
               )}
               <button type="submit" disabled={submitting}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-lg shadow-lg shadow-orange-200 hover:opacity-90 transition-all disabled:opacity-50">
-                {submitting ? '送出中...' : isFull ? '排候補報名 ⏳' : (isFree || selfCollect) ? '送出報名 🍢' : '送出報名並付款 🍢'}
+                {submitting ? '送出中...' : willWaitlist ? '排候補報名 ⏳' : (isFree || selfCollect) ? '送出報名 🍢' : '送出報名並付款 🍢'}
               </button>
             </form>
           )}
