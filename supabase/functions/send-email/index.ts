@@ -134,7 +134,12 @@ const templates: Record<string, (p: any) => Built> = {
 
     let intro = '';
     let cta = '';
-    if (p.is_free || !p.pay_link) {
+    if (p.self_collect) {
+      intro = `您已完成報名。本次由主辦自主收款，請依下方繳費方式完成繳費，繳費後由主辦確認。`;
+      if (p.collect_note) {
+        cta = `<div style="margin-top:16px;padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;font-size:13px;color:#9a3412;white-space:pre-wrap;">【繳費方式】\n${esc(p.collect_note)}</div>`;
+      }
+    } else if (p.is_free || !p.pay_link) {
       intro = `您已完成報名，我們已收到您的報名資訊。`;
     } else {
       intro = `您已完成報名，本次選擇稍後付款。請點下方按鈕完成繳費以保留名額（任何裝置皆可）。`;

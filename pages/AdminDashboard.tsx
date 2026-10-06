@@ -1875,6 +1875,34 @@ const ActivityManager: React.FC<{
                  )}
                </div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">報名狀態</label><select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"><option value="active">開放報名</option><option value="closed">報名截止</option></select></div>
+
+               <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-4">
+                 <h4 className="text-sm font-bold text-gray-700">收款與聯絡（一般報名與接龍共用）</h4>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-600 mb-2">收款方式</label>
+                   <div className="flex flex-wrap gap-2">
+                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'online' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${(formData.payment_mode || 'online') === 'online' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>線上金流（藍新）</button>
+                     <button type="button" onClick={() => setFormData({ ...formData, payment_mode: 'self' })} className={`px-4 py-2 rounded-lg text-sm font-bold border ${formData.payment_mode === 'self' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200'}`}>主辦自主收款</button>
+                   </div>
+                   <p className="text-xs text-gray-400 mt-1">{formData.payment_mode === 'self' ? '報名後不走線上金流，顯示繳費方式，由主辦收款、後台再標記已付。' : '報名後導向藍新繳費；可設逾時未付款自動釋位。'}</p>
+                 </div>
+                 {formData.payment_mode === 'self' ? (
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1">繳費說明（顯示給報名者）</label>
+                     <textarea value={formData.collect_note || ''} onChange={e => setFormData({ ...formData, collect_note: e.target.value })} rows={2} placeholder="例：請匯款至 玉山銀行 808 帳號 xxxx，並私訊主辦。" className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                   </div>
+                 ) : (
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空＝不自動釋放）</label>
+                     <input type="number" min={1} value={formData.payment_deadline_hours ?? ''} onChange={e => setFormData({ ...formData, payment_deadline_hours: e.target.value === '' ? null : Math.max(1, Number(e.target.value)) })} placeholder="例如 24" className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+                     <p className="text-xs text-gray-400 mt-1">報名後超過此時數未付款，自動釋出名額（一般報名與接龍皆適用）。</p>
+                   </div>
+                 )}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div><label className="block text-xs font-bold text-gray-600 mb-1">主辦人姓名（顯示給報名者聯絡）</label><input value={formData.host_name || ''} onChange={e => setFormData({ ...formData, host_name: e.target.value })} maxLength={40} placeholder="例：王小明" className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" /></div>
+                   <div><label className="block text-xs font-bold text-gray-600 mb-1">主辦人手機</label><input value={formData.host_phone || ''} onChange={e => setFormData({ ...formData, host_phone: e.target.value })} maxLength={30} inputMode="tel" placeholder="例：0912-345-678" className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500" /></div>
+                 </div>
+               </div>
                <div className="md:col-span-2"><label className="block text-sm font-bold text-gray-700 mb-2">活動封面圖片</label><div className="flex items-center gap-4"><img src={formData.picture} alt="Preview" className="w-32 h-20 object-cover rounded-lg border bg-gray-50"/><label className="cursor-pointer bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2"><UploadCloud size={18} /> 上傳圖片<input type="file" className="hidden" accept="image/*" onChange={handleImageChange} /></label></div></div>
                <div className="md:col-span-2">
                  <label className="block text-sm font-bold text-gray-700 mb-2">活動描述 (區塊編輯器)</label>

@@ -166,6 +166,9 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
     ? Number(selectedPlan?.price || 0)
     : (isUsingMemberPrice ? activity.member_price! : (activity.price || 0));
 
+  // 收款方式（與接龍共用，來源：活動設定）
+  const selfCollect = activity.payment_mode === 'self';
+
   // 點數抵扣：須先驗證會員。可折抵點數上限 = min(餘額, 折扣後剩餘金額可換算的點數)
   const selectedMember = verifiedMember;
   const memberPoints = selectedMember?.points_balance ?? 0;
@@ -287,6 +290,8 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
             fee: Number(finalPrice) || 0,
             is_free: Number(finalPrice) === 0,
             pay_link: payLink || '',
+            self_collect: selfCollect,
+            collect_note: selfCollect ? (activity.collect_note || '') : '',
           },
         },
       });
@@ -362,6 +367,13 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
       }
 
       if (success) {
+        // 自主收款：不走線上金流，報名維持未付款，顯示繳費方式、寄確認信（含繳費說明）
+        if (selfCollect && finalPrice > 0) {
+          if (formData.email) await sendConfirmationEmail(formData.name, formData.email);
+          setIsSuccess(true);
+          return;
+        }
+
         // 只有在「免費活動」或「不須立即付款」時才發送確認信
         // 繳費活動的信件將移至後端付款成功後發送，避免使用者誤會
         // 稍後付款且需繳費 → 產生補繳連結（信件附上 + 成功畫面顯示）
@@ -374,7 +386,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
         // 處理金流轉跳
         if (payNow && finalPrice > 0) {
           // 正式環境不顯示測試提示
-          
+
           // 紀錄當前活動 URL，以便付款後返回
           sessionStorage.setItem('last_activity_url', window.location.pathname);
 
@@ -421,6 +433,19 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                 <Copy size={16} /> {payLinkCopied ? '已複製 ✓' : '複製連結'}
               </button>
             </div>
+          </div>
+        )}
+        {selfCollect && finalPrice > 0 && (
+          <div className="max-w-md mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 text-left">
+            <p className="text-sm font-bold text-amber-800 mb-1">💰 繳費方式（向主辦繳交）</p>
+            {activity.collect_note
+              ? <p className="text-sm text-amber-700 whitespace-pre-wrap leading-relaxed">{activity.collect_note}</p>
+              : <p className="text-sm text-amber-700">請依主辦通知完成繳費。</p>}
+            {(activity.host_name || activity.host_phone) && (
+              <p className="text-xs text-amber-700 mt-3">
+                聯絡主辦：{activity.host_name}{activity.host_phone && <>　<a href={`tel:${activity.host_phone.replace(/[^0-9+]/g, '')}`} className="font-bold underline">{activity.host_phone}</a></>}
+              </p>
+            )}
           </div>
         )}
         <button onClick={() => navigate('/')} className="bg-red-600 text-white px-8 py-3 rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg">返回活動列表</button>
@@ -474,6 +499,14 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><MapPin size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">地點</p><p className="font-medium">{activity.location}</p></div></div>
               <div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-full flex items-center justify-center ${isClosed ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-600'}`}><DollarSign size={24} /></div><div><p className="text-xs text-gray-400 uppercase font-bold tracking-wider">活動費用</p>{hasPlans ? (<div className="font-medium text-sm space-y-0.5">{planOptions.map((o, i) => <p key={i}>{o.name}：NT$ {Number(o.price || 0).toLocaleString()}</p>)}</div>) : (<><p className="font-medium">NT$ {(activity.price ?? 0).toLocaleString()}</p>{hasMemberPrice && <p className="text-xs text-red-600 font-bold mt-0.5">會員價 NT$ {activity.member_price!.toLocaleString()}</p>}</>)}</div></div>
             </div>
+
+            {(activity.host_name || activity.host_phone) && (
+              <div className="mb-8 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 text-sm text-blue-800 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="font-bold">📞 有問題請聯絡主辦人</span>
+                {activity.host_name && <span>{activity.host_name}</span>}
+                {activity.host_phone && <a href={`tel:${activity.host_phone.replace(/[^0-9+]/g, '')}`} className="font-bold underline hover:text-blue-600">{activity.host_phone}</a>}
+              </div>
+            )}
 
             <div className="prose prose-red max-w-none mb-10 overflow-hidden">
               <h3 className="text-xl font-bold mb-4">活動介紹</h3>
@@ -680,10 +713,18 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                     </div>
                   )}
 
-                  {/* 金流選項 */}
-                  {finalPrice > 0 && (
-                    <div 
-                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${payNow ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`} 
+                  {/* 自主收款說明 */}
+                  {selfCollect && finalPrice > 0 && (
+                    <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800">
+                      <p className="font-bold mb-1">💰 本活動由主辦自主收款</p>
+                      <p className="text-xs leading-relaxed">送出報名後，將顯示繳費方式並寄到你的 Email；完成繳費後由主辦確認。</p>
+                    </div>
+                  )}
+
+                  {/* 金流選項（自主收款不顯示） */}
+                  {!selfCollect && finalPrice > 0 && (
+                    <div
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${payNow ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}
                       onClick={() => setPayNow(!payNow)}
                     >
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${payNow ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
@@ -697,7 +738,7 @@ const ActivityDetail: React.FC<ActivityDetailProps> = (props) => {
                   )}
 
                   <button type="submit" disabled={isSubmitting || (props.type === 'member' && !formData.name)} className="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-[0.98] transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2 shadow-lg shadow-red-200">
-                    {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> 處理中...</> : <><span>{payNow && finalPrice > 0 ? '送出並前往付款' : (props.type === 'member' ? '確認會員資料並報名' : '前往報名')}</span><span className="bg-red-800/30 px-2 py-0.5 rounded text-sm">NT$ {finalPrice.toLocaleString()}</span></>}
+                    {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> 處理中...</> : <><span>{(!selfCollect && payNow && finalPrice > 0) ? '送出並前往付款' : (props.type === 'member' ? '確認會員資料並報名' : '送出報名')}</span><span className="bg-red-800/30 px-2 py-0.5 rounded text-sm">NT$ {finalPrice.toLocaleString()}</span></>}
                   </button>
                 </form>
               </>

@@ -53,6 +53,12 @@ export interface Activity {
   price?: number;
   member_price?: number;
   capacity?: number | null; // 報名總名額（無方案時用；null/0＝不限）。接龍與一般報名共用
+  // 收款與聯絡（接龍與一般報名共用）
+  payment_mode?: 'online' | 'self'; // online=藍新線上 / self=主辦自主收款
+  collect_note?: string | null;     // 自主收款說明（匯款帳號/現場繳費等）
+  host_name?: string | null;        // 主辦人姓名
+  host_phone?: string | null;       // 主辦人手機
+  payment_deadline_hours?: number | null; // 逾時未付款自動釋位（小時；空＝不釋放）
   // 多方案收費（選填）：有設定時，報名者需從中擇一，付款金額＝所選方案價（此時 price/member_price 不套用）
   price_options?: PriceOption[] | null;
 

@@ -183,7 +183,7 @@ const SignupChain: React.FC = () => {
   // 價格一律以「活動」為唯一來源（與一般報名一致）：方案 → 活動會員價 → 活動一般價
   const actPrice = Number(activity?.price || 0);
   const actMemberPrice = activity?.member_price != null ? Number(activity.member_price) : null;
-  const selfCollect = settings?.payment_mode === 'self';
+  const selfCollect = activity?.payment_mode === 'self';
   const effectiveFee = hasPlans ? Number(selectedPlan?.price || 0) : actPrice;
   const isFree = effectiveFee <= 0;   // 免費活動：無需繳費
   const hasMemberPrice = !hasPlans && actMemberPrice != null && actMemberPrice !== actPrice;
@@ -253,7 +253,7 @@ const SignupChain: React.FC = () => {
               is_free: isFree,
               mode,
               pay_link: isFree ? '' : payLink,
-              collect_note: selfCollect ? (settings?.collect_note || '') : '',
+              collect_note: selfCollect ? (activity?.collect_note || '') : '',
             },
           },
         }).catch(err => console.error('接龍確認信寄送失敗', err));
@@ -380,19 +380,19 @@ const SignupChain: React.FC = () => {
         </div>
 
         {/* 自主收款說明 */}
-        {selfCollect && settings.collect_note && (
+        {selfCollect && activity.collect_note && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 text-sm text-amber-800 whitespace-pre-wrap">
-            <span className="font-bold">💰 繳費方式：</span>{settings.collect_note}
+            <span className="font-bold">💰 繳費方式：</span>{activity.collect_note}
           </div>
         )}
 
         {/* 主辦人聯絡資訊 */}
-        {(settings.host_name || settings.host_phone) && (
+        {(activity.host_name || activity.host_phone) && (
           <div className="mt-4 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 text-sm text-blue-800 flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="font-bold">📞 有問題請聯絡主辦人</span>
-            {settings.host_name && <span>{settings.host_name}</span>}
-            {settings.host_phone && (
-              <a href={`tel:${settings.host_phone.replace(/[^0-9+]/g, '')}`} className="font-bold underline hover:text-blue-600">{settings.host_phone}</a>
+            {activity.host_name && <span>{activity.host_name}</span>}
+            {activity.host_phone && (
+              <a href={`tel:${activity.host_phone.replace(/[^0-9+]/g, '')}`} className="font-bold underline hover:text-blue-600">{activity.host_phone}</a>
             )}
           </div>
         )}

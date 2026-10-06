@@ -32,7 +32,7 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
     const [{ data: s }, { data: e }, { data: act }] = await Promise.all([
       supabase.from('signup_settings').select('*').eq('activity_id', activityId).maybeSingle(),
       supabase.from('signup_entries').select('*').eq('activity_id', activityId).order('created_at', { ascending: true }),
-      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity,status').eq('id', activityId).maybeSingle(),
+      supabase.from('activities').select('title,date,location,price_options,price,member_price,capacity,status,payment_mode,collect_note,host_name,host_phone,payment_deadline_hours').eq('id', activityId).maybeSingle(),
     ]);
     if (act) {
       setActivityInfo({ title: act.title || undefined, date: act.date || undefined, location: act.location || undefined });
@@ -43,18 +43,14 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
       setCapacity(Number(act.capacity) || 0);
       setActStatus(act.status || 'active');
       setOpen((act.status || 'active') !== 'closed');
+      // 收款方式/繳費說明/主辦人/逾時釋放一律以活動為唯一來源
+      setPaymentMode(act.payment_mode === 'self' ? 'self' : 'online');
+      setCollectNote(act.collect_note || '');
+      setHostName(act.host_name || '');
+      setHostPhone(act.host_phone || '');
+      setDeadlineHours(act.payment_deadline_hours != null ? String(act.payment_deadline_hours) : '');
     }
-    if (s) {
-      const ss = s as SignupSettings;
-      setEnabled(true);
-      setDeadlineHours(ss.payment_deadline_hours != null ? String(ss.payment_deadline_hours) : '');
-      setPaymentMode(ss.payment_mode === 'self' ? 'self' : 'online');
-      setCollectNote(ss.collect_note || '');
-      setHostName(ss.host_name || '');
-      setHostPhone(ss.host_phone || '');
-    } else {
-      setEnabled(false);
-    }
+    setEnabled(!!s);
     setEntries((e as SignupEntry[]) || []);
     setLoading(false);
   };
@@ -207,72 +203,39 @@ const SignupAdminPanel: React.FC<{ activityId: string; isSuperAdmin?: boolean }>
         <div className="flex items-center gap-2 text-gray-400 text-sm py-4"><Loader2 className="animate-spin" size={16} /> 載入中…</div>
       ) : (
         <>
-          {/* 收款方式 */}
-          <div className="mb-4">
-            <label className="block text-xs font-bold text-gray-600 mb-1">收款方式</label>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setPaymentMode('online')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold border ${paymentMode === 'online' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-                線上金流（藍新）
-              </button>
-              <button type="button" onClick={() => setPaymentMode('self')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold border ${paymentMode === 'self' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-                發起人自主收款
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {paymentMode === 'online' ? '報名確認後導向藍新繳費；可設逾時未付款自動釋放名額。' : '不經線上金流，由主辦自行收款（現場/匯款等）；不做逾時釋放。'}
-            </p>
-          </div>
-
-          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-            <span className="font-bold">💰 報名費用（與一般報名一致，於「活動設定」管理）：</span>
-            {hasPlans ? (
-              planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{(o as any).capacity != null ? `（${(o as any).capacity} 名）` : ''}{i < planOptions.length - 1 ? '、' : ''}</span>)
-            ) : feeAmount > 0 ? (
-              <span className="ml-1">一般 NT${feeAmount.toLocaleString()}{memberFeeAmount.trim() !== '' && Number(memberFeeAmount) !== feeAmount && <>　/　會員 NT${Number(memberFeeAmount).toLocaleString()}</>}</span>
-            ) : (
-              <span className="ml-1 font-bold text-emerald-600">免費</span>
-            )}
-            {!hasPlans && <span className="ml-3 text-gray-600">名額：{capacity > 0 ? `${capacity} 名` : '不限'}</span>}
-            <p className="text-xs text-blue-600/80 mt-1">接龍與一般報名共用同一價格與名額；要修改金額、名額或方案，請到「活動管理 → 編輯活動」。</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">
-              開放／截止請在上方活動的「報名狀態」設定（接龍與一般報名共用一個開關）。目前：
-              <span className={`font-bold ${actStatus === 'closed' ? 'text-gray-500' : 'text-emerald-600'}`}>{actStatus === 'closed' ? '報名截止' : '開放報名'}</span>
-            </div>
-            {paymentMode === 'online' && (
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">逾時釋放時數（空 = 不自動釋放）</label>
-                <input type="number" min={1} value={deadlineHours} onChange={e => setDeadlineHours(e.target.value)} placeholder="例如 24"
-                  className="w-full p-2 border rounded" />
-              </div>
-            )}
-            {paymentMode === 'self' && (
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-600 mb-1">繳費說明（顯示給報名者，例如匯款帳號/現場繳費）</label>
-                <textarea value={collectNote} onChange={e => setCollectNote(e.target.value)} rows={2} placeholder="例：請匯款至 玉山銀行 808 帳號 xxxx，並私訊主辦。"
-                  className="w-full p-2 border rounded" />
-              </div>
-            )}
+          {/* 報名條件（唯讀，皆於「活動設定」管理，接龍與一般報名共用） */}
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800 space-y-1">
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">主辦人姓名（顯示給報名者聯絡）</label>
-              <input value={hostName} onChange={e => setHostName(e.target.value)} maxLength={40} placeholder="例：王小明"
-                className="w-full p-2 border rounded" />
+              <span className="font-bold">💰 報名費用：</span>
+              {hasPlans ? (
+                planOptions.map((o, i) => <span key={i} className="ml-1">{o.name} NT${Number(o.price || 0).toLocaleString()}{(o as any).capacity != null ? `（${(o as any).capacity} 名）` : ''}{i < planOptions.length - 1 ? '、' : ''}</span>)
+              ) : feeAmount > 0 ? (
+                <span className="ml-1">一般 NT${feeAmount.toLocaleString()}{memberFeeAmount.trim() !== '' && Number(memberFeeAmount) !== feeAmount && <>　/　會員 NT${Number(memberFeeAmount).toLocaleString()}</>}</span>
+              ) : (
+                <span className="ml-1 font-bold text-emerald-600">免費</span>
+              )}
+              {!hasPlans && <span className="ml-3 text-gray-600">名額：{capacity > 0 ? `${capacity} 名` : '不限'}</span>}
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">主辦人手機</label>
-              <input value={hostPhone} onChange={e => setHostPhone(e.target.value)} maxLength={30} inputMode="tel" placeholder="例：0912-345-678"
-                className="w-full p-2 border rounded" />
+              <span className="font-bold">💳 收款：</span>
+              <span className="ml-1">{paymentMode === 'self' ? '主辦自主收款' : '線上金流（藍新）'}</span>
+              {paymentMode === 'online' && deadlineHours.trim() !== '' && <span className="ml-3 text-gray-600">逾時釋放：{deadlineHours} 小時</span>}
             </div>
+            <div>
+              <span className="font-bold">📣 開放狀態：</span>
+              <span className={`ml-1 font-bold ${actStatus === 'closed' ? 'text-gray-500' : 'text-emerald-600'}`}>{actStatus === 'closed' ? '報名截止' : '開放報名'}</span>
+              {(hostName || hostPhone) && <span className="ml-3 text-gray-600">主辦人：{hostName}{hostPhone ? `／${hostPhone}` : ''}</span>}
+            </div>
+            <p className="text-xs text-blue-600/80 pt-1">以上（費用、名額、收款方式、開放狀態、主辦人、逾時釋放）皆於「活動管理 → 編輯活動」設定，接龍與一般報名共用。</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mt-4">
-            <button type="button" onClick={handleSave} disabled={saving}
-              className="bg-amber-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-amber-700 transition-colors disabled:opacity-50">
-              {saving ? '儲存中…' : enabled ? '更新設定' : '開啟接龍報名'}
-            </button>
+            {!enabled && (
+              <button type="button" onClick={handleSave} disabled={saving}
+                className="bg-amber-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-amber-700 transition-colors disabled:opacity-50">
+                {saving ? '開啟中…' : '開啟接龍報名'}
+              </button>
+            )}
             <button type="button" onClick={load} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
               <RefreshCw size={14} /> 重新整理
             </button>
