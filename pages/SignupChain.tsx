@@ -248,7 +248,7 @@ const SignupChain: React.FC = () => {
               activity_date: activity?.date || '',
               activity_time: activity?.time || '',
               activity_location: activity?.location || '',
-              fee: Number(row.fee_amount ?? settings?.fee_amount ?? 0),
+              fee: Number(row.fee_amount ?? effectiveFee),
               is_member: !!row.is_member,
               is_free: isFree,
               mode,
