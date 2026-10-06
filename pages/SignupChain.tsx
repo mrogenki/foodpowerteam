@@ -164,19 +164,22 @@ const SignupChain: React.FC = () => {
   const hasPlans = planOptions.length > 0;
   const selectedPlan = hasPlans ? (planOptions[selectedPlanIdx] || planOptions[0]) : null;
 
-  // 容量/額滿：有方案→依各方案容量彙總（未設容量的方案＝不限）；否則→接龍整場總容量
-  const hasUncappedPlan = hasPlans && planOptions.some(o => (planCaps[o.name]?.capacity ?? null) == null);
+  // 容量/額滿：有方案→只彙總「有設上限」的方案（混用時不因某方案留空就整體變不限）；否則→接龍整場總容量
+  const cappedOpts = planOptions.filter(o => planCaps[o.name]?.capacity != null);
+  const hasCappedPlan = cappedOpts.length > 0;
+  const hasUncappedPlan = planOptions.some(o => planCaps[o.name]?.capacity == null);
   const allPlansFull = hasPlans && planOptions.every(o => !!planCaps[o.name]?.is_full);
-  const plansTotalCap = planOptions.reduce((s, o) => s + (planCaps[o.name]?.capacity || 0), 0);
-  const plansTotalTaken = planOptions.reduce((s, o) => s + (planCaps[o.name]?.taken || 0), 0);
+  const cappedTotalCap = cappedOpts.reduce((s, o) => s + (planCaps[o.name]!.capacity || 0), 0);
+  const cappedTotalTaken = cappedOpts.reduce((s, o) => s + (planCaps[o.name]!.taken || 0), 0);
   const selectedPlanFull = hasPlans && !!planCaps[selectedPlan?.name || '']?.is_full;
   const actCapacity = Number(activity?.capacity) || 0; // 0＝不限
-  const capacity = hasPlans ? plansTotalCap : actCapacity;
-  const takenForBar = hasPlans ? plansTotalTaken : confirmed.length;
+  const capacity = hasPlans ? cappedTotalCap : actCapacity;
+  const takenForBar = hasPlans ? cappedTotalTaken : confirmed.length;
   const remain = hasPlans
-    ? (hasUncappedPlan ? Infinity : Math.max(0, plansTotalCap - plansTotalTaken))
+    ? (hasCappedPlan ? Math.max(0, cappedTotalCap - cappedTotalTaken) : Infinity)
     : (actCapacity > 0 ? Math.max(0, actCapacity - confirmed.length) : Infinity);
-  const isFull = hasPlans ? allPlansFull : (actCapacity > 0 ? remain <= 0 : false);
+  // 整體額滿：有任何不限方案→永不滿；否則全部方案都滿才算滿
+  const isFull = hasPlans ? (!hasUncappedPlan && allPlansFull) : (actCapacity > 0 ? remain <= 0 : false);
   // 送出後是否會進候補：有方案看「所選方案」是否額滿；否則看整場
   const willWaitlist = hasPlans ? selectedPlanFull : isFull;
 

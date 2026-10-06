@@ -273,6 +273,7 @@ VITE_SUPABASE_FUNCTION_URL=
 - 報名記錄存選擇的方案：`registrations.plan_name`、`signup_entries.plan_name`。
 - **各方案容量獨立**：已佔用＝該方案的（一般報名＋接龍正取，排除退費）。RPC `activity_plan_capacity(p_activity_id)` 回每方案 `capacity/taken/is_full`。
 - 額滿行為：一般報名該方案鎖住不可選、其他照常、全滿導向接龍候補；接龍該方案標「已滿・排候補」仍可報名候補。
+- **可混用**（部分方案設上限、部分留空＝不限，例：包車 40／自行不限）。接龍頂端「剩餘名額」只彙總「有設上限」的方案（有上限方案就顯示其剩餘總和，不會因某方案留空就整體變「不限」）；只有全部方案都留空才顯示「不限」。「整體額滿」僅當所有方案都有上限且都滿。
 - `signup_fill`（候補遞補）已重寫為**支援各方案**並計入一般報名人數（讀 `activities` 容量）；`signup_register` 依方案容量判定正取/候補。
 
 ### ⏰ 繳費提醒與逾時釋位（`release-expired` Edge Function，2026-10）
