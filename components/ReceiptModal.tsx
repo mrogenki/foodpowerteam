@@ -325,7 +325,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
       }
       
       if (!errorMsg || errorMsg === 'undefined' || errorMsg === '{}') {
-        errorMsg = '請檢查網路連線、EmailJS 模板設定 (template_receipt) 或 Supabase 儲存空間權限。';
+        errorMsg = '請檢查網路連線後稍後再試；若持續失敗，請確認 Resend 設定（send-email）或 Supabase 儲存空間權限。';
       }
       
       alert('寄送失敗: ' + errorMsg);
