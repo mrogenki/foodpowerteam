@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2, Send, Mail } from 'lucide-react';
+import { X, Save, Loader2, Send, Mail, Download } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { supabase } from '../utils/supabaseClient';
 import { RECEIPT_STAMP_BUCKET, RECEIPT_STAMP_PATH } from '../constants';
 
@@ -59,6 +60,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
   const [status, setStatus] = useState(initialData.status || 'issued');
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
   const [duplicateReceipt, setDuplicateReceipt] = useState<any>(null);
   
@@ -343,6 +345,28 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
     setIsSaving(false);
   };
 
+  // 下載 PDF：切到「pdf-mode」（隱藏輸入框、顯示靜態影子文字與勾選框），用 html2pdf 產生 A4 橫式 PDF
+  const handleDownloadPdf = async () => {
+    const el = document.getElementById('receipt-print-area');
+    if (!el) return;
+    setIsGeneratingPdf(true);
+    await new Promise(r => setTimeout(r, 60)); // 等 pdf-mode 樣式套上
+    try {
+      await html2pdf().set({
+        margin: 10,
+        filename: `收據_${receiptNo || payerName || 'receipt'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: 1200, scrollX: 0, scrollY: 0, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' as const },
+      }).from(el).save();
+    } catch (err: any) {
+      console.error('download pdf error:', err);
+      alert('PDF 產生失敗：' + (err?.message || '未知錯誤'));
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:p-0 print:bg-transparent">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto print:overflow-visible print:max-h-none print:shadow-none print:rounded-none">
@@ -380,12 +404,21 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
                 {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 
                 儲存
               </button>
-              <button 
-                onClick={handleEmailReceipt} 
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-bold disabled:opacity-50"
+                title="下載收據 PDF，可直接交給來賓"
+              >
+                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                下載 PDF
+              </button>
+              <button
+                onClick={handleEmailReceipt}
                 disabled={isSending || !email || !!duplicateReceipt}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold disabled:opacity-50"
               >
-                {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} 
+                {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 寄送收據
               </button>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full ml-2">
@@ -398,7 +431,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         {/* Printable Area Wrapper */}
         <div className="overflow-x-auto w-full">
           {/* Printable Area */}
-          <div id="receipt-print-area" className="p-8 bg-white text-black mx-auto" style={{ fontFamily: "'Noto Sans TC', sans-serif", width: '1000px', minWidth: '1000px' }}>
+          <div id="receipt-print-area" className={`p-8 bg-white text-black mx-auto${isGeneratingPdf ? ' pdf-generating' : ''}`} style={{ fontFamily: "'Noto Sans TC', sans-serif", width: '1000px', minWidth: '1000px' }}>
             
             {/* Receipt Header */}
           <div className="text-center mb-6">
@@ -543,8 +576,64 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, initialDat
         </div>
       </div>
       
-      {/* 隱藏收據內平行的 pdf 影子文字（原 html2pdf 用，已改線上收據連結） */}
-      <style dangerouslySetInnerHTML={{__html: `.pdf-text { display: none !important; }` }} />
+      {/* pdf 影子文字：平時隱藏（用輸入框）；產生 PDF 時（.pdf-generating）隱藏輸入框、顯示靜態文字與勾選框，
+          並強制套用 Tailwind 樣式（與 BatchReceiptGenerator 一致，避免 html2canvas 抓不到 class） */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .pdf-text { display: none !important; }
+        .pdf-generating input, .pdf-generating select, .pdf-generating textarea { display: none !important; }
+        .pdf-generating { background-color: white !important; padding: 20px !important; }
+        .pdf-generating table { width: 100% !important; border-collapse: collapse !important; border: 1px solid black !important; }
+        .pdf-generating td, .pdf-generating th { border: 1px solid black !important; }
+        .pdf-generating .bg-gray-100 { background-color: #f3f4f6 !important; }
+        .pdf-generating .text-red-600 { color: #dc2626 !important; }
+        .pdf-generating .bg-blue-600 { background-color: #2563eb !important; }
+        .pdf-generating .border-gray-400 { border-color: #9ca3af !important; }
+        .pdf-generating .grid { display: grid !important; }
+        .pdf-generating .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+        .pdf-generating .whitespace-nowrap { white-space: nowrap !important; }
+        .pdf-generating .flex-shrink-0 { flex-shrink: 0 !important; }
+        .pdf-generating .flex { display: flex !important; }
+        .pdf-generating .items-center { align-items: center !important; }
+        .pdf-generating .justify-between { justify-content: space-between !important; }
+        .pdf-generating .flex-grow { flex-grow: 1 !important; }
+        .pdf-generating .font-bold { font-weight: bold !important; }
+        .pdf-generating .text-center { text-align: center !important; }
+        .pdf-generating .text-left { text-align: left !important; }
+        .pdf-generating .gap-2 { gap: 0.5rem !important; }
+        .pdf-generating .gap-4 { gap: 1rem !important; }
+        .pdf-generating .py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+        .pdf-generating .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+        .pdf-generating .px-3 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+        .pdf-generating .py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+        .pdf-generating .pt-4 { padding-top: 1rem !important; }
+        .pdf-generating .mb-2 { margin-bottom: 0.5rem !important; }
+        .pdf-generating .mb-6 { margin-bottom: 1.5rem !important; }
+        .pdf-generating .ml-\\[1em\\] { margin-left: 1em !important; }
+        .pdf-generating .w-full { width: 100% !important; }
+        .pdf-generating .w-\\[13\\%\\] { width: 13% !important; }
+        .pdf-generating .w-\\[57\\%\\] { width: 57% !important; }
+        .pdf-generating .w-\\[15\\%\\] { width: 15% !important; }
+        .pdf-generating .min-w-\\[280px\\] { min-width: 280px !important; }
+        .pdf-generating .h-full { height: 100% !important; }
+        .pdf-generating .h-36 { height: 9rem !important; }
+        .pdf-generating .w-6 { width: 1.5rem !important; }
+        .pdf-generating .h-6 { height: 1.5rem !important; }
+        .pdf-generating .w-3 { width: 0.75rem !important; }
+        .pdf-generating .h-3 { height: 0.75rem !important; }
+        .pdf-generating .border-2 { border-width: 2px !important; }
+        .pdf-generating .rounded-sm { border-radius: 0.125rem !important; }
+        .pdf-generating .whitespace-pre-wrap { white-space: pre-wrap !important; }
+        .pdf-generating .align-top { vertical-align: top !important; }
+        .pdf-generating .align-middle { vertical-align: middle !important; }
+        .pdf-generating .tracking-widest { letter-spacing: 0.1em !important; }
+        .pdf-generating .tracking-\\[1em\\] { letter-spacing: 1em !important; }
+        .pdf-generating .text-xl { font-size: 1.25rem !important; line-height: 1.75rem !important; }
+        .pdf-generating .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+        .pdf-generating .text-3xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
+        .pdf-generating .text-gray-400 { color: #9ca3af !important; }
+        .pdf-generating .pdf-text { display: block !important; }
+        .pdf-generating .pdf-checkbox { display: flex !important; }
+      ` }} />
     </div>
   );
 };
