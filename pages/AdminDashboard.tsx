@@ -1836,7 +1836,24 @@ const ActivityManager: React.FC<{
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動標題</label><input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">活動類型</label><select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">{Object.values(ActivityType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">日期</label><input required type="date" value={formData.date} onChange={e => { const date = e.target.value; setFormData((f: any) => ({ ...f, date, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(date, f.time)) })); }} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
-               <div><label className="block text-sm font-bold text-gray-700 mb-2">時間</label><input required type="time" lang="en-GB" value={formData.time} onChange={e => { const time = e.target.value; setFormData((f: any) => ({ ...f, time, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(f.date, time)) })); }} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
+               <div>
+                 <label className="block text-sm font-bold text-gray-700 mb-2">時間（24 小時制）</label>
+                 <div className="flex items-center gap-2">
+                   <select required value={(formData.time || '').split(':')[0] ? String((formData.time || '').split(':')[0]).padStart(2, '0') : ''}
+                     onChange={e => { const hh = e.target.value; setFormData((f: any) => { const mm = (f.time || '').split(':')[1] || '00'; const time = `${hh}:${mm}`; return { ...f, time, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(f.date, time)) }; }); }}
+                     className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                     <option value="" disabled>時</option>
+                     {Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0')).map(h => <option key={h} value={h}>{h}</option>)}
+                   </select>
+                   <span className="font-bold text-gray-400">:</span>
+                   <select required value={(formData.time || '').split(':')[1] || ''}
+                     onChange={e => { const mm = e.target.value; setFormData((f: any) => { const hh = (f.time || '').split(':')[0] || '00'; const time = `${hh}:${mm}`; return { ...f, time, payment_deadline: (f.payment_mode === 'self') ? f.payment_deadline : (f.payment_deadline || deadlineBeforeStart(f.date, time)) }; }); }}
+                     className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                     <option value="" disabled>分</option>
+                     {Array.from({ length: 60 }, (_, m) => String(m).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
+                   </select>
+                 </div>
+               </div>
                <div><label className="block text-sm font-bold text-gray-700 mb-2">地點</label><input required type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-red-500"/></div>
                {!(formData.price_options && formData.price_options.length > 0) && (
                  <>
