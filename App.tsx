@@ -369,6 +369,8 @@ const App: React.FC = () => {
         supabase.from('financial_records').select('*').order('date', { ascending: false }),
         supabase.from('milestones').select('*').order('date', { ascending: false }),
         supabase.from('signup_entries').select('*').order('created_at', { ascending: true }),
+        // 管理員載入「完整」文章清單（含草稿/排程），覆蓋前台用的 public_articles() 公開視圖
+        supabase.from('articles').select('*').order('created_at', { ascending: false }),
       ] : [];
 
       const results = await Promise.all([...publicQueries, ...adminQueries]);
@@ -407,6 +409,9 @@ const App: React.FC = () => {
         const milestoneData = results[7]?.data;
         const signupData = results[8]?.data;
         if (signupData) setSignupEntries(signupData as SignupEntry[]);
+        // 管理員：用完整文章清單（含草稿/排程）覆蓋前台公開清單，後台才看得到並能管理
+        const articlesAll = results[9]?.data;
+        if (articlesAll) setArticles(articlesAll as Article[]);
 
         // 統一報名表，依 audience 切回兩組
         if (allRegData) {
