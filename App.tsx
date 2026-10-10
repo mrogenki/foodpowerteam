@@ -456,9 +456,12 @@ const App: React.FC = () => {
       }
 
       // 專欄文章（公開視圖）：走 public_articles() RPC —— 會員限定文章只回前幾段預覽 + locked 標記，
-      // 全文永不從此路徑流出（後台管理另有 loadArticles 直讀表，含草稿）。
-      supabase.rpc('public_articles')
-        .then(({ data }) => { if (Array.isArray(data)) setArticles(data as Article[]); });
+      // 全文永不從此路徑流出。⚠️ 僅「非管理員」載入公開視圖；管理員已在上方 adminQueries 取得
+      //    完整清單（含草稿/排程），這裡若也跑會把完整清單蓋回公開版，導致後台看不到草稿/排程。
+      if (!currentUser) {
+        supabase.rpc('public_articles')
+          .then(({ data }) => { if (Array.isArray(data)) setArticles(data as Article[]); });
+      }
 
     } catch (err: any) {
       console.error('Fetch error:', err);
